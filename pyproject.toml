@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "spicefit"
+version = "0.1.0"
+description = ""
+authors = ["adolliou <antoine.dolliou@universite-paris-saclay.fr>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+numpy = "^2.1.2"
+astropy = "^6.1.4"
+sospice = "^0.0.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,27 @@
+
+fit:
+  type: "gauss"
+  guess: [0.1, 770.42 , 0.25]
+  max_arr: [100, 771.02, 1.6]
+  min_arr: [0.001, 769.82, 0.4]
+  trans_a: [1,1,0.424661]
+  trans_b: [0,0,0]
+
+
+info:
+  name: "Ne VIII 770.42"
+  elem: "Ne"
+  ion: 7
+  wave: 770.42
+  lvl_low: "1$s^2$ 2s $^2S_{1/2}$"
+  lvl_up: "1$s^2$ 2p $P_{3/2}$"
+  
+
+
+
+
+
+
+
+
+

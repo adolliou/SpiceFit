@@ -1,80 +1,45 @@
-import numpy as np
-import astropy.io.fits.hdu.compressed.header
-from FitTemplates import FitTemplate
-from sospice.calibrate import spice_error
-from astropy.wcs import WCS
-import copy
+import astropy.io.fits
+from astropy.io import fits
 import astropy.units as u
 
 
-class SpiceRasterWindow:
+# f = fits.open("https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/2022/03/17/solo_L2_spice-n-ras_20220317T002536_V03_100663832-017.fits")
 
-    def __init__(self, hdu: astropy.io.fits.hdu.image.ImageHDU = None, data: np.ndarray = None,
-                 header: astropy.io.fits.header.Header = None) -> None:
-        """
+class SpiceRaster:
+    # TODO Only initialize a SpiceRasterWindow when needed.
+    def __init__(self, path_l2_fits_file: str = None, hdul: astropy.io.fits.HDUList = None) -> None:
+        if (path_l2_fits_file is not None) & (hdul is None):
+            self.path_l2_fits_file = path_l2_fits_file
+            self.hdul = fits.open(path_l2_fits_file)
+        elif (path_l2_fits_file is None) & (hdul is not None):
+            self.path_l2_fits_file = None
+            self.hdul = hdul
+        self.wavelength_intervals = self.get_wavelength_intervals()
+        self.extension_names = self.get_extension_names()
 
-        :param hdu: astropy.io.fits.hdu.image.ImageHDU
-        SPICE L2 FITS hdu
-        :param data: numpy.ndarray
-        SPICE L2 4D ndarray data (t, lambda, y, x). Assumed in W/m2/sr/nm
-        :param header: astropy.io.fits.header.Header
-        SPICE L2 hdu header
-        """
-        if hdu is not None:
 
-            self.data = copy.deepcopy(hdu.data)
-            self.header = copy.deepcopy(hdu.header)
-        elif (data is not None) and (header is not None):
-            if hdu is None:
-                self.data = copy.deepcopy(data)
-                self.header = copy.deepcopy(header)
-            else:
-                raise RuntimeError("SpiceRasterwindow: Please choose between hdu or data and header to set to None.")
-        else:
-            raise RuntimeError("SpiceRasterWindow: incorrect input for initialization.")
-        self.uncertainty = None
-        self.uncertainty_average = None
 
-        # Building the different wcs depending on the axes
-        self.wcs = WCS(self.header)
-        self.w_xyt = copy.deepcopy(self.wcs).dropaxis(2)
-        self.w_xy = copy.deepcopy(self.w_xyt)
-        self.w_xy.wcs.pc[2, 0] = 0
-        self.w_spec = copy.deepcopy(self.wcs).sub(["spectral"])
 
-    def check_if_line_within(self, fittemplate: FitTemplate, all_interval=False) -> bool:
-        """
-        Check if a given line is within the window.
-        :param fittemplate: fittemplate of the line to check
-        :param all_interval: if True, then the entire interval guess of the line must be within the window. If no,
-                             if False, then just the central wavelength must be within the window
-        """
-        wave_interval = self.return_wavelength_interval()
-        if all_interval:
-            if (fittemplate.wave_interval[0] > wave_interval[0]) and (fittemplate.wave_interval[1] < wave_interval[1]):
-                return True
-            else:
-                return False
-        else:
-            if (fittemplate.central_wave > wave_interval[0]) and (fittemplate.central_wave < wave_interval[1]):
-                return True
-            else:
-                return False
+    def get_wavelength_intervals(self) -> u.Quantity:
+        wavelength_intervals = []
+        hdu = self.hdul[0]
+        header = hdu.header
+        wavecov_str = header["WAVECOV"]
+        wavecov_str = wavecov_str.replace(" ", "")
+        wavecov_str_list = wavecov_str.split(",")
+        for el in wavecov_str_list:
+            el_split = el.split("-")
+            wavelength_intervals.append([float(el_split[0]), float(el_split[1])])
+        wavelength_intervals = u.Quantity(self.wavelength_intervals, "nm")
+        return wavelength_intervals
 
-    def return_lines_within(self):
+    def get_extension_names(self) -> list[str]:
+        extension_names = []
+        for hdu in self.hdul:
+            header = hdu.header
+            extension_names.append(header["EXTNAME"])
+        return extension_names
+
+    def get_lines_within_wavelength_intervals(self, lines_metadata_file: str = None) -> dict:
         pass
 
-    def return_fov(self):
-        pass
-
-    def return_wavelength_interval(self) -> list:
-        lenlambda = self.data.shape[1]
-        z = np.arange(lenlambda)
-        lamb = self.w_spec.world_to_pixel(z)
-        dlamb = lamb[1] - lamb[0]
-        return [lamb[0] - 0.5 * dlamb, lamb[-1] + 0.5 * dlamb]
-
-    def compute_uncertainty(self):
-        av_constant_noise_level, sigma = spice_error(data=self.data, header=self.header, verbose=False)
-        self.uncertainty = sigma
-        self.uncertainty_average = av_constant_noise_level

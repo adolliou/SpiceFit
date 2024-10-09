@@ -1,13 +1,19 @@
 import astropy.io.fits
 from astropy.io import fits
-import astropy.units as u
+from .FitTemplates import *
+from yaml import load, Loader
+from pathlib import Path
+from SpiceRasterWindow import SpiceRasterWindowL2
 
-
-# f = fits.open("https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/2022/03/17/solo_L2_spice-n-ras_20220317T002536_V03_100663832-017.fits")
 
 class SpiceRaster:
-    # TODO Only initialize a SpiceRasterWindow when needed.
-    def __init__(self, path_l2_fits_file: str = None, hdul: astropy.io.fits.HDUList = None) -> None:
+    def __init__(self, path_l2_fits_file: str = None, hdul: astropy.io.fits.HDUList = None, windows="all") -> None:
+        """
+
+        :param path_l2_fits_file:
+        :param hdul:
+        :param windows: "all" : build all windows in file. None : build none. list : build the windows within the list.
+        """
         if (path_l2_fits_file is not None) & (hdul is None):
             self.path_l2_fits_file = path_l2_fits_file
             self.hdul = fits.open(path_l2_fits_file)
@@ -16,9 +22,11 @@ class SpiceRaster:
             self.hdul = hdul
         self.wavelength_intervals = self.get_wavelength_intervals()
         self.extension_names = self.get_extension_names()
-
-
-
+        list_windows_l2 = self.build_windowsl2(windows)
+        self.windows = list_windows_l2
+        self.windows_ext = {}
+        for win, ext in zip(list_windows_l2, self.extension_names):
+            self.windows_ext[ext] = win
 
     def get_wavelength_intervals(self) -> u.Quantity:
         wavelength_intervals = []
@@ -40,6 +48,38 @@ class SpiceRaster:
             extension_names.append(header["EXTNAME"])
         return extension_names
 
-    def get_lines_within_wavelength_intervals(self, lines_metadata_file: str = None) -> dict:
-        pass
+    def build_windowsl2(self, windows) -> list:
+        list_windows = []
+        if windows == "all":
+            for ii, ext in enumerate(self.extension_names):
+                list_windows.append(SpiceRasterWindowL2(hdu=self.hdul[ext]))
+        if type(windows) is list:
+            for ii, ext in enumerate(self.extension_names):
+                if (ii in windows) or (ext in windows):
+                    list_windows.append(SpiceRasterWindowL2(hdu=self.hdul[ext]))
+                else:
+                    list_windows.append(None)
+        elif windows is None:
+            list_windows = [None] * len(self.extension_names)
+        return list_windows
 
+    def get_lines_within_wavelength_intervals(self, lines_metadata_file: str = None) -> dict:
+        """
+        :param lines_metadata_file: str, path to a yaml file with personalised lines metadata. If set to none,
+        then use the default ones from "metadata_lines_default.yaml"
+        """
+        lines_in_raster = {}
+        if lines_metadata_file is None:
+            lines_metadata_file = "../Templates/metadata_lines_default.yaml"
+        else:
+            lines_metadata_file = Path(lines_metadata_file)
+        with open(lines_metadata_file, "r") as f:
+            data = load(f, Loader=Loader)
+            lines_total = data["list_lines_spice_metadata"]
+            for line in lines_total:
+                for ii, interval in enumerate(self.wavelength_intervals):
+                    if u.Quantity(line["central_wavelength"], "anstrom") >= interval[0] and \
+                            u.Quantity(line["central_wavelength"], "angstrom") <= interval[1]:
+                        lines_in_raster[line["name"]] = line
+                        lines_in_raster[line["name"]]["window"] = ii
+        return lines_in_raster

@@ -10,8 +10,8 @@ fit:
 
 info:
   name: "Ne VIII 770.42"
-  elem: "Ne"
-  ion: 7
+  elem: "ne"
+  ion: 8
   wave: 770.42
   lvl_low: "1$s^2$ 2s $^2S_{1/2}$"
   lvl_up: "1$s^2$ 2p $P_{3/2}$"

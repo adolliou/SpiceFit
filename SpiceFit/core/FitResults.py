@@ -5,15 +5,18 @@ from .SpiceRasterWindow import SpiceRasterWindowL2
 from ..Util.shared_memory import gen_shmm
 from ..Util.fitting import FittingUtil
 import copy
+from multiprocessing import Process, Lock
+import multiprocessing as mp
 
 
 class FitResults:
 
-    def __init__(self, fit_template: FitTemplate, verbose=False):
+    def __init__(self, fit_template: FitTemplate, verbose=False,):
         """
 
         :param fit_template: Fit template class
         :param verbose: Print text to console
+        :param count: cpu counts to use for parallelism
         """
 
         self.verbose = verbose
@@ -34,10 +37,10 @@ class FitResults:
         self._fit_coeffs_dict = None
         self._fit_chi2_dict = None
 
-        self._shmm_data = None
-        self._shmm_uncertainty = None
-        self._shmm_fit_coeffs = None
-        self._shmm_fit_chi2 = None
+        # self._shmm_data = None
+        # self._shmm_uncertainty = None
+        # self._shmm_fit_coeffs = None
+        # self._shmm_fit_chi2 = None
 
         self.fit_results = {}
         for jj, name in enumerate(self.fit_template.parinfo["fit"]["name"]):
@@ -51,23 +54,98 @@ class FitResults:
                 "n_components": self.fit_template.parinfo["fit"]["ncomponents"][jj],
             }
 
+            self.lock = None
+            self.count = None
+
     def fit_window_standard(
-        self,
-        spicewindow: SpiceRasterWindowL2,
-        parallelism: bool = True,
+            self,
+            spicewindow: SpiceRasterWindowL2,
+            parallelism: bool = True,
+            count: int = None,
     ):
         """
+        Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
 
         :param spicewindow: SpiceRasterWindowL2 class
         :param parallelism: allow parallelism or not.
-        """
+        :param count: cpu counts to use for parallelism
 
+        """
+        if count is None:
+            self.count = mp.cpu_count()
+        else:
+            self.count = count
         self._gen_function()
 
         if spicewindow.uncertainty is None:
             spicewindow.compute_uncertainty(verbose=False)
         if parallelism:
+            self.lock = Lock()
             self.gen_shmm(spicewindow)
+
+            # Get indexes and positions in (i, j) for all pixels of the raster
+            i_array, j_array = np.meshgrid(np.arange(self.data.shape[0]), np.arange(self.data.shape[1]), indexing='ij')
+            i_array = i_array.flatten()
+            j_array = j_array.flatten()
+            indexes = i_array*self.data.shape[1] + j_array
+
+            processes = []
+
+            for i, j, index in zip(i_array, j_array, indexes):
+                kwargs = {
+                    "i" : i,
+                    "j" : j,
+                    "index" : index,
+                    "lock" : self.lock
+                }
+
+                processes.append(Process(target=self._fit_pixel_parallelism, kwargs=kwargs))
+
+            lenp = len(processes)
+            ii = -1
+            is_close = []
+            while ii < lenp - 1:
+                ii += 1
+                processes[ii].start()
+                while (np.sum([p.is_alive() for mm, p in zip(range(lenp), processes) if
+                               (mm not in is_close)]) > self.count):
+                    pass
+                for kk, P in zip(range(lenp), processes):
+                    if kk not in is_close:
+                        if (not (P.is_alive())) and (kk <= ii):
+                            P.close()
+                            is_close.append(kk)
+
+            while np.sum([p.is_alive() for mm, p in zip(range(lenp), processes) if (mm not in is_close)]) != 0:
+                pass
+            for kk, P in zip(range(lenp), processes):
+                if kk not in is_close:
+                    if (not (P.is_alive())) and (kk <= ii):
+                        P.close()
+                        is_close.append(kk)
+
+            shmm_data, data = gen_shmm(
+                create=False, **self._data_dict
+            )
+            shmm_uncertainty, uncertainty = gen_shmm(
+                create=False, **self._uncertainty_dict
+            )
+            shmm_fit_coeffs, fit_coeffs = gen_shmm(
+                create=False, **self._fit_coeffs_dict
+            )
+            shmm_fit_chi2, fit_chit2 = gen_shmm(
+                create=False, **self._fit_chi2_dict
+            )
+
+            # TODO save all results in permanent addresses before unlinking all shmm objects
+
+            shmm_data.close()
+            shmm_uncertainty.close()
+            shmm_fit_coeffs.close()
+            shmm_fit_chi2.close()
+
+    def _fit_pixel_parallelism(self):
+        raise NotImplementedError
 
     def _gen_function(self):
         names = self.fit_template.parinfo["fit"]["names"]
@@ -98,13 +176,13 @@ class FitResults:
         raise NotImplementedError
 
     def gen_shmm(self, spicewindow: SpiceRasterWindowL2):
-        self._shmm_data, data = gen_shmm(
+        shmm_data, data = gen_shmm(
             create=True, ndarray=copy.deepcopy(spicewindow.data)
         )
-        self._shmm_uncertainty, uncertainty = gen_shmm(
+        shmm_uncertainty, uncertainty = gen_shmm(
             create=True, ndarray=copy.deepcopy(spicewindow.uncertainty["Total"])
         )
-        self._shmm_fit_coeffs, fit_coeffs = gen_shmm(
+        shmm_fit_coeffs, fit_coeffs = gen_shmm(
             create=True,
             ndarray=np.zeros(
                 (
@@ -115,7 +193,7 @@ class FitResults:
                 dtype="float",
             ),
         )
-        self._shmm_fit_chi2, fit_chi2 = gen_shmm(
+        shmm_fit_chi2, fit_chi2 = gen_shmm(
             create=True,
             ndarray=np.zeros(
                 (
@@ -127,22 +205,27 @@ class FitResults:
         )
 
         self._data_dict = {
-            "name": self._shmm_data.name,
+            "name": shmm_data.name,
             "dtype": data.dtype,
             "shape": data.shape,
         }
         self._uncertainty_dict = {
-            "name": self._shmm_uncertainty.name,
+            "name": shmm_uncertainty.name,
             "dtype": uncertainty.dtype,
             "shape": uncertainty.shape,
         }
         self._fit_coeffs_dict = {
-            "name": self._shmm_fit_coeffs.name,
+            "name": shmm_fit_coeffs.name,
             "dtype": fit_coeffs.dtype,
             "shape": fit_coeffs.shape,
         }
         self._fit_chi2_dict = {
-            "name": self._shmm_fit_chi2.name,
+            "name": shmm_fit_chi2.name,
             "dtype": fit_chi2.dtype,
             "shape": fit_chi2.shape,
         }
+
+        shmm_data.close()
+        shmm_uncertainty.close()
+        shmm_fit_coeffs.close()
+        shmm_fit_chi2.close()

@@ -11,7 +11,11 @@ import multiprocessing as mp
 
 class FitResults:
 
-    def __init__(self, fit_template: FitTemplate, verbose=False,):
+    def __init__(
+        self,
+        fit_template: FitTemplate,
+        verbose=False,
+    ):
         """
 
         :param fit_template: Fit template class
@@ -58,10 +62,10 @@ class FitResults:
             self.count = None
 
     def fit_window_standard(
-            self,
-            spicewindow: SpiceRasterWindowL2,
-            parallelism: bool = True,
-            count: int = None,
+        self,
+        spicewindow: SpiceRasterWindowL2,
+        parallelism: bool = True,
+        count: int = None,
     ):
         """
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
@@ -84,22 +88,23 @@ class FitResults:
             self.gen_shmm(spicewindow)
 
             # Get indexes and positions in (i, j) for all pixels of the raster
-            i_array, j_array = np.meshgrid(np.arange(self.data.shape[0]), np.arange(self.data.shape[1]), indexing='ij')
+            i_array, j_array = np.meshgrid(
+                np.arange(self.data.shape[0]),
+                np.arange(self.data.shape[1]),
+                indexing="ij",
+            )
             i_array = i_array.flatten()
             j_array = j_array.flatten()
-            indexes = i_array*self.data.shape[1] + j_array
+            indexes = i_array * self.data.shape[1] + j_array
 
             processes = []
 
             for i, j, index in zip(i_array, j_array, indexes):
-                kwargs = {
-                    "i" : i,
-                    "j" : j,
-                    "index" : index,
-                    "lock" : self.lock
-                }
+                kwargs = {"i": i, "j": j, "index": index, "lock": self.lock}
 
-                processes.append(Process(target=self._fit_pixel_parallelism, kwargs=kwargs))
+                processes.append(
+                    Process(target=self._fit_pixel_parallelism, kwargs=kwargs)
+                )
 
             lenp = len(processes)
             ii = -1
@@ -107,8 +112,16 @@ class FitResults:
             while ii < lenp - 1:
                 ii += 1
                 processes[ii].start()
-                while (np.sum([p.is_alive() for mm, p in zip(range(lenp), processes) if
-                               (mm not in is_close)]) > self.count):
+                while (
+                    np.sum(
+                        [
+                            p.is_alive()
+                            for mm, p in zip(range(lenp), processes)
+                            if (mm not in is_close)
+                        ]
+                    )
+                    > self.count
+                ):
                     pass
                 for kk, P in zip(range(lenp), processes):
                     if kk not in is_close:
@@ -116,7 +129,16 @@ class FitResults:
                             P.close()
                             is_close.append(kk)
 
-            while np.sum([p.is_alive() for mm, p in zip(range(lenp), processes) if (mm not in is_close)]) != 0:
+            while (
+                np.sum(
+                    [
+                        p.is_alive()
+                        for mm, p in zip(range(lenp), processes)
+                        if (mm not in is_close)
+                    ]
+                )
+                != 0
+            ):
                 pass
             for kk, P in zip(range(lenp), processes):
                 if kk not in is_close:
@@ -124,18 +146,14 @@ class FitResults:
                         P.close()
                         is_close.append(kk)
 
-            shmm_data, data = gen_shmm(
-                create=False, **self._data_dict
-            )
+            shmm_data, data = gen_shmm(create=False, **self._data_dict)
             shmm_uncertainty, uncertainty = gen_shmm(
                 create=False, **self._uncertainty_dict
             )
             shmm_fit_coeffs, fit_coeffs = gen_shmm(
                 create=False, **self._fit_coeffs_dict
             )
-            shmm_fit_chi2, fit_chit2 = gen_shmm(
-                create=False, **self._fit_chi2_dict
-            )
+            shmm_fit_chi2, fit_chit2 = gen_shmm(create=False, **self._fit_chi2_dict)
 
             # TODO save all results in permanent addresses before unlinking all shmm objects
 
@@ -176,9 +194,7 @@ class FitResults:
         raise NotImplementedError
 
     def gen_shmm(self, spicewindow: SpiceRasterWindowL2):
-        shmm_data, data = gen_shmm(
-            create=True, ndarray=copy.deepcopy(spicewindow.data)
-        )
+        shmm_data, data = gen_shmm(create=True, ndarray=copy.deepcopy(spicewindow.data))
         shmm_uncertainty, uncertainty = gen_shmm(
             create=True, ndarray=copy.deepcopy(spicewindow.uncertainty["Total"])
         )

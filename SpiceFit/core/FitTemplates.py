@@ -81,7 +81,7 @@ class FitTemplate:
 
         if type(test["fit"]) is not dict:
             return False
-        keys = ['type', 'guess', 'max_arr', 'min_arr', 'trans_a', 'trans_b']
+        keys = ['type', 'name', 'n_components', 'guess', 'max_arr', 'min_arr', 'trans_a', 'trans_b']
         formats = [str, list, list, list, list, list, list]
         for key, format_ in zip(keys, formats):
             if (key not in test["fit"].keys()) | (type(key) is not format_):

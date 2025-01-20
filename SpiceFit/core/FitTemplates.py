@@ -52,8 +52,7 @@ class FitTemplate:
         :param parinfo:
         :return:
         """
-        testparinfo = self.check_parinfo(parinfo=parinfo)
-        if not testparinfo:
+        if not self.check_parinfo(parinfo=parinfo):
             raise TypeError("parinfo dictionary must have the valid format")
         self._parinfo = parinfo
 
@@ -70,7 +69,7 @@ class FitTemplate:
 
         if type(test) is not dict:
             return False
-        if (len(test.keys()) != 2) | ("info" not in test.keys()) | ("fit" not in test.keys()):
+        if ((len(test.keys()) != 2) and (len(test.keys()) != 3)) | ("info" not in test.keys()) | ("fit" not in test.keys()):
             return False
         if type(test["info"]) is not dict:
             return False
@@ -91,3 +90,6 @@ class FitTemplate:
                 for sub in test["fit"][key]:
                     if (type(sub) is not int) and (type(sub) is not float):
                         return False
+        if (len(test.keys()) == 3) and ("special_instructions" not in test.keys()):
+            return False
+        return True

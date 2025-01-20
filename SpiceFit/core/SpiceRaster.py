@@ -3,7 +3,7 @@ from astropy.io import fits
 from .FitTemplates import *
 from yaml import load, Loader
 from pathlib import Path
-from SpiceRasterWindow import SpiceRasterWindowL2
+from .SpiceRasterWindow import SpiceRasterWindowL2
 
 
 class SpiceRaster:
@@ -20,15 +20,21 @@ class SpiceRaster:
         elif (path_l2_fits_file is None) & (hdul is not None):
             self.path_l2_fits_file = None
             self.hdul = hdul
+        self.wavelength_intervals = None
+        self.spectral_windows_names = None
         self.wavelength_intervals = self.get_wavelength_intervals()
-        self.extension_names = self.get_extension_names()
+        self.spectral_windows_names = self.get_spectral_windows_names()
         list_windows_l2 = self.build_windowsl2(windows)
         self.windows = list_windows_l2
         self.windows_ext = {}
-        for win, ext in zip(list_windows_l2, self.extension_names):
+        for win, ext in zip(list_windows_l2, self.spectral_windows_names):
             self.windows_ext[ext] = win
 
-    def get_wavelength_intervals(self) -> u.Quantity:
+    def get_wavelength_intervals(self) -> list[list[u.Quantity]]:
+        """
+        get the wavelength intervals corresponding to the hdul windows
+        :return:
+        """
         wavelength_intervals = []
         hdu = self.hdul[0]
         header = hdu.header
@@ -37,26 +43,37 @@ class SpiceRaster:
         wavecov_str_list = wavecov_str.split(",")
         for el in wavecov_str_list:
             el_split = el.split("-")
-            wavelength_intervals.append([float(el_split[0]), float(el_split[1])])
-        wavelength_intervals = u.Quantity(self.wavelength_intervals, "nm")
+            wavelength_intervals.append([u.Quantity(float(el_split[0]), "nm"),
+                                         u.Quantity(float(el_split[1]), "nm")])
         return wavelength_intervals
 
-    def get_extension_names(self) -> list[str]:
-        extension_names = []
+    def get_spectral_windows_names(self) -> list[str]:
+        """
+        get the extension names of the different spectral windows.
+        :return:
+        """
+        spectral_windows_names = []
         for hdu in self.hdul:
             header = hdu.header
-            extension_names.append(header["EXTNAME"])
-        return extension_names
+            if (header["EXTNAME"] != "VARIABLE_KEYWORDS") and (header["EXTNAME"] != "WCSDVARR"):
+                spectral_windows_names.append(header["EXTNAME"])
+        return spectral_windows_names
 
     def build_windowsl2(self, windows) -> list:
+        """
+        build the SpiceRasterWindowL2 elements.
+        :param windows:
+        :return:
+        """
         list_windows = []
         if windows == "all":
-            for ii, ext in enumerate(self.extension_names):
-                list_windows.append(SpiceRasterWindowL2(hdu=self.hdul[ext]))
+
+            for ii, winname in enumerate(self.spectral_windows_names):
+                list_windows.append(SpiceRasterWindowL2(hdu=self.hdul[winname]))
         if type(windows) is list:
-            for ii, ext in enumerate(self.extension_names):
-                if (ii in windows) or (ext in windows):
-                    list_windows.append(SpiceRasterWindowL2(hdu=self.hdul[ext]))
+            for ii, winname in enumerate(self.spectral_windows_names):
+                if (ii in windows) or (winname in windows):
+                    list_windows.append(SpiceRasterWindowL2(hdu=self.hdul[winname]))
                 else:
                     list_windows.append(None)
         elif windows is None:
@@ -83,3 +100,34 @@ class SpiceRaster:
                         lines_in_raster[line["name"]] = line
                         lines_in_raster[line["name"]]["window"] = ii
         return lines_in_raster
+
+    def estimate_noise_windows(self, windows="all") -> None:
+        if windows == "all":
+            for ii, win in enumerate(self.windows):
+                win.compute_uncertainty()
+        elif type(windows) is list:
+            for ii, win in enumerate(self.windows):
+                if (ii in windows) or (self.windows_ext[win] in windows):
+                    win.compute_uncertainty()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

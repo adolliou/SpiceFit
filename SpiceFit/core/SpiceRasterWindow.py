@@ -1,6 +1,6 @@
 import numpy as np
 import astropy.io.fits.header
-from FitTemplates import FitTemplate
+from .FitTemplates import FitTemplate
 from sospice.calibrate import spice_error
 from astropy.wcs import WCS
 import copy

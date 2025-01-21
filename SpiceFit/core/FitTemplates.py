@@ -23,19 +23,21 @@ class FitTemplate:
                 raise TypeError("parinfo dictionary must have the valid format")
             self._parinfo = parinfo
         else:
-            self._parinfo = {'fit': {}, 'info': {}}
+            self._parinfo = {"fit": {}, "info": {}}
         for key in kwargs:
-            if key in ['type', 'guess', 'max_arr', 'min_arr', 'trans_a', 'trans_b']:
-                self._parinfo['fit'][key] = kwargs[key]
-            elif key in ['name', 'elem', 'ion', 'wave', 'lvl_low', 'lvl_up']:
-                self._parinfo['info'][key] = kwargs[key]
+            if key in ["type", "guess", "units", "max_arr", "min_arr", "trans_a", "trans_b"]:
+                self._parinfo["fit"][key] = kwargs[key]
+            elif key in ["name", "elem", "ion", "wave", "lvl_low", "lvl_up"]:
+                self._parinfo["info"][key] = kwargs[key]
         test_parinfo = self.check_parinfo()
         if not test_parinfo:
             raise TypeError("the keyword arguments must have the valid format")
 
-        self.central_wave = u.Quantity(self._parinfo['fit']['guess'][1], "angstrom")
-        self.wave_interval = [u.Quantity(self._parinfo['fit']['min_arr'][1], "angstrom"),
-                              u.Quantity(self._parinfo['fit']['max_arr'][1], "angstrom")]
+        self.central_wave = u.Quantity(self._parinfo["fit"]["guess"][1], "angstrom")
+        self.wave_interval = [
+            u.Quantity(self._parinfo["fit"]["min_arr"][1], "angstrom"),
+            u.Quantity(self._parinfo["fit"]["max_arr"][1], "angstrom"),
+        ]
 
     @property
     def parinfo(self):
@@ -69,11 +71,15 @@ class FitTemplate:
 
         if type(test) is not dict:
             return False
-        if ((len(test.keys()) != 2) and (len(test.keys()) != 3)) | ("info" not in test.keys()) | ("fit" not in test.keys()):
+        if (
+            ((len(test.keys()) != 2) and (len(test.keys()) != 3))
+            | ("info" not in test.keys())
+            | ("fit" not in test.keys())
+        ):
             return False
         if type(test["info"]) is not dict:
             return False
-        keys = ['name', 'elem', 'ion', 'wave', 'lvl_low', 'lvl_up']
+        keys = ["name", "elem", "ion", "wave", "lvl_low", "lvl_up"]
         formats = [str, str, int, float, str, str]
         for key, format_ in zip(keys, formats):
             if (key not in test["info"].keys()) | (type(key) is not format_):
@@ -81,7 +87,16 @@ class FitTemplate:
 
         if type(test["fit"]) is not dict:
             return False
-        keys = ['type', 'name', 'n_components', 'guess', 'max_arr', 'min_arr', 'trans_a', 'trans_b']
+        keys = [
+            "type",
+            "name",
+            "n_components",
+            "guess",
+            "max_arr",
+            "min_arr",
+            "trans_a",
+            "trans_b",
+        ]
         formats = [str, list, list, list, list, list, list]
         for key, format_ in zip(keys, formats):
             if (key not in test["fit"].keys()) | (type(key) is not format_):

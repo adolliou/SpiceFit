@@ -8,8 +8,12 @@ import copy
 
 class SpiceRasterWindowL2:
 
-    def __init__(self, hdu: astropy.io.fits.hdu.image.ImageHDU = None, data: np.ndarray = None,
-                 header: astropy.io.fits.header.Header = None) -> None:
+    def __init__(
+        self,
+        hdu: astropy.io.fits.hdu.image.ImageHDU = None,
+        data: np.ndarray = None,
+        header: astropy.io.fits.header.Header = None,
+    ) -> None:
         """
 
         :param hdu:
@@ -28,7 +32,9 @@ class SpiceRasterWindowL2:
                 self.data = copy.deepcopy(data)
                 self.header = copy.deepcopy(header)
             else:
-                raise RuntimeError("SpiceRasterwindow: Please choose between hdu or data and header to set to None.")
+                raise RuntimeError(
+                    "SpiceRasterwindow: Please choose between hdu or data and header to set to None."
+                )
         else:
             raise RuntimeError("SpiceRasterWindow: incorrect input for initialization.")
         if self.header["LEVEL"] != "L2":
@@ -43,7 +49,9 @@ class SpiceRasterWindowL2:
         self.w_xy.wcs.pc[2, 0] = 0
         self.w_spec = copy.deepcopy(self.wcs).sub(["spectral"])
 
-    def check_if_line_within(self, fittemplate: FitTemplate, all_interval=False) -> bool:
+    def check_if_line_within(
+        self, fittemplate: FitTemplate, all_interval=False
+    ) -> bool:
         """
         Check if a given line is within the window.
         :param fittemplate: fittemplate of the line to check
@@ -52,12 +60,16 @@ class SpiceRasterWindowL2:
         """
         wave_interval = self.return_wavelength_interval()
         if all_interval:
-            if (fittemplate.wave_interval[0] > wave_interval[0]) and (fittemplate.wave_interval[1] < wave_interval[1]):
+            if (fittemplate.wave_interval[0] > wave_interval[0]) and (
+                fittemplate.wave_interval[1] < wave_interval[1]
+            ):
                 return True
             else:
                 return False
         else:
-            if (fittemplate.central_wave > wave_interval[0]) and (fittemplate.central_wave < wave_interval[1]):
+            if (fittemplate.central_wave > wave_interval[0]) and (
+                fittemplate.central_wave < wave_interval[1]
+            ):
                 return True
             else:
                 return False
@@ -76,6 +88,37 @@ class SpiceRasterWindowL2:
         return [lamb[0] - 0.5 * dlamb, lamb[-1] + 0.5 * dlamb]
 
     def compute_uncertainty(self, verbose: bool = False) -> None:
-        av_constant_noise_level, sigma = spice_error(data=self.data, header=self.header, verbose=verbose)
+        av_constant_noise_level, sigma = spice_error(
+            data=self.data, header=self.header, verbose=verbose
+        )
         self.uncertainty = sigma
         self.uncertainty_average = av_constant_noise_level
+
+    def return_point_pixels(self, type="xylt"):
+        if type == "xylt":
+            t, l, y, x = np.meshgrid(
+                np.arange(self.data.shape[0]),
+                np.arange(self.data.shape[1]),
+                np.arange(self.data.shape[2]),
+                np.arange(self.data.shape[3]),
+                indexing="ij",
+            )
+            return x, y, l, t
+        elif type == "xyl":
+            l, y, x = np.meshgrid(
+                np.arange(self.data.shape[1]),
+                np.arange(self.data.shape[2]),
+                np.arange(self.data.shape[3]),
+                indexing="ij",
+            )
+            return x, y, l
+        elif type == "xy":
+            y, x = np.meshgrid(
+                np.arange(self.data.shape[2]),
+                np.arange(self.data.shape[3]),
+                indexing="ij",
+            )
+            return x, y
+        elif type == "l":
+            l = np.meshgrid(np.arange(self.data.shape[1]), indexing="ij")
+            return l

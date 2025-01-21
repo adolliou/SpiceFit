@@ -7,7 +7,12 @@ from .SpiceRasterWindow import SpiceRasterWindowL2
 
 
 class SpiceRaster:
-    def __init__(self, path_l2_fits_file: str = None, hdul: astropy.io.fits.HDUList = None, windows="all") -> None:
+    def __init__(
+        self,
+        path_l2_fits_file: str = None,
+        hdul: astropy.io.fits.HDUList = None,
+        windows="all",
+    ) -> None:
         """
 
         :param path_l2_fits_file:
@@ -43,8 +48,12 @@ class SpiceRaster:
         wavecov_str_list = wavecov_str.split(",")
         for el in wavecov_str_list:
             el_split = el.split("-")
-            wavelength_intervals.append([u.Quantity(float(el_split[0]), "nm"),
-                                         u.Quantity(float(el_split[1]), "nm")])
+            wavelength_intervals.append(
+                [
+                    u.Quantity(float(el_split[0]), "nm"),
+                    u.Quantity(float(el_split[1]), "nm"),
+                ]
+            )
         return wavelength_intervals
 
     def get_spectral_windows_names(self) -> list[str]:
@@ -55,7 +64,9 @@ class SpiceRaster:
         spectral_windows_names = []
         for hdu in self.hdul:
             header = hdu.header
-            if (header["EXTNAME"] != "VARIABLE_KEYWORDS") and (header["EXTNAME"] != "WCSDVARR"):
+            if (header["EXTNAME"] != "VARIABLE_KEYWORDS") and (
+                header["EXTNAME"] != "WCSDVARR"
+            ):
                 spectral_windows_names.append(header["EXTNAME"])
         return spectral_windows_names
 
@@ -80,7 +91,9 @@ class SpiceRaster:
             list_windows = [None] * len(self.extension_names)
         return list_windows
 
-    def get_lines_within_wavelength_intervals(self, lines_metadata_file: str = None) -> dict:
+    def get_lines_within_wavelength_intervals(
+        self, lines_metadata_file: str = None
+    ) -> dict:
         """
         :param lines_metadata_file: str, path to a yaml file with personalised lines metadata. If set to none,
         then use the default ones from "metadata_lines_default.yaml"
@@ -95,8 +108,11 @@ class SpiceRaster:
             lines_total = data["list_lines_spice_metadata"]
             for line in lines_total:
                 for ii, interval in enumerate(self.wavelength_intervals):
-                    if u.Quantity(line["central_wavelength"], "anstrom") >= interval[0] and \
-                            u.Quantity(line["central_wavelength"], "angstrom") <= interval[1]:
+                    if (
+                        u.Quantity(line["central_wavelength"], "anstrom") >= interval[0]
+                        and u.Quantity(line["central_wavelength"], "angstrom")
+                        <= interval[1]
+                    ):
                         lines_in_raster[line["name"]] = line
                         lines_in_raster[line["name"]]["window"] = ii
         return lines_in_raster
@@ -109,25 +125,3 @@ class SpiceRaster:
             for ii, win in enumerate(self.windows):
                 if (ii in windows) or (self.windows_ext[win] in windows):
                     win.compute_uncertainty()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,0 +1,56 @@
+
+fit:
+  type: ["gauss",
+         "const"]
+  name: ["ne_8 770.42",
+         "background"]
+  n_components: [ 3, 1 ]
+  guess: [
+    [0.1, 770.42 , 0.25,],
+          [0]
+  ]
+  units: [
+    [ "W/m^2/sr/nm", "Angstrom" , "Angstrom", ],
+    [ "Angstrom" ]
+  ]
+  max_arr: [
+    [100, 771.02, 1.6,],
+    [100]
+  ]
+  min_arr: [
+    [0.001, 769.82, 0.4,],
+     [-0.5]
+  ]
+  trans_a: [
+    [ 1, 1, 1, ],
+    [ 1 ]
+  ]
+  trans_b: [
+    [ 0, 0, 0, ],
+    [ 0 ]
+  ]
+
+
+
+info:
+  name: "Ne VIII 770.42"
+  elem: "ne"
+  ion: 8
+  wave: 770.42
+  unit_wave: "Angstrom"
+  lvl_low: "1$s^2$ 2s $^2S_{1/2}$"
+  lvl_up: "1$s^2$ 2p $P_{3/2}$"
+
+special_instructions:
+  
+
+
+
+
+
+
+
+
+
+
+

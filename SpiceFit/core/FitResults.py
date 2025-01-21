@@ -1,5 +1,5 @@
 import numpy as np
-from FitTemplates import FitTemplate
+from .FitTemplate import FitTemplate
 from .SpiceRasterWindow import SpiceRasterWindowL2
 from ..Util.shared_memory import gen_shmm
 from ..Util.fitting import FittingUtil
@@ -55,6 +55,7 @@ class FitResults:
         self.fit_min_arr = None  # size : (N)
         self.fit_unit = None  # size : (N)
         self.min_data_points = None
+        self.chi2_limit = None
 
         # dicts to create and gain access to shared memory objects
         self._data_dict = None  # size : (time, lambda, Y , X)
@@ -85,6 +86,7 @@ class FitResults:
         parallelism: bool = True,
         count: int = None,
         min_data_points: int = 5,
+        chi2_limit: float = 20.0,
     ):
         """
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
@@ -93,10 +95,11 @@ class FitResults:
         :param parallelism: allow parallelism or not.
         :param count: cpu counts to use for parallelism.
         :param min_data_points: minimum data points for each pixel with for the fitting.
-
+        :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
         """
 
         self.min_data_points = min_data_points
+        self.chi2_limit = chi2_limit
         if count is None:
             self.count = mp.cpu_count()
         else:
@@ -109,22 +112,37 @@ class FitResults:
             spicewindow.compute_uncertainty(verbose=False)
         if parallelism:
             self.lock = Lock()
+
             self.gen_shmm(spicewindow)
 
-            # Get indexes and positions in (i, j) for all pixels of the raster
-            i_array, j_array = np.meshgrid(
+            self._flag_pixels_with_not_enough_data()
+
+            # Get indexes and positions in (t, i, j) for all pixels of the raster
+            t_array, i_array, j_array = np.meshgrid(
                 np.arange(self.data.shape[0]),
-                np.arange(self.data.shape[1]),
+                np.arange(self.data.shape[2]),
+                np.arange(self.data.shape[3]),
                 indexing="ij",
             )
+            t_array = t_array.flatten()
             i_array = i_array.flatten()
             j_array = j_array.flatten()
-            indexes = i_array * self.data.shape[1] + j_array
+            indexes = np.arange(0, i_array.size)
+
+            shmm_flagged_pixels, flagged_pixels = gen_shmm(
+                create=False, **self._flagged_pixels_dict
+            )
+            is_not_flagged = ~flagged_pixels[t_array, i_array, j_array]
 
             processes = []
 
-            for i, j, index in zip(i_array, j_array, indexes):
-                kwargs = {"i": i, "j": j, "index": index, "lock": self.lock}
+            for t, i, j, index in zip(
+                t_array[is_not_flagged],
+                i_array[is_not_flagged],
+                j_array[is_not_flagged],
+                indexes[is_not_flagged],
+            ):
+                kwargs = {"t": t, "i": i, "j": j, "index": index, "lock": self.lock}
 
                 processes.append(
                     Process(target=self._fit_pixel_parallelism, kwargs=kwargs)
@@ -178,7 +196,6 @@ class FitResults:
 
             shmm_data, data = gen_shmm(create=False, **self._data_dict)
             shmm_lambda_, lambda_ = gen_shmm(create=False, **self._lambda_dict)
-
             shmm_uncertainty, uncertainty = gen_shmm(
                 create=False, **self._uncertainty_dict
             )
@@ -186,6 +203,9 @@ class FitResults:
                 create=False, **self._fit_coeffs_dict
             )
             shmm_fit_chi2, fit_chit2 = gen_shmm(create=False, **self._fit_chi2_dict)
+            shmm_flagged_pixels, flagged_pixels = gen_shmm(
+                create=False, **self._flagged_pixels_dict
+            )
 
             # TODO save all results in permanent addresses before unlinking all shmm objects
 
@@ -199,8 +219,10 @@ class FitResults:
             shmm_fit_coeffs.unlink()
             shmm_fit_chi2.close()
             shmm_fit_chi2.unlink()
+            shmm_flagged_pixels.close()
+            shmm_flagged_pixels.unlink()
 
-    def _fit_pixel_parallelism(self, i, j, index, lock):
+    def _fit_pixel_parallelism(self, t, i, j, index, lock):
         shmm_data_all, data_all = gen_shmm(create=False, **self._data_dict)
         shmm_lambda_all, lambda_all = gen_shmm(create=False, **self._lambda_dict)
         shmm_uncertainty_all, uncertainty_all = gen_shmm(
@@ -210,13 +232,54 @@ class FitResults:
             create=False, **self._fit_coeffs_dict
         )
         shmm_fit_chi2_all, fit_chit2_all = gen_shmm(create=False, **self._fit_chi2_dict)
+        shmm_flagged_pixels, flagged_pixels = gen_shmm(
+            create=False, **self._flagged_pixels_dict
+        )
 
-        data = data_all[i, j]
-        uncertainty = uncertainty_all[i, j]
-        lambda_ = lambda_all[i, j]
+        data = data_all[t, :, i, j]
+        uncertainty = uncertainty_all[t, :, i, j]
+        lambda_ = lambda_all[t, :, i, j]
         guess = self.fit_guess
         max_arr = self.fit_max_arr
         min_arr = self.fit_min_arr
+        # check which datapoints are nans
+        isnotnan = ~np.isnan(data)
+        if isnotnan.sum() > self.min_data_points:
+
+            popt, pcov = curve_fit(
+                f=self.fit_function,
+                xdata=lambda_[isnotnan],
+                ydata=data[isnotnan],
+                p0=guess,
+                sigma=uncertainty[isnotnan],
+                bound=(min_arr, max_arr),
+                nan_policy="raise",
+                method="trf",
+                full_output=False,
+            )
+
+            chi2 = np.diag(pcov)
+            if chi2 <= self.chi2_limit:
+                lock.acquire()
+                fit_coeffs_all[:, t, i, j] = popt
+                fit_chit2_all[t, i, j] = chi2
+                lock.release()
+            else:
+                lock.acquire()
+                flagged_pixels[t, i, j] = True
+                lock.release()
+
+        else:
+            lock.acquire()
+            flagged_pixels[t, i, j] = True
+            lock.release()
+
+        shmm_data_all.close()
+        shmm_lambda_all.close()
+        shmm_uncertainty_all.close()
+        shmm_fit_coeffs_all.close()
+        shmm_fit_chi2_all.close()
+        shmm_flagged_pixels.close()
 
     def _gen_function(self):
         names = self.fit_template.parinfo["fit"]["names"]
@@ -286,6 +349,17 @@ class FitResults:
                 raise ValueError("Not consistent units among fitting parameters")
             self.fit_unit.append(p.unit)
 
+    def _flag_pixels_with_not_enough_data(self):
+
+        shmm_data, data = gen_shmm(create=False, **self._data_dict)
+        shmm_flagged_pixels, flagged_pixels = gen_shmm(
+            create=False, **self._flagged_pixels_dict
+        )
+        flagged_pixels[...] = np.isnan(data).sum(axis=1) > 0.001
+
+        shmm_data.close()
+        shmm_flagged_pixels.close()
+
     @staticmethod
     def _transform_to_conventional_unit(q: u.Quantity) -> u.Quantity:
         """
@@ -353,7 +427,7 @@ class FitResults:
                     spicewindow.data.shape[2],
                     spicewindow.data.shape[3],
                 ),
-                dtype="int16",
+                dtype="bool",
             ),
         )
         self._flagged_pixels_dict = None  # size : (time, Y , X)

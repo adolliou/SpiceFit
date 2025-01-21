@@ -5,7 +5,10 @@ from multiprocessing.shared_memory import SharedMemory
 def gen_shmm(create=False, name=None, ndarray=None, size=0, shape=None, dtype=None):
     assert (type(ndarray) != type(None) or size != 0) or type(name) != type(None)
     assert type(ndarray) != type(None) or type(shape) != type(None)
-    dtype = ndarray.dtype if dtype is None else dtype = dtype
+    if dtype is None:
+        dtype = ndarray.dtype
+    else:
+        dtype = dtype
     size = size if type(ndarray) == type(None) else ndarray.nbytes
     shmm = SharedMemory(create=create, size=size, name=name)
     shmm_data = np.ndarray(shape=shape if type(ndarray) == type(None) else ndarray.shape,

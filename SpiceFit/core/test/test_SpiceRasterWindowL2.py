@@ -20,10 +20,6 @@ def hdu():
 
 class TestSpiceRasterWindowL2:
 
-    def test_SpiceRasterWindowL2(self, hdu):
-
-        s1 = SpiceRasterWindowL2(hdu=hdu)
-
     def test_return_point_pixels(self, hdu):
 
         s1 = SpiceRasterWindowL2(hdu=hdu)
@@ -49,4 +45,3 @@ class TestSpiceRasterWindowL2:
         data = s1.data[0, 0, :, :]
         assert np.nanmax(xx) == 2
         assert xx.shape == data.shape
-        breakpoint()

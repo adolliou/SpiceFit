@@ -37,6 +37,7 @@ info:
   elem: "ne"
   ion: 8
   wave: 770.42
+  unit_wave: "Angstrom"
   lvl_low: "1$s^2$ 2s $^2S_{1/2}$"
   lvl_up: "1$s^2$ 2p $P_{3/2}$"
 

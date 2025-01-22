@@ -113,7 +113,7 @@ class FitResults:
         :param cpu_count: cpu counts to use for parallelism.
         :param min_data_points: minimum data points for each pixel with for the fitting.
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
-        :param display_progress_bar display the progress bar
+        :param display_progress_bar: display the progress bar
         """
 
         self.min_data_points = min_data_points
@@ -508,8 +508,13 @@ class FitResults:
         else:
             raise ValueError(f"Cannot convert {quantity} to conventional unit")
 
-    def quicklook(self):
-
+    def quicklook(self, coeff_index: int, fig = None, ax = None):
+        """
+        Plot a quicklook plot of the given coefficient index
+        :param coeff_index: coefficient index to plot
+        :param fig:
+        :param ax:
+        """
         if self.spicewindow is None:
             raise ValueError("The data is still not fitted")
 
@@ -523,14 +528,25 @@ class FitResults:
         dlon = dlon.to("arcsec").value
         dlat = dlat.to("arcsec").value
 
-        fig = plt.figure()
-        ax = fig.add_subplot()
-        im = ax.imshow(self.fit_results["coeff"][0, 0, :, :], origin="lower", interpolation="none",
+        if fig is None:
+            fig = plt.figure()
+        if ax is None:
+            ax = fig.add_subplot()
+
+        im = ax.imshow(self.fit_results["coeff"][coeff_index, 0, :, :], origin="lower", interpolation="none",
                        extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
                                latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat), )
         plt.colorbar(im, ax=ax)
         ax.set_xlabel("Solar-X [arcsec]")
         ax.set_ylabel("Solar-Y [arcsec]")
         fig.savefig("test.pdf")
+
+    def check_spectra(self, position = "random"):
+        """
+
+        :param position:
+        """
+
+
 
     # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

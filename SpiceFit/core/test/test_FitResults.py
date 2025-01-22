@@ -26,8 +26,7 @@ def spicewindow(hdu):
 
 @pytest.fixture
 def fittemplate():
-    path_yaml = ("C:/Users/adolliou/PycharmProjects/SpiceFit/SpiceFit/core/test/fit_templates/ne_8_770_42_1c.template"
-                 ".yaml")
+    path_yaml = "C:/Users/dolliou/Desktop/code/SpiceFit/SpiceFit/core/test/fit_templates/ne_8_770_42_1c.template.yaml"
     return FitTemplate(filename=path_yaml)
 
 

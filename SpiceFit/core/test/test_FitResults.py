@@ -35,4 +35,6 @@ class TestFitResults:
 
     def test_fit_window_standard(self, spicewindow, fittemplate):
         f = FitResults(fit_template=fittemplate, verbose=False)
-        f.fit_window_standard(spicewindow=spicewindow,parallelism=True, count=8, )
+        f.fit_window_standard(spicewindow=spicewindow, parallelism=True, cpu_count=8, )
+
+

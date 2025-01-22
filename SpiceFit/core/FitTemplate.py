@@ -139,26 +139,39 @@ class FitTemplate:
             "trans_b",
         ]
         formats = [
-            str,
-            list,
-            list,
-            list,
-            list,
-            list,
-            list,
-            list,
-            list,
+            [list, str],
+            [list, str],
+            [list, int],
+            [list, list, float | int],
+            [list, list, str],
+            [list, list, float | int],
+            [list, list, float | int],
+            [list, list, float | int],
+            [list, list, float | int],
         ]
         for key, format_ in zip(keys, formats):
             if key not in test["fit"].keys():
                 raise ValueError(f"key {key} must exist ")
-            elif type(test["info"][key]) is not format_:
-                raise ValueError(f"key {key} must be in {format_}")
 
-            if format_ is list:
-                for sub in test["fit"][key]:
-                    if type(sub) is not list:
-                        raise ValueError(f"{key} a list")
+            if not isinstance(test["fit"][key], format_[0]):
+                breakpoint()
+                raise ValueError(f"key {key}(0) must have the right format {format_[0]}")
+            for xx in range(len(test["fit"][key])):
+                if not isinstance(test["fit"][key][xx], format_[1]):
+                    raise ValueError(f"key {key}(1) must have the right format {format_[1]}")
+                if len(format_) == 3:
+                    for yy in range(len(test["fit"][key][xx])):
+                        if not isinstance(test["fit"][key][xx][yy], format_[2]):
+                            breakpoint()
+                            raise ValueError(f"key {key}(2) must have the right format {format_[2]}")
+
+            # elif ~isinstance(test["fit"][key], format_):
+            #     breakpoint()
+            #     raise ValueError(f"key {key} must be in {format_}")
+            # if format_ is list:
+            #     for sub in test["fit"][key]:
+            #         if type(sub) is not list:
+            #             raise ValueError(f"{key} a list")
         if (len(test.keys()) == 3) and ("special_instructions" not in test.keys()):
             raise ValueError(f"Fittemplate third key must be 'special_instructions'")
         return True

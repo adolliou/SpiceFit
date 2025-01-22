@@ -1,13 +1,17 @@
 import numpy as np
 from .FitTemplate import FitTemplate
 from .SpiceRasterWindow import SpiceRasterWindowL2
-from ..Util.shared_memory import gen_shmm
-from ..Util.fitting import FittingUtil
+from ..util.shared_memory import gen_shmm
+from ..util.fitting import FittingUtil
+from ..util.common_util import CommonUtil
+from ..util.plotting_fits import PlotFits
 import copy
 from multiprocessing import Process, Lock
 import multiprocessing as mp
 from scipy.optimize import curve_fit
 import astropy.units as u
+import tqdm
+from matplotlib import pyplot as plt
 
 
 def flatten(xss):
@@ -24,9 +28,9 @@ class FitResults:
     conventional_spectral_units = "W/ (m2 sr nm)"
 
     def __init__(
-        self,
-        fit_template: FitTemplate,
-        verbose=False,
+            self,
+            fit_template: FitTemplate,
+            verbose=False,
     ):
         """
 
@@ -53,7 +57,6 @@ class FitResults:
         self.fit_guess = None  # size : (N)
         self.fit_max_arr = None  # size : (N)
         self.fit_min_arr = None  # size : (N)
-        self.fit_unit = None  # size : (N)
         self.min_data_points = None
         self.chi2_limit = None
 
@@ -65,45 +68,62 @@ class FitResults:
         self._fit_chi2_dict = None  # size : (N, time, Y , X)
         self._flagged_pixels_dict = None  # size : (time, Y , X)
 
+        self._unit_coeffs_during_fitting = None  # size : (N)
         self.fit_results = {}
-        for jj, name in enumerate(self.fit_template.parinfo["fit"]["name"]):
-            self.fit_results[name] = {
-                "coeffs": [],
-                "type": self.fit_template.parinfo["fit"]["type"],
-                "max_arr": self.fit_template.parinfo["fit"]["max_arr"][jj],
-                "min_arr": self.fit_template.parinfo["fit"]["max_arr"][jj],
-                "trans_a": self.fit_template.parinfo["fit"]["max_arr"][jj],
-                "trans_b": self.fit_template.parinfo["fit"]["max_arr"][jj],
-                "n_components": self.fit_template.parinfo["fit"]["ncomponents"][jj],
-            }
+        # for jj, name in enumerate(self.fit_template.parinfo["fit"]["name"]):
+        #     self.fit_results[name] = {
+        #         "coeffs": [],
+        #         "type": self.fit_template.parinfo["fit"]["type"],
+        #         "max_arr": self.fit_template.parinfo["fit"]["max_arr"][jj],
+        #         "min_arr": self.fit_template.parinfo["fit"]["max_arr"][jj],
+        #         "trans_a": self.fit_template.parinfo["fit"]["max_arr"][jj],
+        #         "trans_b": self.fit_template.parinfo["fit"]["max_arr"][jj],
+        #         "n_components": self.fit_template.parinfo["fit"]["n_components"][jj],
+        #     }
+        self.fit_results = {
+            "coeff": [],  # (N, time, Y , X)
+            "chi2": [],  # (time, Y , X)
+            "flagged_pixels": [],  # (time, Y , X)
+            "radiance": [],  # (time, Y , X)
+            "type": self.fit_template.parinfo["fit"]["type"],
+            "name": self.fit_template.parinfo["fit"]["name"],
+            "coeff_unit": []
+        }
 
         self.lock = None
-        self.count = None
+        self.cpu_count = None
+        self.display_progress_bar = None
+
+        self.spicewindow = None
 
     def fit_window_standard(
-        self,
-        spicewindow: SpiceRasterWindowL2,
-        parallelism: bool = True,
-        count: int = None,
-        min_data_points: int = 5,
-        chi2_limit: float = 20.0,
+            self,
+            spicewindow: SpiceRasterWindowL2,
+            parallelism: bool = True,
+            cpu_count: int = None,
+            min_data_points: int = 5,
+            chi2_limit: float = 20.0,
+            display_progress_bar=True
     ):
         """
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
 
         :param spicewindow: SpiceRasterWindowL2 class
         :param parallelism: allow parallelism or not.
-        :param count: cpu counts to use for parallelism.
+        :param cpu_count: cpu counts to use for parallelism.
         :param min_data_points: minimum data points for each pixel with for the fitting.
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
+        :param display_progress_bar display the progress bar
         """
 
         self.min_data_points = min_data_points
         self.chi2_limit = chi2_limit
-        if count is None:
-            self.count = mp.cpu_count()
+        self.display_progress_bar = display_progress_bar
+
+        if cpu_count is None:
+            self.cpu_count = mp.cpu_count()
         else:
-            self.count = count
+            self.cpu_count = cpu_count
         self._gen_function()
 
         self._prepare_fitting_parameters()
@@ -113,15 +133,102 @@ class FitResults:
         if parallelism:
             self.lock = Lock()
 
-            self.gen_shmm(spicewindow)
+            # self.gen_shmm(spicewindow)
+            data_ = copy.deepcopy(spicewindow.data)
+            data_ = u.Quantity(data_, spicewindow.header["BUNIT"])
+
+            xx, yy, ll, tt = spicewindow.return_point_pixels()
+            coords, lambda_, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+            lambda_ = lambda_.to(FitResults.conventional_lambda_units).value
+            data_ = data_.to(FitResults.conventional_spectral_units).value
+
+            self.lambda_unit = FitResults.conventional_lambda_units
+            self.data_unit = FitResults.conventional_spectral_units
+
+            shmm_data, data = gen_shmm(create=True, ndarray=copy.deepcopy(data_))
+            shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=copy.deepcopy(lambda_))
+            shmm_uncertainty, uncertainty = gen_shmm(
+                create=True,
+                ndarray=copy.deepcopy(
+                    spicewindow.uncertainty["Total"]
+                    .to(FitResults.conventional_spectral_units)
+                    .value
+                ),
+            )
+            shmm_fit_coeffs, fit_coeffs = gen_shmm(
+                create=True,
+                ndarray=np.zeros(
+                    (
+                        np.sum(self.fit_template.parinfo["fit"]["n_components"]),
+                        spicewindow.data.shape[0],
+                        spicewindow.data.shape[2],
+                        spicewindow.data.shape[3],
+                    ),
+                    dtype="float",
+                ),
+            )
+            shmm_fit_chi2, fit_chi2 = gen_shmm(
+                create=True,
+                ndarray=np.zeros(
+                    (
+                        spicewindow.data.shape[0],
+                        spicewindow.data.shape[2],
+                        spicewindow.data.shape[3],
+                    ),
+                    dtype="float",
+                ),
+            )
+
+            shmm_flagged_pixels, flagged_pixels = gen_shmm(
+                create=True,
+                ndarray=np.zeros(
+                    (
+                        spicewindow.data.shape[0],
+                        spicewindow.data.shape[2],
+                        spicewindow.data.shape[3],
+                    ),
+                    dtype="bool",
+                ),
+            )
+
+            self._data_dict = {
+                "name": shmm_data.name,
+                "dtype": data.dtype,
+                "shape": data.shape,
+            }
+            self._lambda_dict = {
+                "name": shmm_lambda_.name,
+                "dtype": lambda_.dtype,
+                "shape": lambda_.shape,
+            }
+            self._uncertainty_dict = {
+                "name": shmm_uncertainty.name,
+                "dtype": uncertainty.dtype,
+                "shape": uncertainty.shape,
+            }
+            self._fit_coeffs_dict = {
+                "name": shmm_fit_coeffs.name,
+                "dtype": fit_coeffs.dtype,
+                "shape": fit_coeffs.shape,
+            }
+            self._fit_chi2_dict = {
+                "name": shmm_fit_chi2.name,
+                "dtype": fit_chi2.dtype,
+                "shape": fit_chi2.shape,
+            }
+            self._flagged_pixels_dict = {
+                "name": shmm_flagged_pixels.name,
+                "dtype": flagged_pixels.dtype,
+                "shape": flagged_pixels.shape,
+            }
 
             self._flag_pixels_with_not_enough_data()
 
             # Get indexes and positions in (t, i, j) for all pixels of the raster
             t_array, i_array, j_array = np.meshgrid(
-                np.arange(self.data.shape[0]),
-                np.arange(self.data.shape[2]),
-                np.arange(self.data.shape[3]),
+                np.arange(spicewindow.data.shape[0]),
+                np.arange(spicewindow.data.shape[2]),
+                np.arange(spicewindow.data.shape[3]),
                 indexing="ij",
             )
             t_array = t_array.flatten()
@@ -133,19 +240,29 @@ class FitResults:
                 create=False, **self._flagged_pixels_dict
             )
             is_not_flagged = ~flagged_pixels[t_array, i_array, j_array]
+            print(f'{len(indexes[is_not_flagged])=}')
+            print(f'{len(indexes)=}')
 
             processes = []
+            t_array_to_fit = t_array[is_not_flagged],
+            i_array_to_fit = i_array[is_not_flagged],
+            j_array_to_fit = j_array[is_not_flagged],
+            indexes_to_fit = indexes[is_not_flagged],
 
-            for t, i, j, index in zip(
-                t_array[is_not_flagged],
-                i_array[is_not_flagged],
-                j_array[is_not_flagged],
-                indexes[is_not_flagged],
-            ):
-                kwargs = {"t": t, "i": i, "j": j, "index": index, "lock": self.lock}
+            t_array_to_fit_sublists = np.array_split(t_array_to_fit[0], self.cpu_count)
+            i_array_to_fit_sublists = np.array_split(i_array_to_fit[0], self.cpu_count)
+            j_array_to_fit_sublists = np.array_split(j_array_to_fit[0], self.cpu_count)
+            indexes_to_fit_sublists = np.array_split(indexes_to_fit[0], self.cpu_count)
+
+            for t_list, i_list, j_list, index_list in zip(t_array_to_fit_sublists,
+                                                          i_array_to_fit_sublists,
+                                                          j_array_to_fit_sublists,
+                                                          indexes_to_fit_sublists):
+                kwargs = {"t_list": t_list, "i_list": i_list, "j_list": j_list, "index_list": index_list,
+                          "lock": self.lock}
 
                 processes.append(
-                    Process(target=self._fit_pixel_parallelism, kwargs=kwargs)
+                    Process(target=self._fit_multiple_pixels_parallelism, kwargs=kwargs)
                 )
 
             lenp = len(processes)
@@ -157,14 +274,14 @@ class FitResults:
                 # Wait here as long as the number of alive jobs is superior to the number of counts.
 
                 while (
-                    np.sum(
-                        [
-                            p.is_alive()
-                            for mm, p in zip(range(lenp), processes)
-                            if (mm not in is_close)
-                        ]
-                    )
-                    > self.count
+                        np.sum(
+                            [
+                                p.is_alive()
+                                for mm, p in zip(range(lenp), processes)
+                                if (mm not in is_close)
+                            ]
+                        )
+                        > self.cpu_count
                 ):
                     pass
                 # Close the finished processes before starting a new job to save memory.
@@ -176,14 +293,14 @@ class FitResults:
                             is_close.append(kk)
             # Waiting for the remaining jobs to complete
             while (
-                np.sum(
-                    [
-                        p.is_alive()
-                        for mm, p in zip(range(lenp), processes)
-                        if (mm not in is_close)
-                    ]
-                )
-                != 0
+                    np.sum(
+                        [
+                            p.is_alive()
+                            for mm, p in zip(range(lenp), processes)
+                            if (mm not in is_close)
+                        ]
+                    )
+                    != 0
             ):
                 pass
             # Close the final finished jobs
@@ -194,20 +311,27 @@ class FitResults:
                         P.close()
                         is_close.append(kk)
 
-            shmm_data, data = gen_shmm(create=False, **self._data_dict)
-            shmm_lambda_, lambda_ = gen_shmm(create=False, **self._lambda_dict)
-            shmm_uncertainty, uncertainty = gen_shmm(
-                create=False, **self._uncertainty_dict
-            )
-            shmm_fit_coeffs, fit_coeffs = gen_shmm(
-                create=False, **self._fit_coeffs_dict
-            )
-            shmm_fit_chi2, fit_chit2 = gen_shmm(create=False, **self._fit_chi2_dict)
-            shmm_flagged_pixels, flagged_pixels = gen_shmm(
-                create=False, **self._flagged_pixels_dict
-            )
-
             # TODO save all results in permanent addresses before unlinking all shmm objects
+
+            shmm_fit_coeffs_all, fit_coeffs_all = gen_shmm(create=False, **self._fit_coeffs_dict)
+            shmm_fit_chi2_all, fit_chit2_all = gen_shmm(create=False, **self._fit_chi2_dict)
+            shmm_flagged_pixels, flagged_pixels = gen_shmm(create=False, **self._flagged_pixels_dict)
+
+            coeffs_cp = copy.deepcopy(fit_coeffs_all)
+            self.fit_results["unit"] = flatten(self.fit_template.parinfo["fit"]["units"])
+            trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
+            trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
+
+            # goes back to the proper units :
+            for n in range(coeffs_cp.shape[0]):
+                coeffs_cp[n, :, :, :] = u.Quantity(coeffs_cp[n, :, :, :],
+                                                   self._unit_coeffs_during_fitting[n]).to(
+                    self.fit_results["unit"][n]).value
+                coeffs_cp[n, :, :, :] = (coeffs_cp[n, :, :, :] - trans_b[n]) / trans_a[n]
+
+            self.fit_results["coeff"] = coeffs_cp
+            self.fit_results["chi2"] = copy.deepcopy(fit_chit2_all)
+            self.fit_results["flagged_pixels"] = copy.deepcopy(flagged_pixels)
 
             shmm_data.close()
             shmm_data.unlink()
@@ -222,7 +346,19 @@ class FitResults:
             shmm_flagged_pixels.close()
             shmm_flagged_pixels.unlink()
 
+            self.spicewindow = copy.deepcopy(spicewindow)
+
+    def _fit_multiple_pixels_parallelism(self, t_list, i_list, j_list, index_list, lock):
+
+        if self.display_progress_bar:
+            for t, i, j, index in tqdm.tqdm(zip(t_list, i_list, j_list, index_list), total=len(t_list)):
+                self._fit_pixel_parallelism(t, i, j, index, lock)
+        else:
+            for t, i, j, index in zip(t_list, i_list, j_list, index_list):
+                self._fit_pixel_parallelism(t, i, j, index, lock)
+
     def _fit_pixel_parallelism(self, t, i, j, index, lock):
+
         shmm_data_all, data_all = gen_shmm(create=False, **self._data_dict)
         shmm_lambda_all, lambda_all = gen_shmm(create=False, **self._lambda_dict)
         shmm_uncertainty_all, uncertainty_all = gen_shmm(
@@ -252,13 +388,13 @@ class FitResults:
                 ydata=data[isnotnan],
                 p0=guess,
                 sigma=uncertainty[isnotnan],
-                bound=(min_arr, max_arr),
+                bounds=(min_arr, max_arr),
                 nan_policy="raise",
                 method="trf",
                 full_output=False,
             )
 
-            chi2 = np.diag(pcov)
+            chi2 = np.sum(np.diag(pcov))
             if chi2 <= self.chi2_limit:
                 lock.acquire()
                 fit_coeffs_all[:, t, i, j] = popt
@@ -282,10 +418,10 @@ class FitResults:
         shmm_flagged_pixels.close()
 
     def _gen_function(self):
-        names = self.fit_template.parinfo["fit"]["names"]
+        type = self.fit_template.parinfo["fit"]["type"]
         only_gaussi_const = np.logical_and(
-            not any([n in ["gauss", "const"] for n in names]),
-            len(np.array(names)[names == "const"]) == 1,
+            all([n in ["gauss", "const"] for n in type]),
+            len(np.array(type)[np.array(type) == "const"]) == 1,
         )
         if only_gaussi_const:
             self.fit_function = self._gen_function_only_gaussians()
@@ -293,11 +429,11 @@ class FitResults:
             self.fit_function = self._gen_function_exec()
 
     def _gen_function_only_gaussians(self):
-        names = self.fit_template.parinfo["fit"]["names"]
-
+        type = self.fit_template.parinfo["fit"]["type"]
         # Set the constant at the -1 index
-        index_background = np.where(np.array(names) == "const")[0]
-        if index_background != np.array(names) - 1:
+        index_background = np.where(np.array(type) == "const")[0][0]
+        if index_background != len(type) - 1:
+            breakpoint()
             for key in self.fit_template.parinfo["fit"].keys():
                 back_value = copy.deepcopy(
                     self.fit_template.parinfo["fit"][key][index_background]
@@ -315,15 +451,15 @@ class FitResults:
     def _prepare_fitting_parameters(self):
         p0 = flatten(self.fit_template.parinfo["fit"]["guess"])
         max_arr = flatten(self.fit_template.parinfo["fit"]["max_arr"])
-        min_arr = flatten(self.fit_template.parinfo["fit"]["max_arr"])
-        unit = flatten(self.fit_template.parinfo["fit"]["unit"])
+        min_arr = flatten(self.fit_template.parinfo["fit"]["min_arr"])
+        unit = flatten(self.fit_template.parinfo["fit"]["units"])
         trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
         trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
 
         self.fit_guess = []
         self.fit_max_arr = []
         self.fit_min_arr = []
-        self.fit_unit = []
+        self._unit_coeffs_during_fitting = []
 
         # convert into the right units ("W/ (m2 sr nm)" and "nm)
         for jj in range(len(p0)):
@@ -344,10 +480,9 @@ class FitResults:
             self.fit_guess.append(p.value)
             self.fit_max_arr.append(mx.value)
             self.fit_min_arr.append(mn.value)
-
             if (p.unit != mx.unit) or (p.unit != mn.unit):
                 raise ValueError("Not consistent units among fitting parameters")
-            self.fit_unit.append(p.unit)
+            self._unit_coeffs_during_fitting.append(p.unit)
 
     def _flag_pixels_with_not_enough_data(self):
 
@@ -355,117 +490,47 @@ class FitResults:
         shmm_flagged_pixels, flagged_pixels = gen_shmm(
             create=False, **self._flagged_pixels_dict
         )
-        flagged_pixels[...] = np.isnan(data).sum(axis=1) > 0.001
+        flagged_pixels[...] = (~np.isnan(data)).sum(axis=1) < self.min_data_points
 
         shmm_data.close()
         shmm_flagged_pixels.close()
 
     @staticmethod
-    def _transform_to_conventional_unit(q: u.Quantity) -> u.Quantity:
+    def _transform_to_conventional_unit(quantity: u.Quantity) -> u.Quantity:
         """
         transform an u.quantity into either a nm or a W/ (m2 sr nm), which are the conventional units for the fitting.
-        :param q:
+        :param quantity:
         """
-        if q.is_equivalent(FitResults.conventional_lambda_units):
-            return q.to(FitResults.conventional_lambda_units)
-        elif q.is_equivalent(FitResults.conventional_spectral_units):
-            return q.to(FitResults.conventional_spectral_units)
+        if quantity.unit.is_equivalent(FitResults.conventional_lambda_units):
+            return quantity.to(FitResults.conventional_lambda_units)
+        elif quantity.unit.is_equivalent(FitResults.conventional_spectral_units):
+            return quantity.to(FitResults.conventional_spectral_units)
         else:
-            raise ValueError(f"Cannot convert {q} to conventional unit")
+            raise ValueError(f"Cannot convert {quantity} to conventional unit")
 
-    def gen_shmm(self, spicewindow: SpiceRasterWindowL2):
-        data_ = copy.deepcopy(spicewindow.data)
-        data_ = u.Quantity(data_, spicewindow.header["BUNIT"])
+    def quicklook(self):
 
-        xx, yy, ll, tt = spicewindow.return_point_pixels()
-        coords, lambda_, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
-        lambda_ = lambda_.to(FitResults.conventional_lambda_units).value
-        data_ = data_.to(FitResults.conventional_spectral_units).value
+        if self.spicewindow is None:
+            raise ValueError("The data is still not fitted")
 
-        self.lambda_unit = FitResults.conventional_lambda_units
-        self.data_unit = FitResults.conventional_spectral_units
+        w_xy = self.spicewindow.w_xy
 
-        shmm_data, data = gen_shmm(create=True, ndarray=data_)
-        shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=lambda_)
-        shmm_uncertainty, uncertainty = gen_shmm(
-            create=True,
-            ndarray=copy.deepcopy(
-                spicewindow.uncertainty["Total"]
-                .to(FitResults.conventional_spectral_units)
-                .value
-            ),
-        )
-        shmm_fit_coeffs, fit_coeffs = gen_shmm(
-            create=True,
-            ndarray=np.zeros(
-                (
-                    np.sum(self.fit_template.parinfo["fit"]["n_components"]),
-                    spicewindow.data.shape[0],
-                    spicewindow.data.shape[2],
-                    spicewindow.data.shape[3],
-                ),
-                dtype="float",
-            ),
-        )
-        shmm_fit_chi2, fit_chi2 = gen_shmm(
-            create=True,
-            ndarray=np.zeros(
-                (
-                    spicewindow.data.shape[0],
-                    spicewindow.data.shape[2],
-                    spicewindow.data.shape[3],
-                ),
-                dtype="float",
-            ),
-        )
+        x, y = np.meshgrid(np.arange(self.spicewindow.data.shape[3]), np.arange(self.spicewindow.data.shape[2]))
+        coords = w_xy.pixel_to_world(x, y)
+        long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
+        long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
+        latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
+        dlon = dlon.to("arcsec").value
+        dlat = dlat.to("arcsec").value
 
-        shmm_flagged_pixels, flagged_pixels = gen_shmm(
-            create=True,
-            ndarray=np.zeros(
-                (
-                    spicewindow.data.shape[0],
-                    spicewindow.data.shape[2],
-                    spicewindow.data.shape[3],
-                ),
-                dtype="bool",
-            ),
-        )
-        self._flagged_pixels_dict = None  # size : (time, Y , X)
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        im = ax.imshow(self.fit_results["coeff"][0, 0, :, :], origin="lower", interpolation="none",
+                       extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+                               latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat), )
+        plt.colorbar(im, ax=ax)
+        ax.set_xlabel("Solar-X [arcsec]")
+        ax.set_ylabel("Solar-Y [arcsec]")
+        fig.savefig("test.pdf")
 
-        self._data_dict = {
-            "name": shmm_data.name,
-            "dtype": data.dtype,
-            "shape": data.shape,
-        }
-        self._lambda_dict = {
-            "name": shmm_lambda_.name,
-            "dtype": lambda_.dtype,
-            "shape": lambda_.shape,
-        }
-        self._uncertainty_dict = {
-            "name": shmm_uncertainty.name,
-            "dtype": uncertainty.dtype,
-            "shape": uncertainty.shape,
-        }
-        self._fit_coeffs_dict = {
-            "name": shmm_fit_coeffs.name,
-            "dtype": fit_coeffs.dtype,
-            "shape": fit_coeffs.shape,
-        }
-        self._fit_chi2_dict = {
-            "name": shmm_fit_chi2.name,
-            "dtype": fit_chi2.dtype,
-            "shape": fit_chi2.shape,
-        }
-        self._flagged_pixels_dict = {
-            "name": shmm_flagged_pixels.name,
-            "dtype": flagged_pixels.dtype,
-            "shape": flagged_pixels.shape,
-        }
-
-        shmm_data.close()
-        shmm_uncertainty.close()
-        shmm_lambda_.close()
-        shmm_fit_coeffs.close()
-        shmm_fit_chi2.close()
-        shmm_flagged_pixels.close()
+    # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

@@ -6,7 +6,7 @@ fit:
          "background"]
   n_components: [ 3, 1 ]
   guess: [
-    [0.1, 770.42 , 0.25,],
+    [0.1, 770.42 , 0.4,],
           [0]
   ]
   units: [

@@ -47,6 +47,7 @@ class SpiceRasterWindowL2:
         self.w_xyt = copy.deepcopy(self.wcs).dropaxis(2)
         self.w_xy = copy.deepcopy(self.w_xyt)
         self.w_xy.wcs.pc[2, 0] = 0
+        self.w_xy = self.w_xy.dropaxis(2)
         self.w_spec = copy.deepcopy(self.wcs).sub(["spectral"])
 
     def check_if_line_within(

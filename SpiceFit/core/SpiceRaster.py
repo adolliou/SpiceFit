@@ -1,9 +1,9 @@
 import astropy.io.fits
 from astropy.io import fits
-from .FitTemplates import *
 from yaml import load, Loader
 from pathlib import Path
 from .SpiceRasterWindow import SpiceRasterWindowL2
+import astropy.units as u
 
 
 class SpiceRaster:

@@ -95,37 +95,41 @@ class FitTemplate:
             test = self.parinfo
 
         if type(test) is not dict:
-            raise ValueError(f"template must be a dictionary")
+            raise ValueError(f"Fittemplate must be a dictionary")
         if (
-                ((len(test.keys()) != 2) and (len(test.keys()) != 3))
+                ((len(test.keys()) != 3) and (len(test.keys()) != 4))
                 | ("info" not in test.keys())
                 | ("fit" not in test.keys())
+                | ("main_line" not in test.keys())
         ):
-            raise ValueError(f"template must be a dictionary with 2 or 3 keys")
-        if type(test["info"]) is not dict:
-            raise ValueError(f"template['info'] must be a dictionary")
+            raise ValueError(f"Fittemplate must be a dictionary with 2 or 3 keys")
         keys = ["name",
                 "elem",
                 "ion",
                 "wave",
                 "unit_wave",
                 "lvl_low",
-                "lvl_up"]
+                "lvl_up",
+                "legend",]
         formats = [str,
                    str,
                    int,
                    float,
                    str,
                    str,
-                   str]
-        for key, format_ in zip(keys, formats):
-            if key not in test["info"].keys():
-                raise ValueError(f"key {key} must exist")
-            elif type(test["info"][key]) is not format_:
-                raise ValueError(f"key {key} must be in {format_}")
+                   str,
+                   str,]
+        if str(type(test["info"])) != "<class 'list'>":
+            raise ValueError(f"Fittemplate['info'] must be a list with lines information")
+        for elem in test["info"]:
+            for key, format_ in zip(keys, formats):
+                if key not in elem.keys():
+                    raise ValueError(f"key {key} must exist")
+                elif type(elem[key]) is not format_:
+                    raise ValueError(f"key {key} must be in {format_}")
 
-        if type(test["fit"]) is not dict:
-            raise ValueError(f"template['fit'] must be a dictionary")
+            if type(test["fit"]) is not dict:
+                raise ValueError(f"Fittemplate['fit'] must be a dictionary")
 
         keys = [
             "type",
@@ -172,6 +176,6 @@ class FitTemplate:
             #     for sub in test["fit"][key]:
             #         if type(sub) is not list:
             #             raise ValueError(f"{key} a list")
-        if (len(test.keys()) == 3) and ("special_instructions" not in test.keys()):
+        if (len(test.keys()) == 4) and ("special_instructions" not in test.keys()):
             raise ValueError(f"Fittemplate third key must be 'special_instructions'")
         return True

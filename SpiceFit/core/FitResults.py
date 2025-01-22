@@ -93,12 +93,56 @@ class FitResults:
         self.lock = None
         self.cpu_count = None
         self.display_progress_bar = None
-
         self.spicewindow = None
 
-    def fit_window_standard(
-            self,
+        self.components = []
+
+
+    def fit_spice_window_standard(self,
             spicewindow: SpiceRasterWindowL2,
+            parallelism: bool = True,
+            cpu_count: int = None,
+            min_data_points: int = 5,
+            chi2_limit: float = 20.0,
+            display_progress_bar=True):
+        """
+
+        Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
+
+        :param spicewindow: SpiceRasterWindowL2 class
+        :param parallelism: allow parallelism or not.
+        :param cpu_count: cpu counts to use for parallelism.
+        :param min_data_points: minimum data points for each pixel with for the fitting.
+        :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
+        :param display_progress_bar: display the progress bar
+        """
+
+        if spicewindow.uncertainty is None:
+            spicewindow.compute_uncertainty()
+
+        data_cube = u.Quantity(spicewindow.data, spicewindow.header["BUNIT"])
+        uncertainty_cube = spicewindow.uncertainty["Total"]
+        xx, yy, ll, tt = spicewindow.return_point_pixels()
+        coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+
+        self.fit_window_standard_3d(
+        data_cube=data_cube,
+        uncertainty_cube = uncertainty_cube,
+        lambda_cube = lambda_cube,
+        parallelism = parallelism,
+        cpu_count = cpu_count,
+        min_data_points = min_data_points,
+        chi2_limit = chi2_limit,
+        display_progress_bar = display_progress_bar
+        )
+
+
+
+    def fit_window_standard_3d(
+            self,
+            data_cube,
+            uncertainty_cube,
+            lambda_cube,
             parallelism: bool = True,
             cpu_count: int = None,
             min_data_points: int = 5,
@@ -106,9 +150,12 @@ class FitResults:
             display_progress_bar=True
     ):
         """
-        Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
+        Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance. Use this function
+        if the data cube has the shape (time, lambda, Y , X)
 
-        :param spicewindow: SpiceRasterWindowL2 class
+        :param data_cube:                       (time, lambda, Y , X)
+        :param uncertainty_cube:                (time, lambda, Y , X)
+        :param lambda_cube:                     (time, lambda, Y , X)
         :param parallelism: allow parallelism or not.
         :param cpu_count: cpu counts to use for parallelism.
         :param min_data_points: minimum data points for each pixel with for the fitting.
@@ -128,29 +175,21 @@ class FitResults:
 
         self._prepare_fitting_parameters()
 
-        if spicewindow.uncertainty is None:
-            spicewindow.compute_uncertainty(verbose=False)
         if parallelism:
             self.lock = Lock()
 
-            # self.gen_shmm(spicewindow)
-            data_ = copy.deepcopy(spicewindow.data)
-            data_ = u.Quantity(data_, spicewindow.header["BUNIT"])
-
-            xx, yy, ll, tt = spicewindow.return_point_pixels()
-            coords, lambda_, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
-            lambda_ = lambda_.to(FitResults.conventional_lambda_units).value
-            data_ = data_.to(FitResults.conventional_spectral_units).value
+            lambda_ = lambda_cube.to(FitResults.conventional_lambda_units).value
+            data_cube = data_cube.to(FitResults.conventional_spectral_units).value
 
             self.lambda_unit = FitResults.conventional_lambda_units
             self.data_unit = FitResults.conventional_spectral_units
 
-            shmm_data, data = gen_shmm(create=True, ndarray=copy.deepcopy(data_))
+            shmm_data, data = gen_shmm(create=True, ndarray=copy.deepcopy(data_cube))
             shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=copy.deepcopy(lambda_))
             shmm_uncertainty, uncertainty = gen_shmm(
                 create=True,
                 ndarray=copy.deepcopy(
-                    spicewindow.uncertainty["Total"]
+                    uncertainty_cube
                     .to(FitResults.conventional_spectral_units)
                     .value
                 ),
@@ -160,9 +199,9 @@ class FitResults:
                 ndarray=np.zeros(
                     (
                         np.sum(self.fit_template.parinfo["fit"]["n_components"]),
-                        spicewindow.data.shape[0],
-                        spicewindow.data.shape[2],
-                        spicewindow.data.shape[3],
+                        data_cube.shape[0],
+                        data_cube.shape[2],
+                        data_cube.shape[3],
                     ),
                     dtype="float",
                 ),
@@ -171,9 +210,9 @@ class FitResults:
                 create=True,
                 ndarray=np.zeros(
                     (
-                        spicewindow.data.shape[0],
-                        spicewindow.data.shape[2],
-                        spicewindow.data.shape[3],
+                        data_cube.shape[0],
+                        data_cube.shape[2],
+                        data_cube.shape[3],
                     ),
                     dtype="float",
                 ),
@@ -183,9 +222,9 @@ class FitResults:
                 create=True,
                 ndarray=np.zeros(
                     (
-                        spicewindow.data.shape[0],
-                        spicewindow.data.shape[2],
-                        spicewindow.data.shape[3],
+                        data_cube.shape[0],
+                        data_cube.shape[2],
+                        data_cube.shape[3],
                     ),
                     dtype="bool",
                 ),
@@ -226,9 +265,9 @@ class FitResults:
 
             # Get indexes and positions in (t, i, j) for all pixels of the raster
             t_array, i_array, j_array = np.meshgrid(
-                np.arange(spicewindow.data.shape[0]),
-                np.arange(spicewindow.data.shape[2]),
-                np.arange(spicewindow.data.shape[3]),
+                np.arange(data_cube.shape[0]),
+                np.arange(data_cube.shape[2]),
+                np.arange(data_cube.shape[3]),
                 indexing="ij",
             )
             t_array = t_array.flatten()
@@ -262,7 +301,7 @@ class FitResults:
                           "lock": self.lock}
 
                 processes.append(
-                    Process(target=self._fit_multiple_pixels_parallelism, kwargs=kwargs)
+                    Process(target=self._fit_multiple_pixels_parallelism_3d, kwargs=kwargs)
                 )
 
             lenp = len(processes)
@@ -346,18 +385,17 @@ class FitResults:
             shmm_flagged_pixels.close()
             shmm_flagged_pixels.unlink()
 
-            self.spicewindow = copy.deepcopy(spicewindow)
 
-    def _fit_multiple_pixels_parallelism(self, t_list, i_list, j_list, index_list, lock):
+    def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
 
         if self.display_progress_bar:
             for t, i, j, index in tqdm.tqdm(zip(t_list, i_list, j_list, index_list), total=len(t_list)):
-                self._fit_pixel_parallelism(t, i, j, index, lock)
+                self._fit_pixel_parallelism_3d(t, i, j, index, lock)
         else:
             for t, i, j, index in zip(t_list, i_list, j_list, index_list):
-                self._fit_pixel_parallelism(t, i, j, index, lock)
+                self._fit_pixel_parallelism_3d(t, i, j, index, lock)
 
-    def _fit_pixel_parallelism(self, t, i, j, index, lock):
+    def _fit_pixel_parallelism_3d(self, t, i, j, index, lock):
 
         shmm_data_all, data_all = gen_shmm(create=False, **self._data_dict)
         shmm_lambda_all, lambda_all = gen_shmm(create=False, **self._lambda_dict)
@@ -541,11 +579,20 @@ class FitResults:
         ax.set_ylabel("Solar-Y [arcsec]")
         fig.savefig("test.pdf")
 
+    def organize_components(self):
+        """
+        create the self.component dictionnary, with all the fitting and derived parameters for the lines.
+        The "main" entrance is the main line of the template
+        """
+
     def check_spectra(self, position = "random"):
         """
 
         :param position:
         """
+        pass
+
+
 
 
 

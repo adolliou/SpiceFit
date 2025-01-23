@@ -2,7 +2,7 @@ import pytest
 from astropy.io import fits
 from ..SpiceRasterWindow import SpiceRasterWindowL2
 from ..FitResults import FitResults
-from ..FitTemplate import FitTemplate
+from ..FittingModel import FittingModel
 import os
 from pathlib import Path
 
@@ -27,7 +27,7 @@ def spicewindow(hdu):
 @pytest.fixture
 def fittemplate():
     path_yaml = "C:/Users/dolliou/Desktop/code/SpiceFit/SpiceFit/core/test/fit_templates/ne_8_770_42_1c.template.yaml"
-    return FitTemplate(filename=path_yaml)
+    return FittingModel(filename=path_yaml)
 
 
 class TestFitResults:

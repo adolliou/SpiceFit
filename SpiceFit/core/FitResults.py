@@ -1,5 +1,5 @@
 import numpy as np
-from .FitTemplate import FitTemplate
+from .FittingModel import FittingModel
 from .SpiceRasterWindow import SpiceRasterWindowL2
 from ..util.shared_memory import gen_shmm
 from ..util.fitting import FittingUtil
@@ -12,6 +12,7 @@ from scipy.optimize import curve_fit
 import astropy.units as u
 import tqdm
 from matplotlib import pyplot as plt
+from ..util.constants import Constants
 
 
 def flatten(xss):
@@ -24,13 +25,12 @@ def flatten(xss):
 
 
 class FitResults:
-    conventional_lambda_units = "nm"
-    conventional_spectral_units = "W/ (m2 sr nm)"
+
 
     def __init__(
             self,
-            fit_template: FitTemplate,
-            verbose=False,
+            fit_template: FittingModel,
+            verbose=0,
     ):
         """
 
@@ -103,8 +103,7 @@ class FitResults:
             parallelism: bool = True,
             cpu_count: int = None,
             min_data_points: int = 5,
-            chi2_limit: float = 20.0,
-            display_progress_bar=True):
+            chi2_limit: float = 20.0,):
         """
 
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
@@ -133,7 +132,6 @@ class FitResults:
         cpu_count = cpu_count,
         min_data_points = min_data_points,
         chi2_limit = chi2_limit,
-        display_progress_bar = display_progress_bar
         )
 
 
@@ -178,11 +176,11 @@ class FitResults:
         if parallelism:
             self.lock = Lock()
 
-            lambda_ = lambda_cube.to(FitResults.conventional_lambda_units).value
-            data_cube = data_cube.to(FitResults.conventional_spectral_units).value
+            lambda_ = lambda_cube.to(Constants.conventional_lambda_units).value
+            data_cube = data_cube.to(Constants.conventional_spectral_units).value
 
-            self.lambda_unit = FitResults.conventional_lambda_units
-            self.data_unit = FitResults.conventional_spectral_units
+            self.lambda_unit = Constants.conventional_lambda_units
+            self.data_unit = Constants.conventional_spectral_units
 
             shmm_data, data = gen_shmm(create=True, ndarray=copy.deepcopy(data_cube))
             shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=copy.deepcopy(lambda_))
@@ -190,7 +188,7 @@ class FitResults:
                 create=True,
                 ndarray=copy.deepcopy(
                     uncertainty_cube
-                    .to(FitResults.conventional_spectral_units)
+                    .to(Constants.conventional_spectral_units)
                     .value
                 ),
             )
@@ -388,7 +386,7 @@ class FitResults:
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
 
-        if self.display_progress_bar:
+        if self.verbose >= 1:
             for t, i, j, index in tqdm.tqdm(zip(t_list, i_list, j_list, index_list), total=len(t_list)):
                 self._fit_pixel_parallelism_3d(t, i, j, index, lock)
         else:
@@ -520,7 +518,7 @@ class FitResults:
             self.fit_min_arr.append(mn.value)
             if (p.unit != mx.unit) or (p.unit != mn.unit):
                 raise ValueError("Not consistent units among fitting parameters")
-            self._unit_coeffs_during_fitting.append(p.unit)
+            self._unit_coeffs_during_fitting.append(p.unict)
 
     def _flag_pixels_with_not_enough_data(self):
 
@@ -539,10 +537,10 @@ class FitResults:
         transform an u.quantity into either a nm or a W/ (m2 sr nm), which are the conventional units for the fitting.
         :param quantity:
         """
-        if quantity.unit.is_equivalent(FitResults.conventional_lambda_units):
-            return quantity.to(FitResults.conventional_lambda_units)
-        elif quantity.unit.is_equivalent(FitResults.conventional_spectral_units):
-            return quantity.to(FitResults.conventional_spectral_units)
+        if quantity.unit.is_equivalent(Constants.conventional_lambda_units):
+            return quantity.to(Constants.conventional_lambda_units)
+        elif quantity.unit.is_equivalent(Constants.conventional_spectral_units):
+            return quantity.to(Constants.conventional_spectral_units)
         else:
             raise ValueError(f"Cannot convert {quantity} to conventional unit")
 

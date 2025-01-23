@@ -1,6 +1,6 @@
 import numpy as np
 import astropy.io.fits.header
-from .FitTemplate import FitTemplate
+from .FittingModel import FittingModel
 from sospice.calibrate import spice_error
 from astropy.wcs import WCS
 import copy
@@ -51,7 +51,7 @@ class SpiceRasterWindowL2:
         self.w_spec = copy.deepcopy(self.wcs).sub(["spectral"])
 
     def check_if_line_within(
-        self, fittemplate: FitTemplate, all_interval=False
+        self, fittemplate: FittingModel, all_interval=False
     ) -> bool:
         """
         Check if a given line is within the window.

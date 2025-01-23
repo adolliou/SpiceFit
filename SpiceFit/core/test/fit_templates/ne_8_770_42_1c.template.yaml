@@ -1,7 +1,7 @@
 
 fit:
-  type: ["gauss",
-         "const"]
+  type: ["gaussian",
+         "polynomial"]
   name: ["ne_8 770.42",
          "background"]
   n_components: [ 3, 1 ]
@@ -22,7 +22,7 @@ fit:
     [100.0]
   ]
   min_arr: [
-    [0.001, 769.82, 0.4,],
+    [0.001, "guess_minus_0.6", 0.4,],
      [-0.5]
   ]
   trans_a: [
@@ -47,7 +47,19 @@ info:
     legend: "Ne VIII 770.42 $\\AA$"
 
 
-special_instructions:
+constrain_lines:
+  constrained: [
+    [False, False, False],
+         [True]
+  ]
+  type_constrain: [
+    ["constant", "N/A", "N/A"],
+    ["I0_times_0.1"]                  # x0-3
+  ]
+  coeff_notation: [
+  ["I0", "x0", "fwhm0"],
+  ["b0"]
+  ]
   
 
 

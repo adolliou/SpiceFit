@@ -1,4 +1,5 @@
 import astropy.units as u
+import numpy as np
 from yaml import safe_load
 
 
@@ -30,30 +31,6 @@ class FitTemplate:
         else:
             raise ValueError("must either have filename or parinfo as input")
 
-        # else:
-        #     for key in kwargs:
-        #         if key in [
-        #             "type",
-        #             "name",
-        #             "n_components",
-        #             "guess",
-        #             "units",
-        #             "max_arr",
-        #             "min_arr",
-        #             "trans_a",
-        #             "trans_b",
-        #         ]:
-        #             self._parinfo["fit"][key] = kwargs[key]
-        #         elif key in [
-        #             "name",
-        #             "elem",
-        #             "ion",
-        #             "wave",
-        #             "unit_wave",
-        #             "lvl_low",
-        #             "lvl_up"
-        #         ]:
-        #             self._parinfo["info"][key] = kwargs[key]
         test_parinfo = self.check_parinfo()
         if not test_parinfo:
             raise TypeError("the keyword arguments must have the valid format")
@@ -63,6 +40,9 @@ class FitTemplate:
             u.Quantity(self._parinfo["fit"]["min_arr"][1], "angstrom"),
             u.Quantity(self._parinfo["fit"]["max_arr"][1], "angstrom"),
         ]
+
+        self.component_name = self.parinfo["fit"]["name"]
+        self.main_line = self.parinfo["main_line"]
 
     @property
     def parinfo(self):
@@ -82,6 +62,34 @@ class FitTemplate:
         if not self.check_parinfo(parinfo=parinfo):
             raise TypeError("parinfo dictionary must have the valid format")
         self._parinfo = parinfo
+
+    def get_component_info(self, component_name):
+        if self.parinfo is None:
+            raise ValueError("parinfo dictionary must have the valid format")
+
+        name_info = [n["name"] for n in self.parinfo["info"]]
+        index = np.where(np.array(name_info) == component_name)[0]
+        if len(index) > 1:
+            raise ValueError("Duplicated names in info list.")
+        if len(index) == 0:
+            raise ValueError("Component name not in info list.")
+        return self.parinfo["info"][index[0]]
+
+    def get_component_fit(self, component_name):
+        if self.parinfo is None:
+            raise ValueError("parinfo dictionary must have the valid format")
+
+        name_fit = self.parinfo["fit"]["name"]
+        index = np.where(np.array(name_fit) == component_name)[0]
+        if len(index) > 1:
+            raise ValueError("Duplicated names in info list.")
+        if len(index) == 0:
+            raise ValueError("Component name not in fit list.")
+        fit_info_dict = {}
+        for key in self.parinfo["fit"].key():
+            fit_info_dict[key] = self.parinfo["fit"][key][index[0]]
+        return fit_info_dict
+
 
     def check_parinfo(self, parinfo=None):
         """
@@ -136,6 +144,7 @@ class FitTemplate:
             "name",
             "n_components",
             "guess",
+            "coeff_type",
             "units",
             "max_arr",
             "min_arr",
@@ -147,6 +156,7 @@ class FitTemplate:
             [list, str],
             [list, int],
             [list, list, float | int],
+            [list, list, str],
             [list, list, str],
             [list, list, float | int],
             [list, list, float | int],
@@ -178,4 +188,20 @@ class FitTemplate:
             #             raise ValueError(f"{key} a list")
         if (len(test.keys()) == 4) and ("special_instructions" not in test.keys()):
             raise ValueError(f"Fittemplate third key must be 'special_instructions'")
+        name_fit = test["fit"]["name"]
+        name_info = [n["name"] for n in test["info"]]
+
+        if set(name_fit) != len(name_fit):
+            raise ValueError(f"duplicated names in the fit list name !")
+
+        if set(name_info) != len(name_info):
+            raise ValueError(f"duplicated names in the info list name !")
+
+        for n in name_fit:
+            if (n in name_info) and (n != "background"):
+                ValueError(f"a line in the fit list name is not present in the info list !")
+
+        for n in name_info:
+            if n in name_fit:
+                ValueError(f"q line in the info list is not present in the fit name list !")
         return True

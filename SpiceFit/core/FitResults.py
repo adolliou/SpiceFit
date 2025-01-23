@@ -49,9 +49,12 @@ class FitResults:
         self.data_unit = None
         self.lambda_unit = None
 
-        # fitting results
-        self.fit_coeffs = None
-        self.fit_chi2 = None
+        # fitting direct results
+        self.fit_results = {}
+
+
+        # elaborate results
+        self.components = None
 
         # fitting parameters
         self.fit_guess = None  # size : (N)
@@ -67,9 +70,7 @@ class FitResults:
         self._fit_coeffs_dict = None  # size : (N, time, Y , X)
         self._fit_chi2_dict = None  # size : (N, time, Y , X)
         self._flagged_pixels_dict = None  # size : (time, Y , X)
-
         self._unit_coeffs_during_fitting = None  # size : (N)
-        self.fit_results = {}
         # for jj, name in enumerate(self.fit_template.parinfo["fit"]["name"]):
         #     self.fit_results[name] = {
         #         "coeffs": [],
@@ -95,7 +96,6 @@ class FitResults:
         self.display_progress_bar = None
         self.spicewindow = None
 
-        self.components = []
 
 
     def fit_spice_window_standard(self,
@@ -582,8 +582,35 @@ class FitResults:
     def organize_components(self):
         """
         create the self.component dictionnary, with all the fitting and derived parameters for the lines.
-        The "main" entrance is the main line of the template
+        The "main" entrance is the main line of the fit_template attribute
+        The components format will depend on the fit type ("gaussian", "background")
         """
+        self.components = {
+            "chi2": self.fit_chi2,
+            "flagged": self.fla
+        }
+        types = self.fit_template.parinfo["fit"]["type"]
+        main_lines = self.fit_template.parinfo["main_line"]
+        names = self.fit_template.parinfo["fit"]["names"]
+        n_components = self.fit_template.parinfo["fit"]["n_components"]
+        n = 0
+        for ii, name in enumerate(names):
+            type = types[ii]
+
+            self.components[name] = {
+                "fit_coeff": self.fit_results["coeff"][n:n + n_components, ...],
+                "fit_coeff_unit": self.fit_results["coeff_unit"][n:n + n_components],
+                "parinfo_fit": self.fit_template.get_component_fit(component_name=name),
+            }
+            if type == "gauss":
+                self.components[name]["parinfo_info"] = self.fit_template.get_component_info(component_name=name)
+
+
+
+
+
+            n = n + n_components
+
 
     def check_spectra(self, position = "random"):
         """

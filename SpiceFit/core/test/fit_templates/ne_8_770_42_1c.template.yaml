@@ -9,8 +9,12 @@ fit:
     [0.1, 770.42 , 0.4,],
           [0.0]
   ]
+  coeff_type: [
+    ["I", "lambda" , "fwhm",],
+          ["I"]
+  ]
   units: [
-    [ "W/m^2/sr/nm", "Angstrom" , "Angstrom", ],
+    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
     [ "Angstrom" ]
   ]
   max_arr: [

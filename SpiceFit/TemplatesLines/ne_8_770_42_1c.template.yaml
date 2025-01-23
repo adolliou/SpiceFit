@@ -10,7 +10,7 @@ fit:
           [0.0]
   ]
   units: [
-    [ "W/m^2/sr/nm", "Angstrom" , "Angstrom", ],
+    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
     [ "Angstrom" ]
   ]
   max_arr: [

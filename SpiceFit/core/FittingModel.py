@@ -58,14 +58,8 @@ class FittingModel:
 
         # Format of self.free_params["gaussian"][0]["I"/"x"/"s"]["free"/"constrain"/"guess"/"bounds"/"unit"]
         self._params_all = self._build_self_params_all()
-
+        self._params_free = None
         # Format of self.free_params["gaussian"][0]["I"/"x"/"s"]["notation"/"guess"/"bounds"/"unit"]
-        # self._params_free = self._build_self_params_free()
-
-
-
-
-
 
         # self.central_wave = u.Quantity(self._parinfo["fit"]["guess"][1], "angstrom")
         # self.wave_interval = [
@@ -87,12 +81,41 @@ class FittingModel:
         "bounds" : (tuple[float64, float64]) bounds tuple value in "unit"
         "unit" : must be consistent with
 
-        :return: error, as these parameters should be access through self.gen_free_params(), where it is
-        constructed starting from self.gen_all_params()
-        """
-        raise ValueError("Must not access free parameters directly. "
-                         "Please generate them through self.generate_free_params()")
-        # return self._params_free
+        :return:
+        # """
+        # raise ValueError("Must not access free parameters directly. "
+        #                  "Please generate them through self.generate_free_params()")
+        self._params_free = self._generate_empty_params_free_dict()
+        type_list, index_list, coeff_list = self._gen_mapping_params()
+        for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
+
+            d = copy.deepcopy(self.params_all[type_][idx_][coeff_]["bounds"])
+            bounds = []
+
+            for ii, bbb in enumerate(d):
+                if type(bbb) is dict:
+                    if bbb["ref"] == "guess":
+                        value = float(bbb["value"])
+                        if bbb["operation"] == "plus":
+                            bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] + value))
+                        elif bbb["operation"] == "minus":
+                            bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] - value))
+                        elif bbb["operation"] == "times":
+                            bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] * value))
+                    else:
+                        raise NotImplementedError("unknown guess")
+                else:
+                    bounds.append(np.float64(bbb))
+
+
+            self._params_free[type_][idx_][coeff_] = {
+                "guess": self.params_all[type_][idx_][coeff_]["guess"],
+                "bounds": bounds,
+                "unit": self.params_all[type_][idx_][coeff_]["unit"],
+
+            }
+
+        return self._params_free
 
     @params_free.setter
     def params_free(self, params_free: dict):
@@ -101,15 +124,14 @@ class FittingModel:
         Must change the self._all_params dictionnary for the contrained coefficients, according to their constraints.
         :param params_free:
         """
-        raise ValueError("Must not access free parameters directly. "
+        raise ValueError("Must not modify free parameters directly. "
                          "Please generate them through self.generate_free_params()")
-        # self._params_free = params_free
+        # self.params_free = params_free
 
     @property
     def params_all(self):
         """
-        self.params_all getter. Returns a deepcopy object, as self._params_all should only be changed through its setter.
-        :return:
+        self.params_all getter.
         """
         return self._params_all
 
@@ -117,27 +139,7 @@ class FittingModel:
     def params_all(self, params_all: dict):
 
         self._params_all = params_all
-        # TODO changes bounds and params_free
-        # self._all_to_free_bounds()
 
-
-
-
-                # if d["ref"] == "guess":
-                #     value = np.float64(d["value"])
-                #     if d["operation"] == "plus":
-                #
-                #         self.params_free["bounds"][ii] = np.float64(self.params_all["guess"] + value)
-                #     elif d["operation"] == "minus":
-                #         self.params_free["bounds"][ii] = np.float64(self.params_all["guess"] - value)
-                #     elif d["operation"] == "times":
-                #         self.params_free["bounds"][ii] = np.float64(self.params_all["guess"] * value)
-                # else:
-                #     raise NotImplementedError("unknown guess")
-
-
-            # else:
-            #     self.params_free["bounds"][ii] = self._params_all["bounds"][ii]
 
     @property
     def parinfo(self):
@@ -185,11 +187,23 @@ class FittingModel:
             fit_info_dict[key] = self.parinfo["fit"][key][index[0]]
         return fit_info_dict
 
-    def _free_to_params_all(self):
-        raise NotImplementedError
+    def _generate_empty_params_free_dict(self):
+        _params_all = {}
+        _params_all = copy.deepcopy(self.params_all)
 
-    def _all_to_params_free(self):
-        raise NotImplementedError
+        type_list, index_list, coeff_list = self._gen_mapping_params()
+        for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
+
+            for key in list(_params_all[type_][idx_][coeff_].keys()):
+                del _params_all[type_][idx_][coeff_][key]
+
+            _params_all[type_][idx_][coeff_][key] = {
+                "guess": None,
+                "bounds": None,
+                "unit": None,
+            }
+        return _params_all
+
 
     def _build_self_params_all(self):
 
@@ -283,7 +297,7 @@ class FittingModel:
 
         self.params_all = params_all
         if "constrain_lines" in self.parinfo.keys():
-            _type_list, _index_list, _coeff_list = self._gen_mapping_params_all()
+            _type_list, _index_list, _coeff_list = self._gen_mapping_params()
 
             type_constrain_list = self.parinfo["constrain_lines"]["type_constrain"]
             constrained_list = self.parinfo["constrain_lines"]["constrained"]
@@ -304,16 +318,18 @@ class FittingModel:
                 else:
                     type_constraint = None
 
-            params_all[type][-1][coeff]["free"] = not _constrained
-            params_all[type][-1][coeff]["type_constrain"] = type_constraint
-
-
-
+                params_all[_type][_index][_coeff]["free"] = not _constrained
+                params_all[_type][_index][_coeff]["type_constrain"] = type_constraint
 
         return params_all
 
+    # def generate_params_free(self):
 
-    def _gen_mapping_params_all(self, additional_value: str = None):
+
+
+
+
+    def _gen_mapping_params(self, additional_value: str = None):
         """
         can generate a mapping for all the coefficients
         :param args: (str) additionnal keys of the coefficient dictionnary to return
@@ -342,17 +358,15 @@ class FittingModel:
             return type_list, index_list, coeff_list
 
 
-    def _gen_mapping_params_all_from_unique_index(self, unique_index_to_find):
+    def _gen_mapping_params_from_unique_index(self, unique_index_to_find):
 
-        type_list, index_list, coeff_list, unique_index = self._gen_mapping_params_all("index")
+        type_list, index_list, coeff_list, unique_index = self._gen_mapping_params("index")
         ii = np.where(np.array(unique_index) == unique_index_to_find)[0][0]
         return type_list[ii], index_list[ii], coeff_list[ii]
 
-
-
     def _map_user_notation_in_yaml(self):
-        type_list, index_list, coeff_list, index_in_fit_yaml_list = self._gen_mapping_params_all("index_in_fit_yaml")
-        type_list, index_list, coeff_list, unique_index_list = self._gen_mapping_params_all("index")
+        type_list, index_list, coeff_list, index_in_fit_yaml_list = self._gen_mapping_params("index_in_fit_yaml")
+        type_list, index_list, coeff_list, unique_index_list = self._gen_mapping_params("index")
 
         notation_user = self.parinfo["constrain_lines"]["coeff_notation"]
         notation_user_to_unique_index = {}
@@ -399,7 +413,11 @@ class FittingModel:
                     "value": np.float64(val.value),
                 })
             elif (type(bbb) is float) or (type(bbb) is int):
-                bounds_output.append(np.float64(bbb))
+                bbb_ =  np.float64(bbb)
+                bbb_ = u.Quantity(bbb_, unit) * trans_a + u.Quantity(trans_b, unit)
+                bbb_ = self._transform_to_conventional_unit(bbb_)
+
+                bounds_output.append(np.float64(bbb_))
             else:
                 raise TypeError("bounds must be a string or float or integer")
         return bounds_output
@@ -412,7 +430,6 @@ class FittingModel:
         if constrain_to_parse == "N/A":
             return constrain_output
         if m is None:
-            breakpoint()
             raise ValueError("constrain_type string could not be parsed")
         d = m.groupdict()
         val = np.float64(d["value"])

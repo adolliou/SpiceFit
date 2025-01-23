@@ -10,8 +10,8 @@ fit:
           [0.0]
   ]
   coeff_type: [
-    ["I", "lambda" , "fwhm",],
-          ["I"]
+    [ "I", "lambda" , "fwhm", ],
+    [ "I" ]
   ]
   units: [
     [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
@@ -22,7 +22,7 @@ fit:
     [100.0]
   ]
   min_arr: [
-    [0.001, "guess_minus_30.0", 0.4,],
+    [0.001, 769.82, 0.4,],
      [-0.5]
   ]
   trans_a: [
@@ -45,30 +45,4 @@ info:
     lvl_low: "1$s^2$ 2s $^2S_{1/2}$"
     lvl_up: "1$s^2$ 2p $P_{3/2}$"
     legend: "Ne VIII 770.42 $\\AA$"
-
-
-constrain_lines:
-  constrained: [
-    [False, False, False],
-         [True]
-  ]
-  type_constrain: [
-    ["constant", "N/A", "N/A"],
-    ["I0_times_0.1"]                  # x0-3
-  ]
-  coeff_notation: [
-  ["I0", "x0", "fwhm0"],
-  ["b0"]
-  ]
-  
-
-
-
-
-
-
-
-
-
-
 

@@ -8,7 +8,6 @@ import string
 
 
 class FittingModel:
-
     bound_equation_re = re.compile(
         r'''
     (?P<ref>(guess))
@@ -16,7 +15,6 @@ class FittingModel:
     _(?P<value>\d*\.\d*)
     ''',
         re.VERBOSE)
-
 
     constrain_equation_re = re.compile(
         r'''
@@ -26,6 +24,16 @@ class FittingModel:
     ''',
         re.VERBOSE)
 
+    # Template used to compute fitting and Jacobian functions
+
+    template_fitting_function = (""
+                                 "{0}\n"
+                                 "@jit(nopython=True, inline='always', cache = True)\n"
+                                 "def {1}(x, {2}):\n"
+                                 "constant = {3}\n"
+                                 "\tx=np.array(x, dtype=np.float64)\n"
+                                 "\tsum = np.zeros(len(x), dtype=np.float64)\n)"
+                                 "")
 
     def __init__(self, filename=None, parinfo=None, ) -> None:
         """
@@ -59,6 +67,13 @@ class FittingModel:
         # Format of self.free_params["gaussian"][0]["I"/"x"/"s"]["free"/"constrain"/"guess"/"bounds"/"unit"]
         self._params_all = self._build_self_params_all()
         self._params_free = None
+        self.generate_free_params()
+
+        self.str_fitting_function_ = self.write_function_file()
+        self.str_jacobian_function = None
+
+        self._fitting_function = None
+        self._jacobian_function = None
         # Format of self.free_params["gaussian"][0]["I"/"x"/"s"]["notation"/"guess"/"bounds"/"unit"]
 
         # self.central_wave = u.Quantity(self._parinfo["fit"]["guess"][1], "angstrom")
@@ -69,7 +84,6 @@ class FittingModel:
         #
         # self.component_name = self.parinfo["fit"]["name"]
         # self.main_line = self.parinfo["main_line"]
-
 
     @property
     def params_free(self):
@@ -85,35 +99,6 @@ class FittingModel:
         # """
         # raise ValueError("Must not access free parameters directly. "
         #                  "Please generate them through self.generate_free_params()")
-        self._params_free = self._generate_empty_params_free_dict()
-        type_list, index_list, coeff_list = self._gen_mapping_params()
-        for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
-
-            d = copy.deepcopy(self.params_all[type_][idx_][coeff_]["bounds"])
-            bounds = []
-
-            for ii, bbb in enumerate(d):
-                if type(bbb) is dict:
-                    if bbb["ref"] == "guess":
-                        value = float(bbb["value"])
-                        if bbb["operation"] == "plus":
-                            bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] + value))
-                        elif bbb["operation"] == "minus":
-                            bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] - value))
-                        elif bbb["operation"] == "times":
-                            bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] * value))
-                    else:
-                        raise NotImplementedError("unknown guess")
-                else:
-                    bounds.append(np.float64(bbb))
-
-
-            self._params_free[type_][idx_][coeff_] = {
-                "guess": self.params_all[type_][idx_][coeff_]["guess"],
-                "bounds": bounds,
-                "unit": self.params_all[type_][idx_][coeff_]["unit"],
-
-            }
 
         return self._params_free
 
@@ -140,6 +125,29 @@ class FittingModel:
 
         self._params_all = params_all
 
+    @property
+    def fitting_function(self):
+        """
+        self.params_all getter.
+        """
+        return self._fitting_function
+
+    @fitting_function.setter
+    def fitting_function(self, fitting_function: callable):
+
+        self._fitting_function = fitting_function
+
+    @property
+    def jacobian_function(self):
+        """
+        self.params_all getter.
+        """
+        return self._jacobian_function
+
+    @jacobian_function.setter
+    def jacobian_function(self, jacobian_function: callable):
+
+        self._jacobian_function = jacobian_function
 
     @property
     def parinfo(self):
@@ -159,6 +167,60 @@ class FittingModel:
         if not self._check_parinfo(parinfo=parinfo):
             raise TypeError("parinfo dictionary must have the valid format")
         self._parinfo = parinfo
+
+    def generate_free_params(self):
+        self._params_free = {
+            "guess": [],
+            "bounds": [],
+            "unit": [],
+            "index": [],
+            "notation": [],
+        }
+        type_list, index_list, coeff_list = self._gen_mapping_params()
+        for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
+
+            if self.params_all[type_][idx_][coeff_]["free"]:
+                d = copy.deepcopy(self.params_all[type_][idx_][coeff_]["bounds"])
+                bounds = []
+
+                for ii, bbb in enumerate(d):
+                    if type(bbb) is dict:
+                        if bbb["ref"] == "guess":
+                            value = float(bbb["value"])
+                            if bbb["operation"] == "plus":
+                                bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] + value))
+                            elif bbb["operation"] == "minus":
+                                bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] - value))
+                            elif bbb["operation"] == "times":
+                                bounds.append(np.float64(self.params_all[type_][idx_][coeff_]["guess"] * value))
+                        else:
+                            raise NotImplementedError("unknown guess")
+                    else:
+                        bounds.append(np.float64(bbb))
+
+                self._params_free["guess"].append(self.params_all[type_][idx_][coeff_]["guess"], )
+                self._params_free["bounds"].append(bounds)
+                self._params_free["unit"].append(self.params_all[type_][idx_][coeff_]["unit"], )
+                self._params_free["index"].append(self.params_all[type_][idx_][coeff_]["index"], )
+                self._params_free["notation"].append(self.params_all[type_][idx_][coeff_]["notation"], )
+
+    def write_function_file(self):
+        s = self.template_fitting_function.format(self._function_generate_imports_str(),
+                                                  'fitting_function',
+                                                  ','.join(self.params_free["notation"]),
+                                                  0,
+                                                  )
+        s += '\n\n\t'
+        for function_type in self.params_all.keys():
+            for ii in range(len(self.params_all[function_type])):
+                if function_type == "polynomial":
+                    s += self._polynom_to_fitting_str(index_polynom=ii)
+                elif function_type == "gaussian":
+                    s += self._gauss_to_fitting_str(index_gaussian=ii)
+                else:
+                    raise NotImplementedError
+        s += "\n\n \treturn sum"
+        return s
 
     def get_component_info(self, component_name):
         if self.parinfo is None:
@@ -201,9 +263,12 @@ class FittingModel:
                 "guess": None,
                 "bounds": None,
                 "unit": None,
+                "index": None
             }
-        return _params_all
 
+            if not self.params_all[type_][idx_][coeff_]["free"]:
+                del _params_all[type_][idx_][coeff_][key]
+        return _params_all
 
     def _build_self_params_all(self):
 
@@ -220,7 +285,7 @@ class FittingModel:
 
         params_all = {}
         index_gaussian = 0
-        index_polynomial= 0
+        index_polynomial = 0
 
         for ii, type in enumerate(type_list):
             if type not in params_all.keys():
@@ -238,7 +303,7 @@ class FittingModel:
                 idxx = np.where(np.array(coeff_type) == "lambda")[0]
                 idxs = np.where(np.logical_or(np.array(coeff_type) == "fwhm", np.array(coeff_type) == "sigma"))[0]
 
-                for idx in  [idxi, idxx, idxs]:
+                for idx in [idxi, idxx, idxs]:
                     if len(idx) != 1:
                         raise ValueError("coeff_type index must be with in the format (I, lambda, fwhm|sigma) "
                                          "for a Gaussian function")
@@ -267,8 +332,6 @@ class FittingModel:
                 raise NotImplementedError("only gaussian and polynomial types are implemented")
 
             for idx, coeff in zip(indexes_in_yaml, coeffs):
-
-
                 _guess = guess_list[ii][idx]
                 _unit = units_list[ii][idx]
                 _max_arr = max_arr_list[ii][idx]
@@ -279,9 +342,9 @@ class FittingModel:
                 guess = self._transform_to_conventional_unit(_guess)
                 _bounds_to_parse = [_min_arr, _max_arr]
                 bounds = self._parse_bounds(bounds_to_parse=_bounds_to_parse,
-                                            unit=_unit,trans_a = _trans_a, trans_b = _trans_b)
+                                            unit=_unit, trans_a=_trans_a, trans_b=_trans_b)
 
-                notation = f'{str(coeff)}{ii:d}'
+                notation = f'{str(coeff)}{index:d}'
 
                 params_all[type][-1][coeff] = {
                     "guess": guess.value,
@@ -314,7 +377,7 @@ class FittingModel:
 
                 if _constrained:
                     type_constraint = self._parse_constrains_(constrain_to_parse=_type_constrain,
-                                                         unit=_unit, trans_a=_trans_a, trans_b=_trans_b)
+                                                              unit=_unit, trans_a=_trans_a, trans_b=_trans_b)
                 else:
                     type_constraint = None
 
@@ -325,17 +388,12 @@ class FittingModel:
 
     # def generate_params_free(self):
 
-
-
-
-
     def _gen_mapping_params(self, additional_value: str = None):
         """
         can generate a mapping for all the coefficients
         :param args: (str) additionnal keys of the coefficient dictionnary to return
         :return:
         """
-
 
         params_all = self.params_all
 
@@ -357,12 +415,11 @@ class FittingModel:
         else:
             return type_list, index_list, coeff_list
 
-
-    def _gen_mapping_params_from_unique_index(self, unique_index_to_find):
+    def _gen_coeff_from_unique_index(self, unique_index_to_find):
 
         type_list, index_list, coeff_list, unique_index = self._gen_mapping_params("index")
         ii = np.where(np.array(unique_index) == unique_index_to_find)[0][0]
-        return type_list[ii], index_list[ii], coeff_list[ii]
+        return self.params_all[type_list[ii]][index_list[ii]][coeff_list[ii]]
 
     def _map_user_notation_in_yaml(self):
         type_list, index_list, coeff_list, index_in_fit_yaml_list = self._gen_mapping_params("index_in_fit_yaml")
@@ -380,7 +437,6 @@ class FittingModel:
 
     def _build_self_params(self):
         raise NotImplementedError
-
 
     def _parse_bounds(self, bounds_to_parse: list[str | int | float],
                       unit: str, trans_a: float | int, trans_b: float | int):
@@ -413,7 +469,7 @@ class FittingModel:
                     "value": np.float64(val.value),
                 })
             elif (type(bbb) is float) or (type(bbb) is int):
-                bbb_ =  np.float64(bbb)
+                bbb_ = np.float64(bbb)
                 bbb_ = u.Quantity(bbb_, unit) * trans_a + u.Quantity(trans_b, unit)
                 bbb_ = self._transform_to_conventional_unit(bbb_)
 
@@ -444,8 +500,6 @@ class FittingModel:
         }
         return constrain_output
 
-
-
     @staticmethod
     def _transform_to_conventional_unit(quantity: u.Quantity) -> u.Quantity:
         """
@@ -458,6 +512,97 @@ class FittingModel:
             return quantity.to(Constants.conventional_spectral_units)
         else:
             raise ValueError(f"Cannot convert {quantity} to conventional unit")
+
+    @staticmethod
+    def _function_generate_imports_str():
+        return ("import numpy as np\n"
+                "from numba import jit\n\n\n")
+
+
+
+    def _polynom_to_fitting_str(self, index_polynom: int):
+        """
+        returns the str to add to the fitting function str for the given (index_polynom) gaussian function
+        :param index_polynom:
+        :return:
+        """
+        s = "\n\tsum+="
+        if "polynomial" not in self.params_all:
+            return ""
+        coeffs = self.params_all["polynomial"][index_polynom]
+
+        letters = list(string.ascii_lowercase)
+        npoly = len(coeffs) - 1
+
+        for ii in range(len(coeffs)):
+            cstr = self._generate_str_fitting_function_for_params(coeffs[letters[ii]])
+            s += f'{cstr} * x ** ({npoly - ii})'
+        return s
+
+    def _gauss_to_fitting_str(self, index_gaussian: int):
+        """
+        returns the str to add to the fitting function str for the given (index_gaussian) gaussian method
+        gaussian(x) = I*exp(((x - mu)**2)/(2 * sigma**2))
+        :param index_gaussian: index of the gaussian function to write
+        """
+
+        s = "\n\tsum+="
+        if "gaussian" not in self.params_all:
+            return ""
+        coeffs = self.params_all["gaussian"][index_gaussian]
+        i_str = self._generate_str_fitting_function_for_params(coeffs["I"])
+        x_str = self._generate_str_fitting_function_for_params(coeffs["x"])
+        s_str = self._generate_str_fitting_function_for_params(coeffs["I"])
+
+        s += f"{i_str} * np.exp( ( ( {x_str} - x )**2 ) / (2 * ( {s_str} )**2 ))\n"
+        return s
+
+    def _gauss_to_jacobian_str(self, index_gaussian: int):
+        _type_list, _index_list, _coeff_list = self._gen_mapping_params()
+        for _type, _index, _coeff in zip(_type_list, _index_list, _coeff_list):
+            if not self.params_all[_type][_index][_coeff]["free"]:
+                breakpoint()
+                return None
+
+        if "gaussian" not in self.params_all:
+            return ""
+
+    def _generate_str_fitting_function_for_params(self, a: dict):
+        s = ""
+        if a["free"]:
+            s = a["notation"]
+        else:
+            dict_const = a["type_constrain"]
+            s += "("
+            b = self._gen_coeff_from_unique_index(dict_const["ref"])
+            s += b["notation"]
+            if dict_const["operation"] == "plus":
+                s += " + "
+            elif dict_const["operation"] == "minus":
+                s += " - "
+            elif dict_const["operation"] == "times":
+                s += " * "
+            s += str(dict_const["value"])
+            s += ")"
+        return s
+
+    @staticmethod
+    def _generate_str_jacobian_function_for_params(a: dict):
+        s = ""
+        if a["free"]:
+            s = a["notation"]
+        else:
+            dict_const = a["type_constrain"]
+            s += "("
+            s += dict_const["ref"]
+            if dict_const["operation"] == "plus":
+                s += " + "
+            elif dict_const["operation"] == "minus":
+                s += " - "
+            elif dict_const["operation"] == "times":
+                s += " * "
+            s += ")"
+        return s
 
     def _check_parinfo(self, parinfo=None):
         """
@@ -486,7 +631,7 @@ class FittingModel:
                 "unit_wave",
                 "lvl_low",
                 "lvl_up",
-                "legend",]
+                "legend", ]
         formats = [str,
                    str,
                    int,
@@ -494,7 +639,7 @@ class FittingModel:
                    str,
                    str,
                    str,
-                   str,]
+                   str, ]
         if str(type(test["info"])) != "<class 'list'>":
             raise ValueError(f"Fittemplate['info'] must be a list with lines information")
         for elem in test["info"]:
@@ -549,12 +694,11 @@ class FittingModel:
                 "coeff_notation",
             ]
             formats = [
-            [list, list, bool],
-            [list, list, str],
-            [list, list, str],
+                [list, list, bool],
+                [list, list, str],
+                [list, list, str],
             ]
             self._check_format(formats, keys, test["constrain_lines"])
-
 
         name_fit = test["fit"]["name"]
         name_info = [n["name"] for n in test["info"]]
@@ -595,4 +739,3 @@ class FittingModel:
 
     # def __repr__(self):
     #     pass
-

@@ -111,13 +111,14 @@ class FittingModel:
         self.params_all getter. Returns a deepcopy object, as self._params_all should only be changed through its setter.
         :return:
         """
-        return copy.deepcopy(self._params_all)
+        return self._params_all
 
     @params_all.setter
     def params_all(self, params_all: dict):
 
         self._params_all = params_all
-        self._all_to_free_bounds()
+        # TODO changes bounds and params_free
+        # self._all_to_free_bounds()
 
 
 
@@ -280,8 +281,9 @@ class FittingModel:
                     "index_in_fit_yaml": [ii, idx]
                 }
 
+        self.params_all = params_all
         if "constrain_lines" in self.parinfo.keys():
-            _type_list, _index_list, _coeff_list = self._gen_mapping_params_all(params_all)
+            _type_list, _index_list, _coeff_list = self._gen_mapping_params_all()
 
             type_constrain_list = self.parinfo["constrain_lines"]["type_constrain"]
             constrained_list = self.parinfo["constrain_lines"]["constrained"]
@@ -311,14 +313,20 @@ class FittingModel:
         return params_all
 
 
-    def _gen_mapping_params_all(self, params_all: dict):
+    def _gen_mapping_params_all(self, additional_value: str = None):
+        """
+        can generate a mapping for all the coefficients
+        :param args: (str) additionnal keys of the coefficient dictionnary to return
+        :return:
+        """
 
-        if params_all is None:
-            params_all = self.params_all
+
+        params_all = self.params_all
 
         type_list = []
         index_list = []
         coeff_list = []
+        additional_value_list = []
 
         for key0 in params_all.keys():
             for ii, elems in enumerate(params_all[key0]):
@@ -326,8 +334,35 @@ class FittingModel:
                     type_list.append(key0)
                     index_list.append(ii)
                     coeff_list.append(key1)
-        return type_list, index_list, coeff_list
+                    if additional_value is not None:
+                        additional_value_list.append(params_all[key0][ii][key1][additional_value])
+        if additional_value is not None:
+            return type_list, index_list, coeff_list, additional_value_list
+        else:
+            return type_list, index_list, coeff_list
 
+
+    def _gen_mapping_params_all_from_unique_index(self, unique_index_to_find):
+
+        type_list, index_list, coeff_list, unique_index = self._gen_mapping_params_all("index")
+        ii = np.where(np.array(unique_index) == unique_index_to_find)[0][0]
+        return type_list[ii], index_list[ii], coeff_list[ii]
+
+
+
+    def _map_user_notation_in_yaml(self):
+        type_list, index_list, coeff_list, index_in_fit_yaml_list = self._gen_mapping_params_all("index_in_fit_yaml")
+        type_list, index_list, coeff_list, unique_index_list = self._gen_mapping_params_all("index")
+
+        notation_user = self.parinfo["constrain_lines"]["coeff_notation"]
+        notation_user_to_unique_index = {}
+        for ii, elem1 in enumerate(notation_user):
+            for jj, elem2 in enumerate(elem1):
+                l = [[ii, jj] == n for n in index_in_fit_yaml_list]
+                idx = np.where(l)[0][0]
+
+                notation_user_to_unique_index[elem2] = unique_index_list[idx]
+        return notation_user_to_unique_index
 
     def _build_self_params(self):
         raise NotImplementedError
@@ -384,10 +419,9 @@ class FittingModel:
         val = u.Quantity(val, unit) * trans_a + u.Quantity(trans_b, unit)
         val = self._transform_to_conventional_unit(val)
 
-        ref_yaml = self.parinfo["constrain_lines"]["coeff_notation"]
-        breakpoint()
+        map_yaml_notation = self._map_user_notation_in_yaml()
         constrain_output = {
-            "ref": d["ref"],
+            "ref": map_yaml_notation[d["ref"]],
             "operation": d["operation"],
             "value": val.value,
         }

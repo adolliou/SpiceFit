@@ -1,3 +1,5 @@
+import warnings
+
 import astropy.units as u
 import numpy as np
 from yaml import safe_load
@@ -26,21 +28,24 @@ class FittingModel:
 
     # Template used to compute fitting and Jacobian functions
 
-    template_fitting_function = (""
+    template_function = (""
                                  "{0}\n"
                                  "@jit(nopython=True, inline='always', cache = True)\n"
                                  "def {1}(x, {2}):\n"
-                                 "constant = {3}\n"
+                                 "matrix = {3}\n"
                                  "\tx=np.array(x, dtype=np.float64)\n"
                                  "\tsum = np.zeros(len(x), dtype=np.float64)\n)"
                                  "")
 
-    def __init__(self, filename=None, parinfo=None, ) -> None:
+
+
+    def __init__(self, filename=None, parinfo=None, verbose = 1) -> None:
         """
 
         :param filename: (optional)
         :param parinfo: dictionary, should have the same keys as a parinfo dictionary
         """
+        self.verbose = verbose
         self._parinfo = {"fit": {}, "info": {}}
 
         if (filename is not None) & (parinfo is None):
@@ -69,8 +74,8 @@ class FittingModel:
         self._params_free = None
         self.generate_free_params()
 
-        self.str_fitting_function_ = self.write_function_file()
-        self.str_jacobian_function = None
+        self.str_fitting_function_ = self.create_fitting_function_str()
+        self.str_jacobian_function = self.create_jacobian_function_str()
 
         self._fitting_function = None
         self._jacobian_function = None
@@ -204,13 +209,13 @@ class FittingModel:
                 self._params_free["index"].append(self.params_all[type_][idx_][coeff_]["index"], )
                 self._params_free["notation"].append(self.params_all[type_][idx_][coeff_]["notation"], )
 
-    def write_function_file(self):
-        s = self.template_fitting_function.format(self._function_generate_imports_str(),
+    def create_fitting_function_str(self):
+        s = self.template_function.format(self._function_generate_imports_str(),
                                                   'fitting_function',
                                                   ','.join(self.params_free["notation"]),
                                                   0,
                                                   )
-        s += '\n\n\t'
+        s += '\n\t'
         for function_type in self.params_all.keys():
             for ii in range(len(self.params_all[function_type])):
                 if function_type == "polynomial":
@@ -221,6 +226,28 @@ class FittingModel:
                     raise NotImplementedError
         s += "\n\n \treturn sum"
         return s
+
+    def create_jacobian_function_str(self):
+        """
+        creates a str of the code for the Jacobian function.
+        :return:
+        """
+        _type_list, _index_list, _coeff_list = self._gen_mapping_params()
+        for _type, _index, _coeff in zip(_type_list, _index_list, _coeff_list):
+            if not self.params_all[_type][_index][_coeff]["free"]:
+                if self.verbose > 1 :
+                    warnings.warn("The jacobian function is set to None due to Constrained parameters ")
+                return None
+
+        s = self.template_function.format(self._function_generate_imports_str(),
+                                                'jacobian_function',
+                                                ','.join(self.params_free["notation"]),
+                                                f'np.zeros((1, {len(self.params_free["values"])}), dtype=np.float64)',
+                                                  )
+        s += '\n\t'
+
+
+
 
     def get_component_info(self, component_name):
         if self.parinfo is None:
@@ -554,15 +581,62 @@ class FittingModel:
         x_str = self._generate_str_fitting_function_for_params(coeffs["x"])
         s_str = self._generate_str_fitting_function_for_params(coeffs["I"])
 
-        s += f"{i_str} * np.exp( ( ( {x_str} - x )**2 ) / (2 * ( {s_str} )**2 ))\n"
+        s += f"{i_str} * np.exp( - ( ( {x_str} - x )**2 ) / (2 * ( {s_str} )**2 ))\n"
         return s
 
+    def _polynom_to_jacobian_str(self, index_polynom: int):
+        """
+        creates a matrix of str corresponding to the Jacobian of the given polynomial function.
+        each matrix index must be to the corresponding indexes of the global Jacobian matrix to provide
+        the complete jacobian
+
+        coeff i
+        f = an * x**n + ... + ai * x**i + .... + a0 * x**0
+        J[0, i] = df/dai = x**i
+
+        :param index_polynom:
+        :return:
+        """
+        # s = "\n\tsum+="
+
+        if "polynomial" not in self.params_all:
+            return ""
+        coeffs = self.params_all["polynomial"][index_polynom]
+        letters = list(string.ascii_lowercase)
+        npoly = len(coeffs) - 1
+
+        jac_matrix_str = np.array((1, len(coeffs)))
+        for ii in range(len(coeffs)):
+            jac_matrix_str[0, ii] = "x**i"
+        return jac_matrix_str
+
+
     def _gauss_to_jacobian_str(self, index_gaussian: int):
-        _type_list, _index_list, _coeff_list = self._gen_mapping_params()
-        for _type, _index, _coeff in zip(_type_list, _index_list, _coeff_list):
-            if not self.params_all[_type][_index][_coeff]["free"]:
-                breakpoint()
-                return None
+        """
+        returns the str to add to the jacobian function str for the given (index_gaussian) gaussian method
+        f(x) = I*exp( - ((x - mu)**2)/(2 * sigma**2))
+        df/dI =                                                        exp(- ((x - mu)**2)/(2 * sigma**2))
+        df/dmu =        I                 * (x - mu)/(sigma**2)      * exp(- ((x - mu)**2)/(2 * sigma**2))
+        df/dsigma =     I * sigma         * (x - mu)**2/(sigma**3)   * exp(- ((x - mu)**2)/(2 * sigma**2))
+
+        :param index_gaussian: index of the gaussian function to write
+        """
+
+        if "gaussian" not in self.params_all:
+            return ""
+        coeffs = self.params_all["gaussian"][index_gaussian]
+        i_str = self._generate_str_fitting_function_for_params(coeffs["I"])
+        x_str = self._generate_str_fitting_function_for_params(coeffs["x"])
+        s_str = self._generate_str_fitting_function_for_params(coeffs["I"])
+        jac_matrix_str = np.array((1, 3))
+
+
+        return jac_matrix_str
+
+
+
+    def _gauss_to_jacobian_str(self, index_gaussian: int):
+
 
         if "gaussian" not in self.params_all:
             return ""

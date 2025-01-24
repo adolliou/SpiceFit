@@ -29,17 +29,15 @@ class FittingModel:
     # Template used to compute fitting and Jacobian functions
 
     template_function = (""
-                                 "{0}\n"
-                                 "@jit(nopython=True, inline='always', cache = True)\n"
-                                 "def {1}(x, {2}):\n"
-                                 "matrix = {3}\n"
-                                 "\tx=np.array(x, dtype=np.float64)\n"
-                                 "\tsum = np.zeros(len(x), dtype=np.float64)\n)"
-                                 "")
+                         "{0}\n"
+                         "@jit(nopython=True, inline='always', cache = True)\n"
+                         "def {1}(x, {2}):\n"
+                         "matrix = {3}\n"
+                         "\tx=np.array(x, dtype=np.float64)\n"
+                         "\tsum = np.zeros(len(x), dtype=np.float64)\n)"
+                         "")
 
-
-
-    def __init__(self, filename=None, parinfo=None, verbose = 1) -> None:
+    def __init__(self, filename=None, parinfo=None, verbose=1) -> None:
         """
 
         :param filename: (optional)
@@ -211,10 +209,10 @@ class FittingModel:
 
     def create_fitting_function_str(self):
         s = self.template_function.format(self._function_generate_imports_str(),
-                                                  'fitting_function',
-                                                  ','.join(self.params_free["notation"]),
-                                                  0,
-                                                  )
+                                          'fitting_function',
+                                          ','.join(self.params_free["notation"]),
+                                          0,
+                                          )
         s += '\n\t'
         for function_type in self.params_all.keys():
             for ii in range(len(self.params_all[function_type])):
@@ -235,19 +233,16 @@ class FittingModel:
         _type_list, _index_list, _coeff_list = self._gen_mapping_params()
         for _type, _index, _coeff in zip(_type_list, _index_list, _coeff_list):
             if not self.params_all[_type][_index][_coeff]["free"]:
-                if self.verbose > 1 :
+                if self.verbose > 1:
                     warnings.warn("The jacobian function is set to None due to Constrained parameters ")
                 return None
 
         s = self.template_function.format(self._function_generate_imports_str(),
-                                                'jacobian_function',
-                                                ','.join(self.params_free["notation"]),
-                                                f'np.zeros((1, {len(self.params_free["values"])}), dtype=np.float64)',
-                                                  )
+                                          'jacobian_function',
+                                          ','.join(self.params_free["notation"]),
+                                          f'np.zeros((1, {len(self.params_free["values"])}), dtype=np.float64)',
+                                          )
         s += '\n\t'
-
-
-
 
     def get_component_info(self, component_name):
         if self.parinfo is None:
@@ -545,8 +540,6 @@ class FittingModel:
         return ("import numpy as np\n"
                 "from numba import jit\n\n\n")
 
-
-
     def _polynom_to_fitting_str(self, index_polynom: int):
         """
         returns the str to add to the fitting function str for the given (index_polynom) gaussian function
@@ -610,7 +603,6 @@ class FittingModel:
             jac_matrix_str[0, ii] = "x**i"
         return jac_matrix_str
 
-
     def _gauss_to_jacobian_str(self, index_gaussian: int):
         """
         returns the str to add to the jacobian function str for the given (index_gaussian) gaussian method
@@ -630,13 +622,17 @@ class FittingModel:
         s_str = self._generate_str_fitting_function_for_params(coeffs["I"])
         jac_matrix_str = np.array((1, 3))
 
+        exp_str = "{0} * exp(- ((x - {1})**2)/(2 * {2}**2)) "
+        # df/dI
+        jac_matrix_str[0, 0] = exp_str.format("1", x_str, s_str)
+        # df/dx
+        jac_matrix_str[0, 1] = exp_str.format(i_str, x_str, s_str)
+
+
 
         return jac_matrix_str
 
-
-
     def _gauss_to_jacobian_str(self, index_gaussian: int):
-
 
         if "gaussian" not in self.params_all:
             return ""

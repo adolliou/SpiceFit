@@ -26,7 +26,6 @@ def flatten(xss):
 
 class FitResults:
 
-
     def __init__(
             self,
             fit_template: FittingModel,
@@ -52,14 +51,10 @@ class FitResults:
         # fitting direct results
         self.fit_results = {}
 
-
         # elaborate results
         self.components = None
 
         # fitting parameters
-        # self.fit_guess = None  # size : (N)
-        # self.fit_max_arr = None  # size : (N)
-        # self.fit_min_arr = None  # size : (N)
         self.min_data_points = None
         self.chi2_limit = None
 
@@ -68,20 +63,10 @@ class FitResults:
         self._lambda_dict = None  # size : (time, lambda, Y , X)
         self._uncertainty_dict = None  # size : (time, lambda, Y , X)
         self._fit_coeffs_dict = None  # size : (N, time, Y , X)
-        self._fit_coeffs_error_dict = None   # size : (N, time, Y , X)
+        self._fit_coeffs_error_dict = None  # size : (N, time, Y , X)
         self._fit_chi2_dict = None  # size : (N, time, Y , X)
         self._flagged_pixels_dict = None  # size : (time, Y , X)
-        # self._unit_coeffs_during_fitting = None  # size : (N)
-        # for jj, name in enumerate(self.fit_template.parinfo["fit"]["name"]):
-        #     self.fit_results[name] = {
-        #         "coeffs": [],
-        #         "type": self.fit_template.parinfo["fit"]["type"],
-        #         "max_arr": self.fit_template.parinfo["fit"]["max_arr"][jj],
-        #         "min_arr": self.fit_template.parinfo["fit"]["max_arr"][jj],
-        #         "trans_a": self.fit_template.parinfo["fit"]["max_arr"][jj],
-        #         "trans_b": self.fit_template.parinfo["fit"]["max_arr"][jj],
-        #         "n_components": self.fit_template.parinfo["fit"]["n_components"][jj],
-        #     }
+
         self.fit_results = {
             "coeff": [],  # (N, time, Y , X)
             "chi2": [],  # (time, Y , X)
@@ -96,14 +81,12 @@ class FitResults:
         self.display_progress_bar = None
         self.spicewindow = None
 
-
-
     def fit_spice_window_standard(self,
-            spicewindow: SpiceRasterWindowL2,
-            parallelism: bool = True,
-            cpu_count: int = None,
-            min_data_points: int = 5,
-            chi2_limit: float = 20.0,):
+                                  spicewindow: SpiceRasterWindowL2,
+                                  parallelism: bool = True,
+                                  cpu_count: int = None,
+                                  min_data_points: int = 5,
+                                  chi2_limit: float = 20.0, ):
         """
 
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
@@ -125,16 +108,14 @@ class FitResults:
         coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
 
         self.fit_window_standard_3d(
-        data_cube=data_cube,
-        uncertainty_cube = uncertainty_cube,
-        lambda_cube = lambda_cube,
-        parallelism = parallelism,
-        cpu_count = cpu_count,
-        min_data_points = min_data_points,
-        chi2_limit = chi2_limit,
+            data_cube=data_cube,
+            uncertainty_cube=uncertainty_cube,
+            lambda_cube=lambda_cube,
+            parallelism=parallelism,
+            cpu_count=cpu_count,
+            min_data_points=min_data_points,
+            chi2_limit=chi2_limit,
         )
-
-
 
     def fit_window_standard_3d(
             self,
@@ -170,7 +151,6 @@ class FitResults:
         else:
             self.cpu_count = cpu_count
         # self._gen_function()
-        self._prepare_fitting_parameters()
 
         if parallelism:
             self.lock = Lock()
@@ -382,7 +362,6 @@ class FitResults:
             # trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
             # trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
 
-
             # goes back to the proper units :
             # for n in range(coeffs_cp.shape[0]):
             #     coeffs_cp[n, :, :, :] = u.Quantity(coeffs_cp[n, :, :, :],
@@ -415,7 +394,6 @@ class FitResults:
             shmm_fit_chi2.unlink()
             shmm_flagged_pixels.close()
             shmm_flagged_pixels.unlink()
-
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
 
@@ -467,7 +445,6 @@ class FitResults:
 
                 jac=self.fit_template.jacobian_function,
             )
-
 
             chi2 = np.sum(np.diag(pcov))
             if chi2 <= self.chi2_limit:
@@ -584,7 +561,7 @@ class FitResults:
         else:
             raise ValueError(f"Cannot convert {quantity} to conventional unit")
 
-    def quicklook(self, coeff_index: int, fig = None, ax = None):
+    def quicklook(self, coeff_index: int, fig=None, ax=None):
         """
         Plot a quicklook plot of the given coefficient index
         :param coeff_index: coefficient index to plot
@@ -643,22 +620,13 @@ class FitResults:
             if type == "gauss":
                 self.components[name]["parinfo_info"] = self.fit_template.get_component_info(component_name=name)
 
-
-
-
-
             n = n + n_components
 
-
-    def check_spectra(self, position = "random"):
+    def check_spectra(self, position="random"):
         """
 
         :param position:
         """
         pass
-
-
-
-
 
     # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

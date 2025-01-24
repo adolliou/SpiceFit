@@ -57,9 +57,9 @@ class FitResults:
         self.components = None
 
         # fitting parameters
-        self.fit_guess = None  # size : (N)
-        self.fit_max_arr = None  # size : (N)
-        self.fit_min_arr = None  # size : (N)
+        # self.fit_guess = None  # size : (N)
+        # self.fit_max_arr = None  # size : (N)
+        # self.fit_min_arr = None  # size : (N)
         self.min_data_points = None
         self.chi2_limit = None
 
@@ -68,9 +68,10 @@ class FitResults:
         self._lambda_dict = None  # size : (time, lambda, Y , X)
         self._uncertainty_dict = None  # size : (time, lambda, Y , X)
         self._fit_coeffs_dict = None  # size : (N, time, Y , X)
+        self._fit_coeffs_error_dict = None   # size : (N, time, Y , X)
         self._fit_chi2_dict = None  # size : (N, time, Y , X)
         self._flagged_pixels_dict = None  # size : (time, Y , X)
-        self._unit_coeffs_during_fitting = None  # size : (N)
+        # self._unit_coeffs_during_fitting = None  # size : (N)
         # for jj, name in enumerate(self.fit_template.parinfo["fit"]["name"]):
         #     self.fit_results[name] = {
         #         "coeffs": [],
@@ -86,8 +87,7 @@ class FitResults:
             "chi2": [],  # (time, Y , X)
             "flagged_pixels": [],  # (time, Y , X)
             "radiance": [],  # (time, Y , X)
-            "type": self.fit_template.parinfo["fit"]["type"],
-            "name": self.fit_template.parinfo["fit"]["name"],
+            "name": self.fit_template.params_free["notation"],
             "coeff_unit": []
         }
 
@@ -169,8 +169,7 @@ class FitResults:
             self.cpu_count = mp.cpu_count()
         else:
             self.cpu_count = cpu_count
-        self._gen_function()
-
+        # self._gen_function()
         self._prepare_fitting_parameters()
 
         if parallelism:
@@ -182,14 +181,15 @@ class FitResults:
             self.lambda_unit = Constants.conventional_lambda_units
             self.data_unit = Constants.conventional_spectral_units
 
-            shmm_data, data = gen_shmm(create=True, ndarray=copy.deepcopy(data_cube))
-            shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=copy.deepcopy(lambda_))
+            shmm_data, data = gen_shmm(create=True, ndarray=np.array(data_cube, dtype=np.float64))
+            shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=np.array(lambda_, dtype=np.float64))
             shmm_uncertainty, uncertainty = gen_shmm(
                 create=True,
-                ndarray=copy.deepcopy(
+                ndarray=np.array(
                     uncertainty_cube
                     .to(Constants.conventional_spectral_units)
-                    .value
+                    .value,
+                    dtype=np.float64,
                 ),
             )
             shmm_fit_coeffs, fit_coeffs = gen_shmm(
@@ -204,6 +204,20 @@ class FitResults:
                     dtype="float",
                 ),
             )
+
+            shmm_fit_coeffs_error, fit_coeffs_error = gen_shmm(
+                create=True,
+                ndarray=np.zeros(
+                    (
+                        np.sum(self.fit_template.parinfo["fit"]["n_components"]),
+                        data_cube.shape[0],
+                        data_cube.shape[2],
+                        data_cube.shape[3],
+                    ),
+                    dtype="float",
+                ),
+            )
+
             shmm_fit_chi2, fit_chi2 = gen_shmm(
                 create=True,
                 ndarray=np.zeros(
@@ -247,6 +261,11 @@ class FitResults:
                 "name": shmm_fit_coeffs.name,
                 "dtype": fit_coeffs.dtype,
                 "shape": fit_coeffs.shape,
+            }
+            self._fit_coeffs_error_dict = {
+                "name": shmm_fit_coeffs_error,
+                "dtype": fit_coeffs_error.dtype,
+                "shape": fit_coeffs_error.shape,
             }
             self._fit_chi2_dict = {
                 "name": shmm_fit_chi2.name,
@@ -351,24 +370,38 @@ class FitResults:
             # TODO save all results in permanent addresses before unlinking all shmm objects
 
             shmm_fit_coeffs_all, fit_coeffs_all = gen_shmm(create=False, **self._fit_coeffs_dict)
+            shmm_fit_coeffs_error_all, fit_coeffs_error_all = gen_shmm(create=False, **self._fit_coeffs_error_dict)
+
             shmm_fit_chi2_all, fit_chit2_all = gen_shmm(create=False, **self._fit_chi2_dict)
             shmm_flagged_pixels, flagged_pixels = gen_shmm(create=False, **self._flagged_pixels_dict)
 
             coeffs_cp = copy.deepcopy(fit_coeffs_all)
-            self.fit_results["unit"] = flatten(self.fit_template.parinfo["fit"]["units"])
-            trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
-            trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
+            coeffs_error_cp = copy.deepcopy(fit_coeffs_error_all)
+
+            # self.fit_results["unit"] = flatten(self.fit_template.parinfo["fit"]["units"])
+            # trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
+            # trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
+
 
             # goes back to the proper units :
-            for n in range(coeffs_cp.shape[0]):
-                coeffs_cp[n, :, :, :] = u.Quantity(coeffs_cp[n, :, :, :],
-                                                   self._unit_coeffs_during_fitting[n]).to(
-                    self.fit_results["unit"][n]).value
-                coeffs_cp[n, :, :, :] = (coeffs_cp[n, :, :, :] - trans_b[n]) / trans_a[n]
+            # for n in range(coeffs_cp.shape[0]):
+            #     coeffs_cp[n, :, :, :] = u.Quantity(coeffs_cp[n, :, :, :],
+            #                                        self._unit_coeffs_during_fitting[n]).to(
+            #         self.fit_results["unit"][n]).value
+            #     coeffs_cp[n, :, :, :] = (coeffs_cp[n, :, :, :] - trans_b[n]) / trans_a[n]
+            #
+            #     coeffs_error_cp[n, :, :, :] = u.Quantity(coeffs_error_cp[n, :, :, :],
+            #                                        self._unit_coeffs_during_fitting[n]).to(
+            #         self.fit_results["unit"][n]).value
+            #     coeffs_error_cp[n, :, :, :] = (coeffs_error_cp[n, :, :, :] - trans_b[n]) / trans_a[n]
 
             self.fit_results["coeff"] = coeffs_cp
+            self.fit_results["coeffs_error"] = coeffs_error_cp
+
             self.fit_results["chi2"] = copy.deepcopy(fit_chit2_all)
             self.fit_results["flagged_pixels"] = copy.deepcopy(flagged_pixels)
+
+            self.fit_results["unit"] = flatten(self.fit_template.params_free["unit"])
 
             shmm_data.close()
             shmm_data.unlink()
@@ -403,6 +436,9 @@ class FitResults:
         shmm_fit_coeffs_all, fit_coeffs_all = gen_shmm(
             create=False, **self._fit_coeffs_dict
         )
+        shmm_fit_coeffs_all_error, fit_coeffs_all_error = gen_shmm(
+            create=False, **self._fit_coeffs_error_dict
+        )
         shmm_fit_chi2_all, fit_chit2_all = gen_shmm(create=False, **self._fit_chi2_dict)
         shmm_flagged_pixels, flagged_pixels = gen_shmm(
             create=False, **self._flagged_pixels_dict
@@ -411,29 +447,33 @@ class FitResults:
         data = data_all[t, :, i, j]
         uncertainty = uncertainty_all[t, :, i, j]
         lambda_ = lambda_all[t, :, i, j]
-        guess = self.fit_guess
-        max_arr = self.fit_max_arr
-        min_arr = self.fit_min_arr
+
         # check which datapoints are nans
         isnotnan = ~np.isnan(data)
         if isnotnan.sum() > self.min_data_points:
 
             popt, pcov = curve_fit(
-                f=self.fit_function,
+                f=self.fit_template.fitting_function,
                 xdata=lambda_[isnotnan],
                 ydata=data[isnotnan],
-                p0=guess,
                 sigma=uncertainty[isnotnan],
-                bounds=(min_arr, max_arr),
+
+                p0=self.fit_template.params_free["guess"],
+                bounds=self.fit_template.params_free["bounds"],
                 nan_policy="raise",
                 method="trf",
                 full_output=False,
+                absolute_sigma=True,
+
+                jac=self.fit_template.jacobian_function,
             )
+
 
             chi2 = np.sum(np.diag(pcov))
             if chi2 <= self.chi2_limit:
                 lock.acquire()
                 fit_coeffs_all[:, t, i, j] = popt
+                fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
                 fit_chit2_all[t, i, j] = chi2
                 lock.release()
             else:
@@ -456,7 +496,7 @@ class FitResults:
     def _gen_function(self):
         type = self.fit_template.parinfo["fit"]["type"]
         only_gaussi_const = np.logical_and(
-            all([n in ["gauss", "const"] for n in type]),
+            all([n in ["gaussian", "polynomial"] for n in type]),
             len(np.array(type)[np.array(type) == "const"]) == 1,
         )
         if only_gaussi_const:
@@ -484,41 +524,41 @@ class FitResults:
         """
         raise NotImplementedError
 
-    def _prepare_fitting_parameters(self):
-        p0 = flatten(self.fit_template.parinfo["fit"]["guess"])
-        max_arr = flatten(self.fit_template.parinfo["fit"]["max_arr"])
-        min_arr = flatten(self.fit_template.parinfo["fit"]["min_arr"])
-        unit = flatten(self.fit_template.parinfo["fit"]["units"])
-        trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
-        trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
-
-        self.fit_guess = []
-        self.fit_max_arr = []
-        self.fit_min_arr = []
-        self._unit_coeffs_during_fitting = []
-
-        # convert into the right units ("W/ (m2 sr nm)" and "nm)
-        for jj in range(len(p0)):
-            p = u.Quantity(p0[jj], unit[jj]) * trans_a[jj] + u.Quantity(
-                trans_b[jj], unit[jj]
-            )
-            mx = u.Quantity(max_arr[jj], unit[jj]) * trans_a[jj] + u.Quantity(
-                trans_b[jj], unit[jj]
-            )
-            mn = u.Quantity(min_arr[jj], unit[jj]) * trans_a[jj] + u.Quantity(
-                trans_b[jj], unit[jj]
-            )
-
-            p = self._transform_to_conventional_unit(p)
-            mx = self._transform_to_conventional_unit(mx)
-            mn = self._transform_to_conventional_unit(mn)
-
-            self.fit_guess.append(p.value)
-            self.fit_max_arr.append(mx.value)
-            self.fit_min_arr.append(mn.value)
-            if (p.unit != mx.unit) or (p.unit != mn.unit):
-                raise ValueError("Not consistent units among fitting parameters")
-            self._unit_coeffs_during_fitting.append(p.unict)
+    # def _prepare_fitting_parameters(self):
+    #     p0 = flatten(self.fit_template.parinfo["fit"]["guess"])
+    #     max_arr = flatten(self.fit_template.parinfo["fit"]["max_arr"])
+    #     min_arr = flatten(self.fit_template.parinfo["fit"]["min_arr"])
+    #     unit = flatten(self.fit_template.parinfo["fit"]["units"])
+    #     trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
+    #     trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
+    #
+    #     self.fit_guess = []
+    #     self.fit_max_arr = []
+    #     self.fit_min_arr = []
+    #     self._unit_coeffs_during_fitting = []
+    #
+    #     # convert into the right units ("W/ (m2 sr nm)" and "nm)
+    #     for jj in range(len(p0)):
+    #         p = u.Quantity(p0[jj], unit[jj]) * trans_a[jj] + u.Quantity(
+    #             trans_b[jj], unit[jj]
+    #         )
+    #         mx = u.Quantity(max_arr[jj], unit[jj]) * trans_a[jj] + u.Quantity(
+    #             trans_b[jj], unit[jj]
+    #         )
+    #         mn = u.Quantity(min_arr[jj], unit[jj]) * trans_a[jj] + u.Quantity(
+    #             trans_b[jj], unit[jj]
+    #         )
+    #
+    #         p = self._transform_to_conventional_unit(p)
+    #         mx = self._transform_to_conventional_unit(mx)
+    #         mn = self._transform_to_conventional_unit(mn)
+    #
+    #         self.fit_guess.append(p.value)
+    #         self.fit_max_arr.append(mx.value)
+    #         self.fit_min_arr.append(mn.value)
+    #         if (p.unit != mx.unit) or (p.unit != mn.unit):
+    #             raise ValueError("Not consistent units among fitting parameters")
+    #         self._unit_coeffs_during_fitting.append(p.unict)
 
     def _flag_pixels_with_not_enough_data(self):
 

@@ -18,7 +18,6 @@ import astropy.constants as const
 from matplotlib.gridspec import GridSpec
 
 
-
 def flatten(xss):
     """
     https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists
@@ -405,7 +404,7 @@ class FitResults:
             a = self.fit_template.params_all[type_][index_][coeff_]
             wha = np.where(a["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
             if a["name_component"] not in self.components_results:
-                self.components_results[a["name_component"]] = {"name_component": a["name_component"],}
+                self.components_results[a["name_component"]] = {"name_component": a["name_component"], }
             if a["free"]:
                 self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][wha, ...]
             else:
@@ -414,18 +413,18 @@ class FitResults:
                 whb = np.where(b["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
                 if dict_const["operation"] == "plus":
                     self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb, ...] + \
-                                                                              dict_const["value"]
+                                                                           dict_const["value"]
                 elif dict_const["operation"] == "minus":
                     self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb, ...] - \
-                                                                              dict_const["value"]
+                                                                           dict_const["value"]
                 elif dict_const["operation"] == "times":
                     self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb, ...] * \
-                                                                              dict_const["value"]
+                                                                           dict_const["value"]
                 else:
                     raise NotImplementedError
 
             self.components_results[a["name_component"]][coeff_] = \
-                u.Quantity(self.components_results[a["name_component"]][coeff_],self.fit_results["unit"][wha])
+                u.Quantity(self.components_results[a["name_component"]][coeff_], self.fit_results["unit"][wha])
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
 
             if (type_ == "gaussian") and ("radiance" not in self.components_results[a["name_component"]].keys()):
@@ -443,17 +442,15 @@ class FitResults:
                     raise NotImplementedError
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 self.components_results[a["name_component"]]["velocity"] = \
-                    (const.c.to("km/s") * (x - lambda_ref)/lambda_ref).to(Constants.conventional_velocity_units)
+                    (const.c.to("km/s") * (x - lambda_ref) / lambda_ref).to(Constants.conventional_velocity_units)
                 self.components_results[a["name_component"]]["radiance"] = \
                     (I * np.sqrt(2 * np.pi * s * s)).to(Constants.conventional_radiance_units)
                 self.components_results[a["name_component"]]["fwhm"] = 2.355 * s
+        dic = copy.deepcopy(self.components_results)
 
-        for line_ in self.components_results.keys():
-            if line_ ==self.fit_template.parinfo["main_line"]:
-                self.components_results["main"] = self.components_results[a["name_component"]]
-
-
-
+        for line_ in dic.keys():
+            if line_ == self.fit_template.parinfo["main_line"]:
+                self.components_results["main"] = self.components_results[line_]
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
 
@@ -681,8 +678,7 @@ class FitResults:
         latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
         dlon = dlon.to("arcsec").value
         dlat = dlat.to("arcsec").value
-        xg, yg = w_xy.world_to_pixel(coords.Tx, coords.Ty)
-
+        xg, yg = w_xy.world_to_pixel(coords)
 
         if line not in self.components_results.keys():
             raise ValueError(f"Cannot plot {line} as it is not a fitted line")
@@ -691,25 +687,31 @@ class FitResults:
         cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
         cmap.set_bad('white')
 
-        fig = plt.figure(figsize=(17*cm, 17*cm))
+        fig = plt.figure(figsize=(17 * cm, 17 * cm))
         gs = GridSpec(2, 2, wspace=0.7, hspace=0.7)
-        axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1]) ]
+        axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1])]
         for ii, param, unit in zip(range(4), ["radiance", "velocity", "fwhm", "chi2"],
                                    ["W/ (m2 sr)", "km/s", "nm", None]):
-            data_rep = CommonUtil.interpol2d(a[param].to(unit).value, )
+            data_rep = CommonUtil.interpol2d(a[param].to(unit).value, x=xg, y=yg, order=3, fill=np.nqn)
             if unit is not None:
-                im = axs[ii].imshow(a[param].to(unit).value, origin="lower", interpolation="none",cmap = cmap)
-                cbar = fig.colorbar(im, ax=axs[ii], label=unit)
+                im = axs[ii].imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
+                                    extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+                                            latg[0, 0] - 0.5 * dlat, latg[-1, -1] + 0.5 * dlat)
+                                    )
+                cbar = fig.colorbar(im, ax=axs[ii], label=unit,
+                                    )
 
             else:
-                im = axs[ii].imshow(a[param], origin="lower", interpolation="none", cmap=cmap)
+                im = axs[ii].imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
+                                    extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+                                            latg[0, 0] - 0.5 * dlat, latg[-1, -1] + 0.5 * dlat)
+                                    )
                 cbar = fig.colorbar(im, ax=axs[ii])
             axs[ii].set_title(param)
             if show == True:
                 fig.show()
             else:
                 return fig
-
 
     def organize_components(self):
         """

@@ -190,8 +190,9 @@ class FittingModel:
             "guess": [],
             "bounds": [[], []],
             "unit": [],
-            "index": [],
+            "unique_index": [],
             "notation": [],
+            "name_component": [],
         }
         type_list, index_list, coeff_list = self.gen_mapping_params()
         for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
@@ -220,8 +221,10 @@ class FittingModel:
                 self._params_free["bounds"][1].append(bounds[1])
 
                 self._params_free["unit"].append(self.params_all[type_][idx_][coeff_]["unit"], )
-                self._params_free["index"].append(self.params_all[type_][idx_][coeff_]["index"], )
+                self._params_free["unique_index"].append(self.params_all[type_][idx_][coeff_]["unique_index"], )
                 self._params_free["notation"].append(self.params_all[type_][idx_][coeff_]["notation"], )
+                self._params_free["name_component"].append(self.params_all[type_][idx_][coeff_]["name_component"], )
+
         self._params_free["guess"] = np.array(self._params_free["guess"], dtype=np.float64)
         self._params_free["bounds"] = tuple(self._params_free["bounds"])
 
@@ -373,7 +376,8 @@ class FittingModel:
                 "guess": None,
                 "bounds": None,
                 "unit": None,
-                "index": None
+                "unique_index": None,
+                "name_component": None,
             }
 
             if not self.params_all[type_][idx_][coeff_]["free"]:
@@ -396,7 +400,7 @@ class FittingModel:
         params_all = {}
         index_gaussian = 0
         index_polynomial = 0
-
+        unique_index = 0
         for ii, type in enumerate(type_list):
             if type not in params_all.keys():
                 params_all[type] = []
@@ -438,6 +442,7 @@ class FittingModel:
 
                 index = copy.deepcopy(index_polynomial)
                 index_polynomial = index_polynomial + 1
+
             else:
                 raise NotImplementedError("only gaussian and polynomial types are implemented")
 
@@ -462,13 +467,14 @@ class FittingModel:
                     "bounds": bounds,
                     "unit": str(guess.unit),
                     "notation": notation,
-                    "index": index,
+                    "unique_index": unique_index,
                     "free": True,
                     "type_constrain": None,
-                    "name_line": _name,
+                    "name_component": _name,
 
                     "index_in_fit_yaml": [ii, idx]
                 }
+                unique_index = unique_index + 1
 
         self.params_all = params_all
         if "constrain_lines" in self.parinfo.keys():
@@ -529,13 +535,13 @@ class FittingModel:
 
     def gen_coeff_from_unique_index(self, unique_index_to_find):
 
-        type_list, index_list, coeff_list, unique_index = self.gen_mapping_params("index")
+        type_list, index_list, coeff_list, unique_index = self.gen_mapping_params("unique_index")
         ii = np.where(np.array(unique_index) == unique_index_to_find)[0][0]
         return self.params_all[type_list[ii]][index_list[ii]][coeff_list[ii]]
 
     def _map_user_notation_in_yaml(self):
         type_list, index_list, coeff_list, index_in_fit_yaml_list = self.gen_mapping_params("index_in_fit_yaml")
-        type_list, index_list, coeff_list, unique_index_list = self.gen_mapping_params("index")
+        type_list, index_list, coeff_list, unique_index_list = self.gen_mapping_params("unique_index")
 
         notation_user = self.parinfo["constrain_lines"]["coeff_notation"]
         notation_user_to_unique_index = {}

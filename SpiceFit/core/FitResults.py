@@ -373,13 +373,13 @@ class FitResults:
         coeffs_cp = copy.deepcopy(fit_coeffs_all)
         coeffs_error_cp = copy.deepcopy(fit_coeffs_error_all)
 
-        self.fit_results["index_in_template"] = self.fit_template.params_free["index"]
+        self.fit_results["unique_index"] = self.fit_template.params_free["unique_index"]
         self.fit_results["coeff_name"] = self.fit_template.params_free["notation"]
         self.fit_results["coeff"] = coeffs_cp
         self.fit_results["coeffs_error"] = coeffs_error_cp
         self.fit_results["chi2"] = copy.deepcopy(fit_chit2_all)
         self.fit_results["flagged_pixels"] = copy.deepcopy(flagged_pixels)
-        self.fit_results["unit"] = flatten(self.fit_template.params_free["unit"])
+        self.fit_results["unit"] = self.fit_template.params_free["unit"]
 
         self.build_components_results(self.components_results)
 
@@ -398,9 +398,12 @@ class FitResults:
 
     def build_components_results(self, components_results: dict):
         type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
+        self.components_results["chi2"] = self.fit_results["chi2"]
+        self.components_results["flagged_pixels"] = self.fit_results["flagged_pixels"]
+
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
             a = self.fit_template.params_all[type_][index_][coeff_]
-            wha = np.where(a["index"] == self.fit_results["index"])[0][0]
+            wha = np.where(a["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
             if a["name_component"] not in self.components_results:
                 self.components_results[a["name_component"]] = {"name_component": a["name_component"],}
             if a["free"]:
@@ -408,7 +411,7 @@ class FitResults:
             else:
                 dict_const = a["type_constrain"]
                 b = self.fit_template.gen_coeff_from_unique_index(dict_const["ref"])
-                whb = np.where(b["index"] == self.fit_results["index"])[0][0]
+                whb = np.where(b["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
                 if dict_const["operation"] == "plus":
                     self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb, ...] + \
                                                                               dict_const["value"]
@@ -423,12 +426,10 @@ class FitResults:
 
             self.components_results[a["name_component"]][coeff_] = \
                 u.Quantity(self.components_results[a["name_component"]][coeff_],self.fit_results["unit"][wha])
-            self.components_results[a["name_component"]]["chi2"] = self.fit_results["chi2"][wha, ...]
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
 
             if (type_ == "gaussian") and ("radiance" not in self.components_results[a["name_component"]].keys()):
                 a = self.fit_template.params_all[type_][index_][coeff_]
-                wha = np.where(a["index"] == self.fit_results["index"])[0][0]
 
                 I = self.components_results[a["name_component"]]["I"]
                 x = self.components_results[a["name_component"]]["x"]
@@ -443,13 +444,9 @@ class FitResults:
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 self.components_results[a["name_component"]]["velocity"] = \
                     (const.c.to("km/s") * (x - lambda_ref)/lambda_ref).to(Constants.conventional_velocity_units)
-
-
                 self.components_results[a["name_component"]]["radiance"] = \
                     (I * np.sqrt(2 * np.pi * s * s)).to(Constants.conventional_radiance_units)
-
                 self.components_results[a["name_component"]]["fwhm"] = 2.355 * s
-
 
         for line_ in self.components_results.keys():
             if line_ ==self.fit_template.parinfo["main_line"]:
@@ -674,6 +671,19 @@ class FitResults:
         Function to quickly plot the main results of a fitted line
         :param line:
         """
+
+        w_xy = self.spicewindow.w_xy
+
+        x, y = np.meshgrid(np.arange(self.spicewindow.data.shape[3]), np.arange(self.spicewindow.data.shape[2]))
+        coords = w_xy.pixel_to_world(x, y)
+        long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
+        long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
+        latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
+        dlon = dlon.to("arcsec").value
+        dlat = dlat.to("arcsec").value
+        xg, yg = w_xy.world_to_pixel(coords.Tx, coords.Ty)
+
+
         if line not in self.components_results.keys():
             raise ValueError(f"Cannot plot {line} as it is not a fitted line")
         a = self.components_results[line]
@@ -686,6 +696,7 @@ class FitResults:
         axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1]) ]
         for ii, param, unit in zip(range(4), ["radiance", "velocity", "fwhm", "chi2"],
                                    ["W/ (m2 sr)", "km/s", "nm", None]):
+            data_rep = CommonUtil.interpol2d(a[param].to(unit).value, )
             if unit is not None:
                 im = axs[ii].imshow(a[param].to(unit).value, origin="lower", interpolation="none",cmap = cmap)
                 cbar = fig.colorbar(im, ax=axs[ii], label=unit)

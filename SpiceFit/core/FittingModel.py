@@ -453,7 +453,7 @@ class FittingModel:
                 _min_arr = min_arr_list[ii][idx]
                 _trans_a = trans_a_list[ii][idx]
                 _trans_b = trans_b_list[ii][idx]
-                _name = name_list[ii][idx]
+                _name = name_list[ii]
                 _guess = (u.Quantity(_guess, _unit) * _trans_a + u.Quantity(_trans_b, _unit))
                 guess = self._transform_to_conventional_unit(_guess)
                 _bounds_to_parse = [_min_arr, _max_arr]

@@ -437,7 +437,7 @@ class FitResults:
 
                 line = None
                 for line_ in self.fit_template.parinfo["info"]:
-                    if line_["name"] == a["name_line"]:
+                    if line_["name"] == a["name_component"]:
                         line = line_
                 if line is None:
                     raise NotImplementedError

@@ -13,6 +13,7 @@ import importlib.util
 import sys
 import secrets
 
+
 class FittingModel:
     bound_equation_re = re.compile(
         r'''
@@ -32,8 +33,6 @@ class FittingModel:
 
     # Template used to compute fitting and Jacobian functions
 
-
-
     def __init__(self, filename: str = None, parinfo: dict = None, verbose: int = 1,
                  use_jit: bool = False, cache: bool = True) -> None:
         """
@@ -49,15 +48,14 @@ class FittingModel:
         if self.use_jit:
             jit_str = f"\n@ jit(nopython=True, inline='always', cache={cache})"
         self.template_function = (""
-                             "\n{0}"
-                             f"{jit_str}"
-                             "\ndef {1}(x, {2}):"
-                             "\n\tm = {3}"
-                             # "\n\tx=np.array(x, dtype=np.float64)"
-                             "\n\tsum = np.zeros(len(x), dtype=np.float64)"
-                             "\n\t"
-                             "")
-
+                                  "\n{0}"
+                                  f"{jit_str}"
+                                  "\ndef {1}(x, {2}):"
+                                  "\n\tm = {3}"
+                                  # "\n\tx=np.array(x, dtype=np.float64)"
+                                  "\n\tsum = np.zeros(len(x), dtype=np.float64)"
+                                  "\n\t"
+                                  "")
 
         if (filename is not None) & (parinfo is None):
             if isinstance(filename, str):
@@ -86,12 +84,12 @@ class FittingModel:
         self.generate_free_params()
 
         # self._str_fitting_function = self.create_fitting_function_str()
-        # self._str_jacobian_function = self.create_jacobian_function_str()
+        # self._str_jacobian_function = self.   create_jacobian_function_str()
 
         self.fitting_function = None
         self.jacobian_function = None
 
-        self.generate_callable_fitting_jacobian_function()
+        self.generate_callable_fitting_jacobian_function_from_module()
         # Format of self.free_params["gaussian"][0]["I"/"x"/"s"]["notation"/"guess"/"bounds"/"unit"]
 
         # self.central_wave = u.Quantity(self._parinfo["fit"]["guess"][1], "angstrom")
@@ -189,12 +187,12 @@ class FittingModel:
     def generate_free_params(self):
         self._params_free = {
             "guess": [],
-            "bounds": [],
+            "bounds": [[], []],
             "unit": [],
             "index": [],
             "notation": [],
         }
-        type_list, index_list, coeff_list = self._gen_mapping_params()
+        type_list, index_list, coeff_list = self.gen_mapping_params()
         for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
 
             if self.params_all[type_][idx_][coeff_]["free"]:
@@ -217,10 +215,14 @@ class FittingModel:
                         bounds.append(np.float64(bbb))
 
                 self._params_free["guess"].append(self.params_all[type_][idx_][coeff_]["guess"], )
-                self._params_free["bounds"].append(bounds)
+                self._params_free["bounds"][0].append(bounds[0])
+                self._params_free["bounds"][1].append(bounds[1])
+
                 self._params_free["unit"].append(self.params_all[type_][idx_][coeff_]["unit"], )
                 self._params_free["index"].append(self.params_all[type_][idx_][coeff_]["index"], )
                 self._params_free["notation"].append(self.params_all[type_][idx_][coeff_]["notation"], )
+        self._params_free["guess"] = np.array(self._params_free["guess"], dtype=np.float64)
+        self._params_free["bounds"] = tuple(self._params_free["bounds"])
 
     def create_fitting_function_str(self):
         s = self.template_function.format(self._function_generate_imports_str(),
@@ -245,7 +247,7 @@ class FittingModel:
         creates a str of the code for the Jacobian function.
         :return:
         """
-        _type_list, _index_list, _coeff_list = self._gen_mapping_params()
+        _type_list, _index_list, _coeff_list = self.gen_mapping_params()
         for _type, _index, _coeff in zip(_type_list, _index_list, _coeff_list):
             if not self.params_all[_type][_index][_coeff]["free"]:
                 if self.verbose > 1:
@@ -255,11 +257,11 @@ class FittingModel:
         s = self.template_function.format("",
                                           'jacobian_function',
                                           ','.join(self.params_free["notation"]),
-                                          f'np.zeros((1, {len(self.params_free["guess"])}), dtype=np.float64)',
+                                          f'np.zeros((len(x), {len(self.params_free["guess"])}), dtype=np.float64)',
                                           )
 
         s += '\n\t'
-        _type_list, _index_list, _coeff_list = self._gen_mapping_params()
+        _type_list, _index_list, _coeff_list = self.gen_mapping_params()
 
         # jacobian_matrix_s = np.array((1, len(_coeff_list)), dtype=str)
         index = 0
@@ -271,21 +273,27 @@ class FittingModel:
                     jac_str = self._polynom_to_jacobian_str(index_polynom=ii)
                     ncoeffs = len(jac_str)
                     for jj in range(ncoeffs):
-                        s += "\n\tm[0, {0}] = {1}".format(int(index + jj), jac_str[jj])
+                        s += "\n\tm[:, {0}] = {1}".format(int(index + jj), jac_str[jj])
                 elif function_type == "gaussian":
                     jac_str = self._gauss_to_jacobian_str(index_gaussian=ii)
                     ncoeffs = len(jac_str)
                     for jj in range(ncoeffs):
-                        s += "\n\tm[0, {0}] = {1}".format(int(index + jj), jac_str[jj])
+                        s += "\n\tm[:, {0}] = {1}".format(int(index + jj), jac_str[jj])
                 else:
                     raise NotImplementedError
 
                 index += ncoeffs
 
-        s +=  "\n\n\treturn m"
+        s += "\n\n\treturn m"
         return s
 
-    def generate_callable_fitting_jacobian_function(self, directory_path: str = None, filename:str = None):
+    # def generate_callable_fitting_jacobian_function_exec(self):
+
+        # exec(self.create_fitting_function_str())
+        # self.fitting_function = fitting_function
+        # self.jacobian_function = jacobian_function
+
+    def generate_callable_fitting_jacobian_function_from_module(self, directory_path: str = None, filename: str = None):
         """
 
         :param directory_path:
@@ -300,20 +308,28 @@ class FittingModel:
         Path(directory_path).mkdir(exist_ok=True)
         with open(os.path.join(directory_path, filename), "w") as f:
             f.write(self.create_fitting_function_str())
-            f.write("\n\n\n")
-            f.write(self.create_jacobian_function_str())
+            if self.create_jacobian_function_str() is not None:
+                f.write("\n\n\n")
+                f.write(self.create_jacobian_function_str())
 
-        spec = importlib.util.spec_from_file_location(location=os.path.join(directory_path, filename), name="FittingJacobian")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["FittingJacobian"] = module
-        spec.loader.exec_module(module)
+        sys.path.append(directory_path)
+        import fitting_jacobian_functions
+        # spec = importlib.util.spec_from_file_location(location=os.path.join(directory_path, filename),
+        #                                               name=filename, )
+        # module = importlib.util.module_from_spec(spec)
+        # sys.modules[filename] = module
+        # spec.loader.exec_module(module)
 
         # module = self._load_module(source=os.path.join(directory_path, filename), module_name = "FittingJacobian")
-        self.fitting_function = getattr(module, "fitting_function")
-        self.jacobian_function = getattr(module, "jacobian_function")
+        # self.fitting_function = getattr(module, "fitting_function")
+        self.fitting_function = fitting_jacobian_functions.fitting_function
 
-
-
+        if self.create_jacobian_function_str() is not None:
+            # self.jacobian_function = getattr(module, "jacobian_function")
+            self.jacobian_function = fitting_jacobian_functions.jacobian_function
+        else:
+            self.jacobian_function = None
+        # del sys.modules["FittingJacobian"]
 
     def get_component_info(self, component_name):
         if self.parinfo is None:
@@ -346,7 +362,7 @@ class FittingModel:
         _params_all = {}
         _params_all = copy.deepcopy(self.params_all)
 
-        type_list, index_list, coeff_list = self._gen_mapping_params()
+        type_list, index_list, coeff_list = self.gen_mapping_params()
         for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
 
             for key in list(_params_all[type_][idx_][coeff_].keys()):
@@ -431,6 +447,7 @@ class FittingModel:
                 _min_arr = min_arr_list[ii][idx]
                 _trans_a = trans_a_list[ii][idx]
                 _trans_b = trans_b_list[ii][idx]
+                _name = name_list[ii][idx]
                 _guess = (u.Quantity(_guess, _unit) * _trans_a + u.Quantity(_trans_b, _unit))
                 guess = self._transform_to_conventional_unit(_guess)
                 _bounds_to_parse = [_min_arr, _max_arr]
@@ -447,13 +464,14 @@ class FittingModel:
                     "index": index,
                     "free": True,
                     "type_constrain": None,
+                    "name_line": _name,
 
                     "index_in_fit_yaml": [ii, idx]
                 }
 
         self.params_all = params_all
         if "constrain_lines" in self.parinfo.keys():
-            _type_list, _index_list, _coeff_list = self._gen_mapping_params()
+            _type_list, _index_list, _coeff_list = self.gen_mapping_params()
 
             type_constrain_list = self.parinfo["constrain_lines"]["type_constrain"]
             constrained_list = self.parinfo["constrain_lines"]["constrained"]
@@ -481,7 +499,7 @@ class FittingModel:
 
     # def generate_params_free(self):
 
-    def _gen_mapping_params(self, additional_value: str = None):
+    def gen_mapping_params(self, additional_value: str = None):
         """
         can generate a mapping for all the coefficients
         :param args: (str) additionnal keys of the coefficient dictionnary to return
@@ -508,15 +526,15 @@ class FittingModel:
         else:
             return type_list, index_list, coeff_list
 
-    def _gen_coeff_from_unique_index(self, unique_index_to_find):
+    def gen_coeff_from_unique_index(self, unique_index_to_find):
 
-        type_list, index_list, coeff_list, unique_index = self._gen_mapping_params("index")
+        type_list, index_list, coeff_list, unique_index = self.gen_mapping_params("index")
         ii = np.where(np.array(unique_index) == unique_index_to_find)[0][0]
         return self.params_all[type_list[ii]][index_list[ii]][coeff_list[ii]]
 
     def _map_user_notation_in_yaml(self):
-        type_list, index_list, coeff_list, index_in_fit_yaml_list = self._gen_mapping_params("index_in_fit_yaml")
-        type_list, index_list, coeff_list, unique_index_list = self._gen_mapping_params("index")
+        type_list, index_list, coeff_list, index_in_fit_yaml_list = self.gen_mapping_params("index_in_fit_yaml")
+        type_list, index_list, coeff_list, unique_index_list = self.gen_mapping_params("index")
 
         notation_user = self.parinfo["constrain_lines"]["coeff_notation"]
         notation_user_to_unique_index = {}
@@ -670,7 +688,7 @@ class FittingModel:
 
         jac_matrix_str = []
         for ii in range(len(coeffs)):
-            jac_matrix_str.append(f"x**{npoly-ii:d}")
+            jac_matrix_str.append(f"x**{npoly - ii:d}")
         return jac_matrix_str
 
     def _gauss_to_jacobian_str(self, index_gaussian: int):
@@ -697,13 +715,13 @@ class FittingModel:
         jac_matrix_str.append(exp_str.format("1", x_str, s_str))
         # df/dx
         jac_matrix_str.append(" * ".join(["((x - {0})/({1}**2))".format(x_str, s_str),
-                                            exp_str.format(i_str, x_str, s_str)]))
+                                          exp_str.format(i_str, x_str, s_str)]))
         # df/ds
         jac_matrix_str.append(" * ".join(
-            [   "{0}".format(s_str),
-                "(((x - {0})**2)/({1}**3))".format(x_str, s_str),
-                exp_str.format(i_str, x_str, s_str)
-            ]
+            ["{0}".format(s_str),
+             "(((x - {0})**2)/({1}**3))".format(x_str, s_str),
+             exp_str.format(i_str, x_str, s_str)
+             ]
         ))
         return jac_matrix_str
 
@@ -714,7 +732,7 @@ class FittingModel:
         else:
             dict_const = a["type_constrain"]
             s += "("
-            b = self._gen_coeff_from_unique_index(dict_const["ref"])
+            b = self.gen_coeff_from_unique_index(dict_const["ref"])
             s += b["notation"]
             if dict_const["operation"] == "plus":
                 s += " + "
@@ -873,7 +891,6 @@ class FittingModel:
                         if not isinstance(dict_[key][xx][yy], format_[2]):
                             raise ValueError(f"key {key}(2) must have the right format {format_[2]}")
 
-
 # from https://medium.com/@david.bonn.2010/dynamic-loading-of-python-code-2617c04e5f3f
 #     @staticmethod
 #     def _gensym(length=32, prefix="gensym_"):
@@ -903,5 +920,5 @@ class FittingModel:
 #
 #
 #         return module
-    # def __repr__(self):
-    #     pass
+# def __repr__(self):
+#     pass

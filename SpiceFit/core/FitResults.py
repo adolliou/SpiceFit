@@ -8,11 +8,12 @@ from ..util.plotting_fits import PlotFits
 import copy
 from multiprocessing import Process, Lock
 import multiprocessing as mp
-from scipy.optimize import curve_fit
 import astropy.units as u
 import tqdm
 from matplotlib import pyplot as plt
 from ..util.constants import Constants
+from .fitting_spectra import fit_spectra
+import matplotlib as mpl
 
 
 def flatten(xss):
@@ -81,6 +82,8 @@ class FitResults:
         self.display_progress_bar = None
         self.spicewindow = None
 
+        self.components_results = {}
+
     def fit_spice_window_standard(self,
                                   spicewindow: SpiceRasterWindowL2,
                                   parallelism: bool = True,
@@ -117,6 +120,8 @@ class FitResults:
             chi2_limit=chi2_limit,
         )
 
+        self.spicewindow = spicewindow
+
     def fit_window_standard_3d(
             self,
             data_cube,
@@ -152,144 +157,144 @@ class FitResults:
             self.cpu_count = cpu_count
         # self._gen_function()
 
+        self.lock = Lock()
+
+        lambda_ = lambda_cube.to(Constants.conventional_lambda_units).value
+        data_cube = data_cube.to(Constants.conventional_spectral_units).value
+
+        self.lambda_unit = Constants.conventional_lambda_units
+        self.data_unit = Constants.conventional_spectral_units
+
+        shmm_data, data = gen_shmm(create=True, ndarray=np.array(data_cube, dtype=np.float64))
+        shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=np.array(lambda_, dtype=np.float64))
+        shmm_uncertainty, uncertainty = gen_shmm(
+            create=True,
+            ndarray=np.array(
+                uncertainty_cube
+                .to(Constants.conventional_spectral_units)
+                .value,
+                dtype=np.float64,
+            ),
+        )
+        shmm_fit_coeffs, fit_coeffs = gen_shmm(
+            create=True,
+            ndarray=np.zeros(
+                (
+                    np.sum(self.fit_template.parinfo["fit"]["n_components"]),
+                    data_cube.shape[0],
+                    data_cube.shape[2],
+                    data_cube.shape[3],
+                ),
+                dtype="float",
+            ),
+        )
+
+        shmm_fit_coeffs_error, fit_coeffs_error = gen_shmm(
+            create=True,
+            ndarray=np.zeros(
+                (
+                    np.sum(self.fit_template.parinfo["fit"]["n_components"]),
+                    data_cube.shape[0],
+                    data_cube.shape[2],
+                    data_cube.shape[3],
+                ),
+                dtype="float",
+            ),
+        )
+
+        shmm_fit_chi2, fit_chi2 = gen_shmm(
+            create=True,
+            ndarray=np.zeros(
+                (
+                    data_cube.shape[0],
+                    data_cube.shape[2],
+                    data_cube.shape[3],
+                ),
+                dtype="float",
+            ),
+        )
+
+        shmm_flagged_pixels, flagged_pixels = gen_shmm(
+            create=True,
+            ndarray=np.zeros(
+                (
+                    data_cube.shape[0],
+                    data_cube.shape[2],
+                    data_cube.shape[3],
+                ),
+                dtype="bool",
+            ),
+        )
+
+        self._data_dict = {
+            "name": shmm_data.name,
+            "dtype": data.dtype,
+            "shape": data.shape,
+        }
+        self._lambda_dict = {
+            "name": shmm_lambda_.name,
+            "dtype": lambda_.dtype,
+            "shape": lambda_.shape,
+        }
+        self._uncertainty_dict = {
+            "name": shmm_uncertainty.name,
+            "dtype": uncertainty.dtype,
+            "shape": uncertainty.shape,
+        }
+        self._fit_coeffs_dict = {
+            "name": shmm_fit_coeffs.name,
+            "dtype": fit_coeffs.dtype,
+            "shape": fit_coeffs.shape,
+        }
+        self._fit_coeffs_error_dict = {
+            "name": shmm_fit_coeffs_error.name,
+            "dtype": fit_coeffs_error.dtype,
+            "shape": fit_coeffs_error.shape,
+        }
+        self._fit_chi2_dict = {
+            "name": shmm_fit_chi2.name,
+            "dtype": fit_chi2.dtype,
+            "shape": fit_chi2.shape,
+        }
+        self._flagged_pixels_dict = {
+            "name": shmm_flagged_pixels.name,
+            "dtype": flagged_pixels.dtype,
+            "shape": flagged_pixels.shape,
+        }
+
+        self._flag_pixels_with_not_enough_data()
+
+        # Get indexes and positions in (t, i, j) for all pixels of the raster
+        t_array, i_array, j_array = np.meshgrid(
+            np.arange(data_cube.shape[0]),
+            np.arange(data_cube.shape[2]),
+            np.arange(data_cube.shape[3]),
+            indexing="ij",
+        )
+        t_array = t_array.flatten()
+        i_array = i_array.flatten()
+        j_array = j_array.flatten()
+        indexes = np.arange(0, i_array.size)
+
+        shmm_flagged_pixels, flagged_pixels = gen_shmm(
+            create=False, **self._flagged_pixels_dict
+        )
+        is_not_flagged = ~flagged_pixels[t_array, i_array, j_array]
+        if self.verbose >= 1:
+            print(f'Fitting {len(indexes[is_not_flagged])}/{len(indexes)} pixels')
+
+        processes = []
+        t_array_to_fit = t_array[is_not_flagged],
+        i_array_to_fit = i_array[is_not_flagged],
+        j_array_to_fit = j_array[is_not_flagged],
+        indexes_to_fit = indexes[is_not_flagged],
+
         if parallelism:
-            self.lock = Lock()
-
-            lambda_ = lambda_cube.to(Constants.conventional_lambda_units).value
-            data_cube = data_cube.to(Constants.conventional_spectral_units).value
-
-            self.lambda_unit = Constants.conventional_lambda_units
-            self.data_unit = Constants.conventional_spectral_units
-
-            shmm_data, data = gen_shmm(create=True, ndarray=np.array(data_cube, dtype=np.float64))
-            shmm_lambda_, lambda_ = gen_shmm(create=True, ndarray=np.array(lambda_, dtype=np.float64))
-            shmm_uncertainty, uncertainty = gen_shmm(
-                create=True,
-                ndarray=np.array(
-                    uncertainty_cube
-                    .to(Constants.conventional_spectral_units)
-                    .value,
-                    dtype=np.float64,
-                ),
-            )
-            shmm_fit_coeffs, fit_coeffs = gen_shmm(
-                create=True,
-                ndarray=np.zeros(
-                    (
-                        np.sum(self.fit_template.parinfo["fit"]["n_components"]),
-                        data_cube.shape[0],
-                        data_cube.shape[2],
-                        data_cube.shape[3],
-                    ),
-                    dtype="float",
-                ),
-            )
-
-            shmm_fit_coeffs_error, fit_coeffs_error = gen_shmm(
-                create=True,
-                ndarray=np.zeros(
-                    (
-                        np.sum(self.fit_template.parinfo["fit"]["n_components"]),
-                        data_cube.shape[0],
-                        data_cube.shape[2],
-                        data_cube.shape[3],
-                    ),
-                    dtype="float",
-                ),
-            )
-
-            shmm_fit_chi2, fit_chi2 = gen_shmm(
-                create=True,
-                ndarray=np.zeros(
-                    (
-                        data_cube.shape[0],
-                        data_cube.shape[2],
-                        data_cube.shape[3],
-                    ),
-                    dtype="float",
-                ),
-            )
-
-            shmm_flagged_pixels, flagged_pixels = gen_shmm(
-                create=True,
-                ndarray=np.zeros(
-                    (
-                        data_cube.shape[0],
-                        data_cube.shape[2],
-                        data_cube.shape[3],
-                    ),
-                    dtype="bool",
-                ),
-            )
-
-            self._data_dict = {
-                "name": shmm_data.name,
-                "dtype": data.dtype,
-                "shape": data.shape,
-            }
-            self._lambda_dict = {
-                "name": shmm_lambda_.name,
-                "dtype": lambda_.dtype,
-                "shape": lambda_.shape,
-            }
-            self._uncertainty_dict = {
-                "name": shmm_uncertainty.name,
-                "dtype": uncertainty.dtype,
-                "shape": uncertainty.shape,
-            }
-            self._fit_coeffs_dict = {
-                "name": shmm_fit_coeffs.name,
-                "dtype": fit_coeffs.dtype,
-                "shape": fit_coeffs.shape,
-            }
-            self._fit_coeffs_error_dict = {
-                "name": shmm_fit_coeffs_error,
-                "dtype": fit_coeffs_error.dtype,
-                "shape": fit_coeffs_error.shape,
-            }
-            self._fit_chi2_dict = {
-                "name": shmm_fit_chi2.name,
-                "dtype": fit_chi2.dtype,
-                "shape": fit_chi2.shape,
-            }
-            self._flagged_pixels_dict = {
-                "name": shmm_flagged_pixels.name,
-                "dtype": flagged_pixels.dtype,
-                "shape": flagged_pixels.shape,
-            }
-
-            self._flag_pixels_with_not_enough_data()
-
-            # Get indexes and positions in (t, i, j) for all pixels of the raster
-            t_array, i_array, j_array = np.meshgrid(
-                np.arange(data_cube.shape[0]),
-                np.arange(data_cube.shape[2]),
-                np.arange(data_cube.shape[3]),
-                indexing="ij",
-            )
-            t_array = t_array.flatten()
-            i_array = i_array.flatten()
-            j_array = j_array.flatten()
-            indexes = np.arange(0, i_array.size)
-
-            shmm_flagged_pixels, flagged_pixels = gen_shmm(
-                create=False, **self._flagged_pixels_dict
-            )
-            is_not_flagged = ~flagged_pixels[t_array, i_array, j_array]
-            print(f'{len(indexes[is_not_flagged])=}')
-            print(f'{len(indexes)=}')
-
-            processes = []
-            t_array_to_fit = t_array[is_not_flagged],
-            i_array_to_fit = i_array[is_not_flagged],
-            j_array_to_fit = j_array[is_not_flagged],
-            indexes_to_fit = indexes[is_not_flagged],
 
             t_array_to_fit_sublists = np.array_split(t_array_to_fit[0], self.cpu_count)
             i_array_to_fit_sublists = np.array_split(i_array_to_fit[0], self.cpu_count)
             j_array_to_fit_sublists = np.array_split(j_array_to_fit[0], self.cpu_count)
             indexes_to_fit_sublists = np.array_split(indexes_to_fit[0], self.cpu_count)
-
             for t_list, i_list, j_list, index_list in zip(t_array_to_fit_sublists,
                                                           i_array_to_fit_sublists,
                                                           j_array_to_fit_sublists,
@@ -347,64 +352,76 @@ class FitResults:
                         P.close()
                         is_close.append(kk)
 
-            # TODO save all results in permanent addresses before unlinking all shmm objects
+        else:
 
-            shmm_fit_coeffs_all, fit_coeffs_all = gen_shmm(create=False, **self._fit_coeffs_dict)
-            shmm_fit_coeffs_error_all, fit_coeffs_error_all = gen_shmm(create=False, **self._fit_coeffs_error_dict)
+            self._fit_multiple_pixels_parallelism_3d(
+                t_array_to_fit[0],
+                i_array_to_fit[0],
+                j_array_to_fit[0],
+                indexes_to_fit[0],
+                self.lock)
 
-            shmm_fit_chi2_all, fit_chit2_all = gen_shmm(create=False, **self._fit_chi2_dict)
-            shmm_flagged_pixels, flagged_pixels = gen_shmm(create=False, **self._flagged_pixels_dict)
+        shmm_fit_coeffs_all, fit_coeffs_all = gen_shmm(create=False, **self._fit_coeffs_dict)
+        shmm_fit_coeffs_error_all, fit_coeffs_error_all = gen_shmm(create=False, **self._fit_coeffs_error_dict)
 
-            coeffs_cp = copy.deepcopy(fit_coeffs_all)
-            coeffs_error_cp = copy.deepcopy(fit_coeffs_error_all)
+        shmm_fit_chi2_all, fit_chit2_all = gen_shmm(create=False, **self._fit_chi2_dict)
+        shmm_flagged_pixels, flagged_pixels = gen_shmm(create=False, **self._flagged_pixels_dict)
 
-            # self.fit_results["unit"] = flatten(self.fit_template.parinfo["fit"]["units"])
-            # trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
-            # trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
+        coeffs_cp = copy.deepcopy(fit_coeffs_all)
+        coeffs_error_cp = copy.deepcopy(fit_coeffs_error_all)
 
-            # goes back to the proper units :
-            # for n in range(coeffs_cp.shape[0]):
-            #     coeffs_cp[n, :, :, :] = u.Quantity(coeffs_cp[n, :, :, :],
-            #                                        self._unit_coeffs_during_fitting[n]).to(
-            #         self.fit_results["unit"][n]).value
-            #     coeffs_cp[n, :, :, :] = (coeffs_cp[n, :, :, :] - trans_b[n]) / trans_a[n]
-            #
-            #     coeffs_error_cp[n, :, :, :] = u.Quantity(coeffs_error_cp[n, :, :, :],
-            #                                        self._unit_coeffs_during_fitting[n]).to(
-            #         self.fit_results["unit"][n]).value
-            #     coeffs_error_cp[n, :, :, :] = (coeffs_error_cp[n, :, :, :] - trans_b[n]) / trans_a[n]
+        self.fit_results["index_in_template"] = self.fit_template.params_free["index"]
+        self.fit_results["coeff_name"] = self.fit_template.params_free["name"]
+        self.fit_results["coeff"] = coeffs_cp
+        self.fit_results["coeffs_error"] = coeffs_error_cp
+        self.fit_results["chi2"] = copy.deepcopy(fit_chit2_all)
+        self.fit_results["flagged_pixels"] = copy.deepcopy(flagged_pixels)
+        self.fit_results["unit"] = flatten(self.fit_template.params_free["unit"])
 
-            self.fit_results["coeff"] = coeffs_cp
-            self.fit_results["coeffs_error"] = coeffs_error_cp
+        self.builf_components_results(self.components_results)
 
-            self.fit_results["chi2"] = copy.deepcopy(fit_chit2_all)
-            self.fit_results["flagged_pixels"] = copy.deepcopy(flagged_pixels)
+        shmm_data.close()
+        shmm_data.unlink()
+        shmm_lambda_.close()
+        shmm_lambda_.unlink()
+        shmm_uncertainty.close()
+        shmm_uncertainty.unlink()
+        shmm_fit_coeffs.close()
+        shmm_fit_coeffs.unlink()
+        shmm_fit_chi2.close()
+        shmm_fit_chi2.unlink()
+        shmm_flagged_pixels.close()
+        shmm_flagged_pixels.unlink()
 
-            self.fit_results["unit"] = flatten(self.fit_template.params_free["unit"])
+    def builf_components_results(self, components_results: dict):
+        type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
+        for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
+            a = self.fit_template.params_all[type_][index_][coeff_]
+            wha = np.where(a["index"] == self.fit_results["index"])[0][0]
+            if a["name_component"] not in self.components_results:
+                self.components_results[a["name_component"]] = {}
+            if type_ == "polynomial":
+                if a["free"]:
+                    self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][wha]
+                else:
+                    dict_const = a["type_constrain"]
+                    b = self.fit_template.gen_coeff_from_unique_index(dict_const["ref"])
+                    whb = np.where(b["index"] == self.fit_results["index"])[0][0]
+                    if dict_const["operation"] == "plus":
+                        self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb] + \
+                                                                                  dict_const["value"]
+                    elif dict_const["operation"] == "minus":
+                        self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb] - \
+                                                                                  dict_const["value"]
+                    elif dict_const["operation"] == "times":
+                        self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb] * \
+                                                                                  dict_const["value"]
+                    else:
+                        raise NotImplementedError
+            if type_ == "gaussian":
 
-            shmm_data.close()
-            shmm_data.unlink()
-            shmm_lambda_.close()
-            shmm_lambda_.unlink()
-            shmm_uncertainty.close()
-            shmm_uncertainty.unlink()
-            shmm_fit_coeffs.close()
-            shmm_fit_coeffs.unlink()
-            shmm_fit_chi2.close()
-            shmm_fit_chi2.unlink()
-            shmm_flagged_pixels.close()
-            shmm_flagged_pixels.unlink()
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
-
-        if self.verbose >= 1:
-            for t, i, j, index in tqdm.tqdm(zip(t_list, i_list, j_list, index_list), total=len(t_list)):
-                self._fit_pixel_parallelism_3d(t, i, j, index, lock)
-        else:
-            for t, i, j, index in zip(t_list, i_list, j_list, index_list):
-                self._fit_pixel_parallelism_3d(t, i, j, index, lock)
-
-    def _fit_pixel_parallelism_3d(self, t, i, j, index, lock):
 
         shmm_data_all, data_all = gen_shmm(create=False, **self._data_dict)
         shmm_lambda_all, lambda_all = gen_shmm(create=False, **self._lambda_dict)
@@ -422,46 +439,60 @@ class FitResults:
             create=False, **self._flagged_pixels_dict
         )
 
-        data = data_all[t, :, i, j]
-        uncertainty = uncertainty_all[t, :, i, j]
-        lambda_ = lambda_all[t, :, i, j]
+        if self.verbose >= 1:
+            for t, i, j, index in tqdm.tqdm(zip(t_list, i_list, j_list, index_list), total=len(t_list)):
+                x = lambda_all[t, :, i, j]
+                y = data_all[t, :, i, j]
+                dy = uncertainty_all[t, :, i, j]
+                popt, pcov = fit_spectra(x=x,
+                                         y=y,
+                                         dy=dy,
+                                         fit_template=self.fit_template,
+                                         minimum_data_points=self.min_data_points)
 
-        # check which datapoints are nans
-        isnotnan = ~np.isnan(data)
-        if isnotnan.sum() > self.min_data_points:
-
-            popt, pcov = curve_fit(
-                f=self.fit_template.fitting_function,
-                xdata=lambda_[isnotnan],
-                ydata=data[isnotnan],
-                sigma=uncertainty[isnotnan],
-
-                p0=self.fit_template.params_free["guess"],
-                bounds=self.fit_template.params_free["bounds"],
-                nan_policy="raise",
-                method="trf",
-                full_output=False,
-                absolute_sigma=True,
-
-                jac=self.fit_template.jacobian_function,
-            )
-
-            chi2 = np.sum(np.diag(pcov))
-            if chi2 <= self.chi2_limit:
-                lock.acquire()
-                fit_coeffs_all[:, t, i, j] = popt
-                fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
-                fit_chit2_all[t, i, j] = chi2
-                lock.release()
-            else:
-                lock.acquire()
-                flagged_pixels[t, i, j] = True
-                lock.release()
-
+                chi2 = np.sum(np.diag(pcov))
+                if chi2 <= self.chi2_limit:
+                    lock.acquire()
+                    fit_coeffs_all[:, t, i, j] = popt
+                    fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                    fit_chit2_all[t, i, j] = chi2
+                    lock.release()
+                else:
+                    lock.acquire()
+                    flagged_pixels[t, i, j] = True
+                    lock.release()
         else:
-            lock.acquire()
-            flagged_pixels[t, i, j] = True
-            lock.release()
+            for t, i, j, index in zip(t_list, i_list, j_list, index_list):
+                x = lambda_all[t, :, i, j]
+                y = data_all[t, :, i, j]
+                dy = uncertainty_all[t, :, i, j]
+                try:
+                    popt, pcov = fit_spectra(x=x,
+                                             y=y,
+                                             dy=dy,
+                                             fit_template=self.fit_template,
+                                             minimum_data_points=self.min_data_points)
+                    if popt is not None:
+
+                        chi2 = np.sum(np.diag(pcov))
+                        if chi2 <= self.chi2_limit:
+                            lock.acquire()
+                            fit_coeffs_all[:, t, i, j] = popt
+                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                            fit_chit2_all[t, i, j] = chi2
+                            lock.release()
+                        else:
+                            lock.acquire()
+                            flagged_pixels[t, i, j] = True
+                            lock.release()
+                    else:
+                        lock.acquire()
+                        flagged_pixels[t, i, j] = True
+                        lock.release()
+                except ValueError:
+                    lock.acquire()
+                    flagged_pixels[t, i, j] = True
+                    lock.release()
 
         shmm_data_all.close()
         shmm_lambda_all.close()
@@ -585,10 +616,14 @@ class FitResults:
             fig = plt.figure()
         if ax is None:
             ax = fig.add_subplot()
-
-        im = ax.imshow(self.fit_results["coeff"][coeff_index, 0, :, :], origin="lower", interpolation="none",
+        cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
+        cmap.set_bad('white')
+        coeff = self.fit_results["coeff"][coeff_index, 0, :, :]
+        coeff[not self.fit_results["flagged_pixels"][0, :, :]] = np.nan
+        im = ax.imshow(coeff, origin="lower", interpolation="none",
                        extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                               latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat), )
+                               latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
+                       cmap=cmap)
         plt.colorbar(im, ax=ax)
         ax.set_xlabel("Solar-X [arcsec]")
         ax.set_ylabel("Solar-Y [arcsec]")

@@ -3,3 +3,4 @@ class Constants:
     conventional_spectral_units = "W/ (m2 sr nm)"
     conventional_velocity_units = "km/s"
     conventional_radiance_units = "W/ (m2 sr)"
+    inch_to_cm = 1 / 2.54

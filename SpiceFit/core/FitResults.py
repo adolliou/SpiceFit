@@ -374,7 +374,7 @@ class FitResults:
         coeffs_error_cp = copy.deepcopy(fit_coeffs_error_all)
 
         self.fit_results["index_in_template"] = self.fit_template.params_free["index"]
-        self.fit_results["coeff_name"] = self.fit_template.params_free["name"]
+        self.fit_results["coeff_name"] = self.fit_template.params_free["notation"]
         self.fit_results["coeff"] = coeffs_cp
         self.fit_results["coeffs_error"] = coeffs_error_cp
         self.fit_results["chi2"] = copy.deepcopy(fit_chit2_all)
@@ -481,23 +481,29 @@ class FitResults:
                 x = lambda_all[t, :, i, j]
                 y = data_all[t, :, i, j]
                 dy = uncertainty_all[t, :, i, j]
-                popt, pcov = fit_spectra(x=x,
-                                         y=y,
-                                         dy=dy,
-                                         fit_template=self.fit_template,
-                                         minimum_data_points=self.min_data_points)
+                try:
+                    popt, pcov = fit_spectra(x=x,
+                                             y=y,
+                                             dy=dy,
+                                             fit_template=self.fit_template,
+                                             minimum_data_points=self.min_data_points)
 
-                chi2 = np.sum(np.diag(pcov))
-                if chi2 <= self.chi2_limit:
-                    lock.acquire()
-                    fit_coeffs_all[:, t, i, j] = popt
-                    fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
-                    fit_chit2_all[t, i, j] = chi2
-                    lock.release()
-                else:
+                    chi2 = np.sum(np.diag(pcov))
+                    if chi2 <= self.chi2_limit:
+                        lock.acquire()
+                        fit_coeffs_all[:, t, i, j] = popt
+                        fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                        fit_chit2_all[t, i, j] = chi2
+                        lock.release()
+                    else:
+                        lock.acquire()
+                        flagged_pixels[t, i, j] = True
+                        lock.release()
+                except ValueError:
                     lock.acquire()
                     flagged_pixels[t, i, j] = True
                     lock.release()
+
         else:
             for t, i, j, index in zip(t_list, i_list, j_list, index_list):
                 x = lambda_all[t, :, i, j]

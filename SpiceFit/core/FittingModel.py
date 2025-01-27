@@ -186,6 +186,7 @@ class FittingModel:
 
     def generate_free_params(self):
         self._params_free = {
+
             "guess": [],
             "bounds": [[], []],
             "unit": [],

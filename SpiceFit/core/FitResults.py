@@ -14,6 +14,9 @@ from matplotlib import pyplot as plt
 from ..util.constants import Constants
 from .fitting_spectra import fit_spectra
 import matplotlib as mpl
+import astropy.constants as const
+from matplotlib.gridspec import GridSpec
+
 
 
 def flatten(xss):
@@ -378,7 +381,7 @@ class FitResults:
         self.fit_results["flagged_pixels"] = copy.deepcopy(flagged_pixels)
         self.fit_results["unit"] = flatten(self.fit_template.params_free["unit"])
 
-        self.builf_components_results(self.components_results)
+        self.build_components_results(self.components_results)
 
         shmm_data.close()
         shmm_data.unlink()
@@ -393,32 +396,66 @@ class FitResults:
         shmm_flagged_pixels.close()
         shmm_flagged_pixels.unlink()
 
-    def builf_components_results(self, components_results: dict):
+    def build_components_results(self, components_results: dict):
         type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
             a = self.fit_template.params_all[type_][index_][coeff_]
             wha = np.where(a["index"] == self.fit_results["index"])[0][0]
             if a["name_component"] not in self.components_results:
-                self.components_results[a["name_component"]] = {}
-            if type_ == "polynomial":
-                if a["free"]:
-                    self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][wha]
+                self.components_results[a["name_component"]] = {"name_component": a["name_component"],}
+            if a["free"]:
+                self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][wha, ...]
+            else:
+                dict_const = a["type_constrain"]
+                b = self.fit_template.gen_coeff_from_unique_index(dict_const["ref"])
+                whb = np.where(b["index"] == self.fit_results["index"])[0][0]
+                if dict_const["operation"] == "plus":
+                    self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb, ...] + \
+                                                                              dict_const["value"]
+                elif dict_const["operation"] == "minus":
+                    self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb, ...] - \
+                                                                              dict_const["value"]
+                elif dict_const["operation"] == "times":
+                    self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb, ...] * \
+                                                                              dict_const["value"]
                 else:
-                    dict_const = a["type_constrain"]
-                    b = self.fit_template.gen_coeff_from_unique_index(dict_const["ref"])
-                    whb = np.where(b["index"] == self.fit_results["index"])[0][0]
-                    if dict_const["operation"] == "plus":
-                        self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb] + \
-                                                                                  dict_const["value"]
-                    elif dict_const["operation"] == "minus":
-                        self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb] - \
-                                                                                  dict_const["value"]
-                    elif dict_const["operation"] == "times":
-                        self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][whb] * \
-                                                                                  dict_const["value"]
-                    else:
-                        raise NotImplementedError
-            if type_ == "gaussian":
+                    raise NotImplementedError
+
+            self.components_results[a["name_component"]][coeff_] = \
+                u.Quantity(self.components_results[a["name_component"]][coeff_],self.fit_results["unit"][wha])
+            self.components_results[a["name_component"]]["chi2"] = self.fit_results["chi2"][wha, ...]
+        for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
+
+            if (type_ == "gaussian") and ("radiance" not in self.components_results[a["name_component"]].keys()):
+                a = self.fit_template.params_all[type_][index_][coeff_]
+                wha = np.where(a["index"] == self.fit_results["index"])[0][0]
+
+                I = self.components_results[a["name_component"]]["I"]
+                x = self.components_results[a["name_component"]]["x"]
+                s = self.components_results[a["name_component"]]["s"]
+
+                line = None
+                for line_ in self.fit_template.parinfo["info"]:
+                    if line_["name"] == a["name_line"]:
+                        line = line_
+                if line is None:
+                    raise NotImplementedError
+                lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
+                self.components_results[a["name_component"]]["velocity"] = \
+                    (const.c.to("km/s") * (x - lambda_ref)/lambda_ref).to(Constants.conventional_velocity_units)
+
+
+                self.components_results[a["name_component"]]["radiance"] = \
+                    (I * np.sqrt(2 * np.pi * s * s)).to(Constants.conventional_radiance_units)
+
+                self.components_results[a["name_component"]]["fwhm"] = 2.355 * s
+
+
+        for line_ in self.components_results.keys():
+            if line_ ==self.fit_template.parinfo["main_line"]:
+                self.components_results["main"] = self.components_results[a["name_component"]]
+
+
 
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
@@ -592,7 +629,7 @@ class FitResults:
         else:
             raise ValueError(f"Cannot convert {quantity} to conventional unit")
 
-    def quicklook(self, coeff_index: int, fig=None, ax=None):
+    def quicklook_coefficient(self, coeff_index: int, fig=None, ax=None):
         """
         Plot a quicklook plot of the given coefficient index
         :param coeff_index: coefficient index to plot
@@ -604,13 +641,13 @@ class FitResults:
 
         w_xy = self.spicewindow.w_xy
 
-        x, y = np.meshgrid(np.arange(self.spicewindow.data.shape[3]), np.arange(self.spicewindow.data.shape[2]))
-        coords = w_xy.pixel_to_world(x, y)
-        long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
-        long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
-        latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
-        dlon = dlon.to("arcsec").value
-        dlat = dlat.to("arcsec").value
+        # x, y = np.meshgrid(np.arange(self.spicewindow.data.shape[3]), np.arange(self.spicewindow.data.shape[2]))
+        # coords = w_xy.pixel_to_world(x, y)
+        # long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
+        # long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
+        # latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
+        # dlon = dlon.to("arcsec").value
+        # dlat = dlat.to("arcsec").value
 
         if fig is None:
             fig = plt.figure()
@@ -621,13 +658,41 @@ class FitResults:
         coeff = self.fit_results["coeff"][coeff_index, 0, :, :]
         coeff[not self.fit_results["flagged_pixels"][0, :, :]] = np.nan
         im = ax.imshow(coeff, origin="lower", interpolation="none",
-                       extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                               latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
                        cmap=cmap)
         plt.colorbar(im, ax=ax)
-        ax.set_xlabel("Solar-X [arcsec]")
-        ax.set_ylabel("Solar-Y [arcsec]")
+
         fig.savefig("test.pdf")
+
+    def quicklook(self, line="main", show=True):
+        """
+        Function to quickly plot the main results of a fitted line
+        :param line:
+        """
+        if line not in self.components_results.keys():
+            raise ValueError(f"Cannot plot {line} as it is not a fitted line")
+        a = self.components_results[line]
+        cm = Constants.inch_to_cm
+        cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
+        cmap.set_bad('white')
+
+        fig = plt.figure(figsize=(17*cm, 17*cm))
+        gs = GridSpec(2, 2, wspace=0.7, hspace=0.7)
+        axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1]) ]
+        for ii, param, unit in zip(range(4), ["radiance", "velocity", "fwhm", "chi2"],
+                                   ["W/ (m2 sr)", "km/s", "nm", None]):
+            if unit is not None:
+                im = axs[ii].imshow(a[param].to(unit).value, origin="lower", interpolation="none",cmap = cmap)
+                cbar = fig.colorbar(im, ax=axs[ii], label=unit)
+
+            else:
+                im = axs[ii].imshow(a[param], origin="lower", interpolation="none", cmap=cmap)
+                cbar = fig.colorbar(im, ax=axs[ii])
+            axs[ii].set_title(param)
+            if show == True:
+                fig.show()
+            else:
+                return fig
+
 
     def organize_components(self):
         """

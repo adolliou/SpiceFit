@@ -692,7 +692,7 @@ class FitResults:
         axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1])]
         for ii, param, unit in zip(range(4), ["radiance", "velocity", "fwhm", "chi2"],
                                    ["W/ (m2 sr)", "km/s", "nm", None]):
-            data_rep = CommonUtil.interpol2d(a[param].to(unit).value, x=xg, y=yg, order=3, fill=np.nqn)
+            data_rep = CommonUtil.interpol2d(a[param].to(unit).value, x=xg, y=yg, order=3, fill=np.nan)
             if unit is not None:
                 im = axs[ii].imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
                                     extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,

@@ -1,3 +1,5 @@
+import string
+
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.visualization import ImageNormalize, LogStretch
@@ -22,6 +24,7 @@ from matplotlib.gridspec import GridSpec
 import random
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.patches import Rectangle
+from astropy.io import fits
 
 
 
@@ -81,7 +84,6 @@ class FitResults:
             "coeff": [],  # (N, time, Y , X)
             "chi2": [],  # (time, Y , X)
             "flagged_pixels": [],  # (time, Y , X)
-            "radiance": [],  # (time, Y , X)
             "name": self.fit_template.params_free["notation"],
             "coeff_unit": []
         }
@@ -155,7 +157,6 @@ class FitResults:
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
         :param display_progress_bar: display the progress bar
         """
-        A = 1
         self.min_data_points = min_data_points
         self.chi2_limit = chi2_limit
         self.display_progress_bar = display_progress_bar
@@ -386,6 +387,9 @@ class FitResults:
         self.fit_results["chi2"] = copy.deepcopy(fit_chit2_all)
         self.fit_results["flagged_pixels"] = copy.deepcopy(flagged_pixels)
         self.fit_results["unit"] = self.fit_template.params_free["unit"]
+        self.fit_results["trans_a"] = self.fit_template.params_free["trans_a"]
+        self.fit_results["trans_b"] = self.fit_template.params_free["trans_b"]
+
 
         self.build_components_results(self.components_results)
 
@@ -417,7 +421,12 @@ class FitResults:
                 self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][wha, ...]
                 self.components_results[a["name_component"]][f"{coeff_}_sigma"] = (
                     self.fit_results)["coeff_error"][wha, ...]
+                self.components_results[a["name_component"]][f"{coeff_}_trans_a"] =  self.fit_results["trans_a"][wha, ...]
+                self.components_results[a["name_component"]][f"{coeff_}_trans_b"] =  self.fit_results["trans_b"][wha, ...]
+
             else:
+                raise NotImplementedError
+                # Not yet impletented the error in the case the parameters are not free
                 dict_const = a["type_constrain"]
                 b = self.fit_template.gen_coeff_from_unique_index(dict_const["ref"])
                 whb = np.where(b["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
@@ -891,9 +900,26 @@ class FitResults:
                 return FittingUtil.gaussian(x, I, x, s, 0)
             if comp["type"] == "polynomial":
                 value = []
-                for key in comp.keys():
-                    value.append(comp[key])
+                for letter in string.ascii_lowercase:
+                    if letter in comp.keys():
+                        value.append(comp[letter])
                 return FittingUtil.polynomial(x, *value)
+
+
+    def to_fits(self, path_to_save_fits:str):
+        """
+        Save the basic fitting data into a FITS file that ressembles the ones producted by OSLO.
+        The hdulist has between the following windows
+        - hdul[0] :  coeffs
+        - hdul[1] :  coeffs_sigma
+        - hdul[2] :  data_l2
+        - hdul[3] :  WCSDVAR
+
+
+        :param path_to_save_fits: path where the FITS file to be saved
+        :param sigma: if True, then the sigma of the coeffs values will be saved in the
+        """
+        hdu = fits.PrimaryHDU()
 
 
 

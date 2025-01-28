@@ -193,6 +193,9 @@ class FittingModel:
             "unique_index": [],
             "notation": [],
             "name_component": [],
+            "trans_a": [],
+            "trans_b": [],
+
         }
         type_list, index_list, coeff_list = self.gen_mapping_params()
         for type_, idx_, coeff_ in zip(type_list, index_list, coeff_list):
@@ -224,6 +227,9 @@ class FittingModel:
                 self._params_free["unique_index"].append(self.params_all[type_][idx_][coeff_]["unique_index"], )
                 self._params_free["notation"].append(self.params_all[type_][idx_][coeff_]["notation"], )
                 self._params_free["name_component"].append(self.params_all[type_][idx_][coeff_]["name_component"], )
+                self._params_free["trans_a"].append(self.params_all[type_][idx_][coeff_]["trans_a"], )
+                self._params_free["trans_b"].append(self.params_all[type_][idx_][coeff_]["trans_b"], )
+
 
         self._params_free["guess"] = np.array(self._params_free["guess"], dtype=np.float64)
         self._params_free["bounds"] = tuple(self._params_free["bounds"])
@@ -471,6 +477,8 @@ class FittingModel:
                     "free": True,
                     "type_constrain": None,
                     "name_component": _name,
+                    "trans_a": _trans_a,
+                    "trans_b": _trans_b,
 
                     "index_in_fit_yaml": [ii, idx]
                 }

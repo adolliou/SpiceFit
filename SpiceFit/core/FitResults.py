@@ -155,7 +155,7 @@ class FitResults:
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
         :param display_progress_bar: display the progress bar
         """
-
+        A = 1
         self.min_data_points = min_data_points
         self.chi2_limit = chi2_limit
         self.display_progress_bar = display_progress_bar

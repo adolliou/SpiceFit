@@ -1,4 +1,7 @@
 import numpy as np
+from astropy.coordinates import SkyCoord
+from astropy.visualization import ImageNormalize, LogStretch
+
 from .FittingModel import FittingModel
 from .SpiceRasterWindow import SpiceRasterWindowL2
 from ..util.shared_memory import gen_shmm
@@ -682,7 +685,7 @@ class FitResults:
 
         cm = Constants.inch_to_cm
         fig = plt.figure(figsize=(17 * cm, 17 * cm))
-        gs = GridSpec(2, 2, wspace=0.7, hspace=0.7)
+        gs = GridSpec(2, 2, wspace=0.3, hspace=0.3)
         axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1])]
         for ii, param in enumerate(["radiance", "velocity", "fwhm", "chi2"] ):
             ax = axs[ii]
@@ -699,8 +702,15 @@ class FitResults:
             "velocity": Constants.conventional_velocity_units,
             "chi2": None
         }
+        cmaps = {
+            "radiance":mpl.colormaps.get_cmap('viridis'),
+            "fwhm": mpl.colormaps.get_cmap('viridis'),
+            "velocity": mpl.colormaps.get_cmap('bwr'),
+            "chi2": mpl.colormaps.get_cmap('viridis'),
+        }
+
         unit = units[param]
-        cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
+        cmap = cmaps[param]  # viridis is the default colormap for imshow
         cmap.set_bad('white')
         a = self.components_results[line]
         w_xy = self.spectral_window.w_xy
@@ -715,29 +725,45 @@ class FitResults:
             data = data[0, ...]
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
                                np.arange(self.spectral_window.data.shape[2]))
+        # isnotnan = np.logical_not(np.isnan(data))
+        # min_ = np.percentile(data[isnotnan], 1)
+        # max_ = np.percentile(data[isnotnan], 100)
+        # norm_ = ImageNormalize(stretch=LogStretch(a=30))
 
+
+        norms = {
+            "radiance": PlotFits.get_range(data, stre="log", imin=0, imax=100),
+            # "radiance": norm_,
+            "fwhm":PlotFits.get_range(data, stre=None),
+            "velocity": mpl.colors.CenteredNorm(vcenter=0),
+            "chi2": PlotFits.get_range(data, stre=None),
+        }
+
+        norm = norms[param]
         coords = w_xy.pixel_to_world(x, y)
         long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
         long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
         latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
         dlon = dlon.to("arcsec").value
         dlat = dlat.to("arcsec").value
-        xg, yg = w_xy.world_to_pixel(coords)
+        coordsg = SkyCoord(long, latg, frame=coords.frame)
+        xg, yg = w_xy.world_to_pixel(coordsg)
         data_rep = CommonUtil.interpol2d(data, x=xg, y=yg, order=3, fill=np.nan)
         if unit is not None:
             im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
                            extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat)
-                           )
+                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
+                           norm=norm,)
             cbar = fig.colorbar(im, ax=ax, label=unit,
                                 )
 
         else:
             im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
                            extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat)
+                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
+                           norm=norm,
                            )
-            cbar = fig.colorbar(im, ax=ax)
+            cbar = fig.colorbar(im, ax=ax, pad=0)
         ax.set_xlabel("Solar-X")
         ax.set_ylabel("Solar-Y")
         ax.set_title(param)

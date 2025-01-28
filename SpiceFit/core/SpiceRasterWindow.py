@@ -5,6 +5,7 @@ from sospice.calibrate import spice_error
 from astropy.wcs import WCS
 import copy
 import astropy.units as u
+from ..util.spice_util import SpiceUtil
 
 
 class SpiceRasterWindowL2:
@@ -14,6 +15,7 @@ class SpiceRasterWindowL2:
         hdu: astropy.io.fits.hdu.image.ImageHDU = None,
         data: np.ndarray = None,
         header: astropy.io.fits.header.Header = None,
+        remove_dumbbells = True,
     ) -> None:
         """
 
@@ -24,6 +26,7 @@ class SpiceRasterWindowL2:
         :param header:
         SPICE L2 hdu header
         """
+        self.remove_dumbbells = remove_dumbbells
         if hdu is not None:
 
             self.data = copy.deepcopy(u.Quantity(hdu.data, hdu.header["BUNIT"]))
@@ -40,6 +43,11 @@ class SpiceRasterWindowL2:
             raise RuntimeError("SpiceRasterWindow: incorrect input for initialization.")
         if self.header["LEVEL"] != "L2":
             raise RuntimeError("SpiceRasterWindow: FITS LEVEL not set to L2.")
+        if self.remove_dumbbells:
+            ymin, ymax = SpiceUtil.vertical_edges_limits(self.header)
+            self.data[:, :, :ymin + 1, :] = np.nan
+            self.data[:, :, ymax:, :] = np.nan
+
         self.uncertainty = None
         self.uncertainty_average = None
 

@@ -16,6 +16,10 @@ from .fitting_spectra import fit_spectra
 import matplotlib as mpl
 import astropy.constants as const
 from matplotlib.gridspec import GridSpec
+import random
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.patches import Rectangle
+
 
 
 def flatten(xss):
@@ -82,7 +86,7 @@ class FitResults:
         self.lock = None
         self.cpu_count = None
         self.display_progress_bar = None
-        self.spicewindow = None
+        self.spectral_window = None
 
         self.components_results = {}
 
@@ -107,7 +111,7 @@ class FitResults:
         if spicewindow.uncertainty is None:
             spicewindow.compute_uncertainty()
 
-        data_cube = u.Quantity(spicewindow.data, spicewindow.header["BUNIT"])
+        data_cube = spicewindow.data
         uncertainty_cube = spicewindow.uncertainty["Total"]
         xx, yy, ll, tt = spicewindow.return_point_pixels()
         coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
@@ -122,7 +126,7 @@ class FitResults:
             chi2_limit=chi2_limit,
         )
 
-        self.spicewindow = spicewindow
+        self.spectral_window = spicewindow
 
     def fit_window_standard_3d(
             self,
@@ -399,12 +403,13 @@ class FitResults:
         type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
         self.components_results["chi2"] = self.fit_results["chi2"]
         self.components_results["flagged_pixels"] = self.fit_results["flagged_pixels"]
-
+        flagged_pixels = self.fit_results["flagged_pixels"]
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
             a = self.fit_template.params_all[type_][index_][coeff_]
             wha = np.where(a["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
             if a["name_component"] not in self.components_results:
-                self.components_results[a["name_component"]] = {"name_component": a["name_component"], }
+                self.components_results[a["name_component"]] = {"name_component": a["name_component"],
+                                                                "type": type_,}
             if a["free"]:
                 self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][wha, ...]
             else:
@@ -422,7 +427,7 @@ class FitResults:
                                                                            dict_const["value"]
                 else:
                     raise NotImplementedError
-
+            self.components_results[a["name_component"]][coeff_][flagged_pixels] = np.nan
             self.components_results[a["name_component"]][coeff_] = \
                 u.Quantity(self.components_results[a["name_component"]][coeff_], self.fit_results["unit"][wha])
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
@@ -636,12 +641,12 @@ class FitResults:
         :param fig:
         :param ax:
         """
-        if self.spicewindow is None:
+        if self.spectral_window is None:
             raise ValueError("The data is still not fitted")
 
-        w_xy = self.spicewindow.w_xy
+        w_xy = self.spectral_window.w_xy
 
-        # x, y = np.meshgrid(np.arange(self.spicewindow.data.shape[3]), np.arange(self.spicewindow.data.shape[2]))
+        # x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]), np.arange(self.spectral_window.data.shape[2]))
         # coords = w_xy.pixel_to_world(x, y)
         # long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
         # long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
@@ -659,6 +664,7 @@ class FitResults:
         coeff[not self.fit_results["flagged_pixels"][0, :, :]] = np.nan
         im = ax.imshow(coeff, origin="lower", interpolation="none",
                        cmap=cmap)
+
         plt.colorbar(im, ax=ax)
 
         fig.savefig("test.pdf")
@@ -669,9 +675,47 @@ class FitResults:
         :param line:
         """
 
-        w_xy = self.spicewindow.w_xy
 
-        x, y = np.meshgrid(np.arange(self.spicewindow.data.shape[3]), np.arange(self.spicewindow.data.shape[2]))
+
+        if line not in self.components_results.keys():
+            raise ValueError(f"Cannot plot {line} as it is not a fitted line")
+
+        cm = Constants.inch_to_cm
+        fig = plt.figure(figsize=(17 * cm, 17 * cm))
+        gs = GridSpec(2, 2, wspace=0.7, hspace=0.7)
+        axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1])]
+        for ii, param in enumerate(["radiance", "velocity", "fwhm", "chi2"] ):
+            ax = axs[ii]
+            self.plot_fitted_map(ax, fig, line, param)
+        if show == True:
+            fig.show()
+        else:
+            return fig
+
+    def plot_fitted_map(self, ax, fig, line, param):
+        units = {
+            "radiance": Constants.conventional_radiance_units,
+            "fwhm": Constants.conventional_lambda_units,
+            "velocity": Constants.conventional_velocity_units,
+            "chi2": None
+        }
+        unit = units[param]
+        cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
+        cmap.set_bad('white')
+        a = self.components_results[line]
+        w_xy = self.spectral_window.w_xy
+
+        if param == "chi2":
+            data = self.components_results[param]
+        else:
+            data = a[param].to(unit).value
+            x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
+                               np.arange(self.spectral_window.data.shape[1]))
+        if data.ndim == 3:
+            data = data[0, ...]
+            x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
+                               np.arange(self.spectral_window.data.shape[2]))
+
         coords = w_xy.pixel_to_world(x, y)
         long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
         long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
@@ -679,73 +723,162 @@ class FitResults:
         dlon = dlon.to("arcsec").value
         dlat = dlat.to("arcsec").value
         xg, yg = w_xy.world_to_pixel(coords)
+        data_rep = CommonUtil.interpol2d(data, x=xg, y=yg, order=3, fill=np.nan)
+        if unit is not None:
+            im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
+                           extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat)
+                           )
+            cbar = fig.colorbar(im, ax=ax, label=unit,
+                                )
 
-        if line not in self.components_results.keys():
-            raise ValueError(f"Cannot plot {line} as it is not a fitted line")
-        a = self.components_results[line]
+        else:
+            im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
+                           extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat)
+                           )
+            cbar = fig.colorbar(im, ax=ax)
+        ax.set_xlabel("Solar-X")
+        ax.set_ylabel("Solar-Y")
+        ax.set_title(param)
+
+    def check_spectra(self, path_to_save_figure: str, position="random"):
+        """
+        show example of the spectra with the fitting.
+        :param path_to_save_figure: path where to save the PDF figure. Must end by "pdf".
+        :param position: "random" or 2-tuple with the positions of the pixel where the spectra is shown
+        ex : position = ( (0, 1, 2) , (0, 0, 0) ) shows the spectrum at data[0, 0] ; data[1, 0]... etc
+        """
+        x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]), np.arange(self.spectral_window.data.shape[2]))
+        xf = x.flatten()
+        yf = y.flatten()
+
+        xpos = []
+        ypos = []
+        index = np.arange(len(xf))
         cm = Constants.inch_to_cm
-        cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
-        cmap.set_bad('white')
+        cdelt1 = self.spectral_window.header["CDELT1"]
+        cdelt2 = self.spectral_window.header["CDELT2"]
+        ratio = cdelt2/cdelt1
+        if position == "random":
+            for ii in range(30):
+                index_r = random.choice(index)
+                xpos.append(xf[index_r])
+                ypos.append(yf[index_r])
+        elif isinstance(position,tuple):
+            xpos = position[0]
+            ypos = position[1]
 
-        fig = plt.figure(figsize=(17 * cm, 17 * cm))
-        gs = GridSpec(2, 2, wspace=0.7, hspace=0.7)
-        axs = [fig.add_subplot(gs[i, j]) for i, j in zip([0, 0, 1, 1], [0, 1, 0, 1])]
-        for ii, param, unit in zip(range(4), ["radiance", "velocity", "fwhm", "chi2"],
-                                   ["W/ (m2 sr)", "km/s", "nm", None]):
-            data_rep = CommonUtil.interpol2d(a[param].to(unit).value, x=xg, y=yg, order=3, fill=np.nan)
-            if unit is not None:
-                im = axs[ii].imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
-                                    extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                                            latg[0, 0] - 0.5 * dlat, latg[-1, -1] + 0.5 * dlat)
-                                    )
-                cbar = fig.colorbar(im, ax=axs[ii], label=unit,
-                                    )
+        if self.spectral_window is None:
+            raise NotImplementedError
+        data_cube = self.spectral_window.data
+        uncertainty_cube = self.spectral_window.uncertainty["Total"]
+        xx, yy, ll, tt = self.spectral_window.return_point_pixels()
+        coords, lambda_cube, t = self.spectral_window.wcs.pixel_to_world(xx, yy, ll, tt)
 
-            else:
-                im = axs[ii].imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
-                                    extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                                            latg[0, 0] - 0.5 * dlat, latg[-1, -1] + 0.5 * dlat)
-                                    )
-                cbar = fig.colorbar(im, ax=axs[ii])
-            axs[ii].set_title(param)
-            if show == True:
-                fig.show()
-            else:
-                return fig
+        data_l2 = data_cube.to(Constants.conventional_spectral_units).value
+        uncertainty_l2 = uncertainty_cube.to(Constants.conventional_spectral_units).value
+        lambda_l2 = lambda_cube.to(Constants.conventional_lambda_units).value
 
-    def organize_components(self):
+        if data_cube.ndim == 4:
+            data_l2 = data_l2[0, ...]
+            uncertainty_l2 = uncertainty_l2[0, ...]
+            lambda_l2 = lambda_l2[0, ...]
+
+
+
+        with PdfPages(path_to_save_figure) as pdf:
+            for ii in range(len(xpos)):
+
+                fig = plt.figure(figsize=(17 * cm, 9 * cm))
+                gs = GridSpec(1, 2, wspace=0.7, hspace=0.7, width_ratios=[0.5, 1.0])
+                axs = [fig.add_subplot(gs[n]) for n in range(2)]
+
+                unit = Constants.conventional_radiance_units
+                param = "radiance"
+                data_radiance = self.components_results["main"][param].to(unit).value
+                if data_radiance.ndim == 3:
+                    data_radiance = data_radiance[0, ...]
+                cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
+                cmap.set_bad('white')
+                im = axs[0].imshow(data_radiance, origin="lower", interpolation="none", cmap=cmap,
+                                   aspect=ratio)
+                cbar = fig.colorbar(im, ax=axs[0], label=unit)
+                axs[0].set_label(param)
+
+                rect = Rectangle((xpos[ii] - 0.5, ypos[ii] - 0.5, ), height=1, width=1, linewidth=0.7,
+                         edgecolor='r', facecolor="none")
+                axs[0].add_patch(rect)
+                axs[1].errorbar(x=lambda_l2[:,  ypos[ii], xpos[ii]], y=data_l2[:,  ypos[ii], xpos[ii]],
+                                yerr=0.5*uncertainty_l2[:,  ypos[ii], xpos[ii]],
+                                lw=0.9, marker='', linestyle='-', elinewidth=0.4, color="k", label="data",)
+                yfit_total = self.get_fitted_spectra(x=u.Quantity(lambda_l2[:,  ypos[ii], xpos[ii]],
+                                                                  Constants.conventional_lambda_units),
+                                                     position = (0, ypos[ii],  xpos[ii]),
+                                                     component="total")
+                axs[1].plot(lambda_l2[:,  ypos[ii], xpos[ii]], yfit_total,
+                            lw=0.9, marker='', linestyle='-', color="b", label="total",
+                            )
+
+                axs[1].set_xlabel(f"Wavelength [{Constants.conventional_lambda_units}]")
+                axs[1].set_ylabel(f"Spectra [{Constants.conventional_spectral_units}]")
+                axs[1].set_title(f"({str(xpos[ii]), str(ypos[ii])})")
+
+
+
+
+                pdf.savefig(fig)
+
+
+    def get_fitted_spectra(self, x: np.array, position: tuple, component: str="total"):
         """
-        create the self.component dictionnary, with all the fitting and derived parameters for the lines.
-        The "main" entrance is the main line of the fit_template attribute
-        The components format will depend on the fit type ("gaussian", "background")
-        """
-        self.components = {
-            "chi2": self.fit_chi2,
-            "flagged": self.fla
-        }
-        types = self.fit_template.parinfo["fit"]["type"]
-        main_lines = self.fit_template.parinfo["main_line"]
-        names = self.fit_template.parinfo["fit"]["names"]
-        n_components = self.fit_template.parinfo["fit"]["n_components"]
-        n = 0
-        for ii, name in enumerate(names):
-            type = types[ii]
-
-            self.components[name] = {
-                "fit_coeff": self.fit_results["coeff"][n:n + n_components, ...],
-                "fit_coeff_unit": self.fit_results["coeff_unit"][n:n + n_components],
-                "parinfo_fit": self.fit_template.get_component_fit(component_name=name),
-            }
-            if type == "gauss":
-                self.components[name]["parinfo_info"] = self.fit_template.get_component_info(component_name=name)
-
-            n = n + n_components
-
-    def check_spectra(self, position="random"):
-        """
-
+        return the fitted y values for a given wavelength array "x", given a component name. accepts also "all"
+        to take all the components
+        :param x:
         :param position:
+        :param component:
+        :return:
         """
-        pass
+        x = x.to(Constants.conventional_lambda_units).value
+        if component == "total":
+            coeffs = self.fit_results["coeff"]
+            if coeffs.ndim == 4:
+                coeff = coeffs[:, position[0], position[1], position[2]]
+            elif coeffs.ndim == 3:
+                coeff = coeffs[:, position[0], position[1]]
+            else:
+                raise NotImplementedError
+
+            return self.fit_template.fitting_function(x, *coeff)
+        else:
+            comp = self.components_results[component]
+            if comp["type"] == "gaussian":
+                I = comp["I"].value[position]
+                x = comp["x"].value[position]
+                s = comp["s"].value[position]
+
+                return FittingUtil.gaussian(x, I, x, s, 0)
+            if comp["type"] == "polynomial":
+                value = []
+                for key in comp.keys():
+                    value.append(comp[key])
+                return FittingUtil.polynomial(x, *value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

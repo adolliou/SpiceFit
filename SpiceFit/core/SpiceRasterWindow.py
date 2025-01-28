@@ -4,6 +4,7 @@ from .FittingModel import FittingModel
 from sospice.calibrate import spice_error
 from astropy.wcs import WCS
 import copy
+import astropy.units as u
 
 
 class SpiceRasterWindowL2:
@@ -25,11 +26,11 @@ class SpiceRasterWindowL2:
         """
         if hdu is not None:
 
-            self.data = copy.deepcopy(hdu.data)
+            self.data = copy.deepcopy(u.Quantity(hdu.data, hdu.header["BUNIT"]))
             self.header = copy.deepcopy(hdu.header)
         elif (data is not None) and (header is not None):
             if hdu is None:
-                self.data = copy.deepcopy(data)
+                self.data = copy.deepcopy(u.Quantity(data, header["BUNIT"]))
                 self.header = copy.deepcopy(header)
             else:
                 raise RuntimeError(
@@ -90,7 +91,7 @@ class SpiceRasterWindowL2:
 
     def compute_uncertainty(self, verbose: bool = False) -> None:
         av_constant_noise_level, sigma = spice_error(
-            data=self.data, header=self.header, verbose=verbose
+            data=self.data.to(self.header["BUNIT"]).value, header=self.header, verbose=verbose
         )
         self.uncertainty = sigma
         self.uncertainty_average = av_constant_noise_level

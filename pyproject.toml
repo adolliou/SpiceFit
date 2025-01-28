@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "spicefit"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["adolliou <antoine.dolliou@universite-paris-saclay.fr>"]
 readme = "README.md"

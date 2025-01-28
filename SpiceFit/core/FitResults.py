@@ -415,6 +415,8 @@ class FitResults:
                                                                 "type": type_,}
             if a["free"]:
                 self.components_results[a["name_component"]][coeff_] = self.fit_results["coeff"][wha, ...]
+                self.components_results[a["name_component"]][f"{coeff_}_sigma"] = (
+                    self.fit_results)["coeff_error"][wha, ...]
             else:
                 dict_const = a["type_constrain"]
                 b = self.fit_template.gen_coeff_from_unique_index(dict_const["ref"])
@@ -433,6 +435,9 @@ class FitResults:
             self.components_results[a["name_component"]][coeff_][flagged_pixels] = np.nan
             self.components_results[a["name_component"]][coeff_] = \
                 u.Quantity(self.components_results[a["name_component"]][coeff_], self.fit_results["unit"][wha])
+            self.components_results[a["name_component"]][f"{coeff_}_sigma"] = \
+                u.Quantity(self.components_results[a["name_component"]][f"{coeff_}_sigma"],
+                           self.fit_results["unit"][wha])
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
 
             if (type_ == "gaussian") and ("radiance" not in self.components_results[a["name_component"]].keys()):

@@ -27,6 +27,7 @@ from matplotlib.patches import Rectangle
 from astropy.io import fits
 from datetime import datetime
 from astropy.time import Time
+import os
 
 
 def flatten(xss):
@@ -961,59 +962,100 @@ class FitResults:
             else:
                 raise NotImplementedError
 
-    def to_fits(self, path_to_save_fits: str):
+    def to_fits(self, path_to_save_fits: str, hdu_wcsdvar = None):
         """
         Save the basic fitting data into a FITS file that resembles the ones produced by OSLO.
         The hdulist has between the following windows
         - hdul[0] :  coeffs
         - hdul[1] :  coeffs_sigma
-        - hdul[2] :  flagged_pixels
+        - hdul[2] :  data_l2
+        if hdu_wcsdvar is not None
         - hdul[3] :  data_l2
-        - hdul[4] :  WCSDVAR
 
-
+        :param hdu_wcsdvar: an additional hdu that can be added at the end of the hdulist to correct the jitter
+        information
         :param path_to_save_fits: path where the FITS file to be saved
         """
         header_ref = self.spectral_window.header
 
         hdu = fits.PrimaryHDU()
+
+        data = self._write_hdu(hdu, header_ref, path_to_save_fits,  results_type="results", hdu_wcsdvar=hdu_wcsdvar)
+        hdu.data = data
+        hdu.add_checksum()
+
+        hdu_sigma = fits.ImageHDU()
+        data_sigma = self._write_hdu(hdu_sigma, header_ref, path_to_save_fits,
+                                     results_type="sigma", hdu_wcsdvar=hdu_wcsdvar)
+        hdu_sigma.data = data_sigma
+        hdu_sigma.add_checksum()
+
+        hdu_data = fits.ImageHDU()
+        hdu_data.data = self.spectral_window.data.copy()
+        hdu_data.header = self.spectral_window.header.copy()
+
+        hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')
+        hdu_data.header["FILENAME"] = os.path.basename(path_to_save_fits)
+        hdu_data.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
+        hdu_data.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
+        hdu_data.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
+        hdu_data.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
+
+        if hdu_wcsdvar is not None:
+            hdu_data.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
+
+        hdul = fits.HDUList(hdus=[hdu, hdu_sigma, hdu_data])
+
+        if hdu_wcsdvar is not None:
+
+            hdu_wcs = fits.ImageHDU()
+            hdu_wcs.data = hdu_wcsdvar.data.copy()
+            hdu_wcs.header = hdu_wcsdvar.header.copy()
+
+            hdu_wcs.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of this window')
+            hdu_wcs.header["FILENAME"] = os.path.basename(path_to_save_fits)
+            hdu_wcs.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
+            hdu_wcs.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
+            hdu_wcs.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
+            hdu_wcs.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
+            hdu_wcs.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
+            hdul.append(hdu_wcs)
+        hdul.writeto(path_to_save_fits, overwrite=True)
+
+    def _write_hdu(self, hdu, header_ref, path_to_save_fits, results_type="coeffs", hdu_wcsdvar=None):
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
-        hdu.header["EXTNAME"] = self.spectral_window.header["EXTNAME"]
-        hdu.header["LONGSTRN"] = self.spectral_window.header["LONGSTRN"]
-        hdu.header["FILENAME"] = path_to_save_fits
-
-
-
+        hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} results', 'Extension name of this window')
+        hdu.header["LONGSTRN"] = header_ref["LONGSTRN"]
+        hdu.header["FILENAME"] = os.path.basename(path_to_save_fits)
         hdu.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
-        hdu.header['RESEXT'] = ('V03_100663831-000 ext01 results', 'Extension name of results')
-        hdu.header['UNCEXT'] = ('V03_100663831-000 ext01 uncertainties', 'Extension name of uncertainties')
-        hdu.header['DATAEXT'] = ('V03_100663831-000 ext01 data', 'Extension name of data')
+        hdu.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
+        hdu.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
+        hdu.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
+        if hdu_wcsdvar is not None:
+            hdu.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of data')
+
         shape = self.fit_results["coeff"][0, ...].shape
         data = np.zeros((len(self.components_results.keys()), *shape), dtype=float)
-
         keys_comp = list(self.components_results.keys())
         keys_comp.remove("main")
         index = 0
         last_index = ['DATAEXT']
         for ii, key in enumerate(keys_comp):
 
-            # hdu.header[''] = '-------------------------------------'
-            # hdu.header[''] = f'| Keywords describing fit component {ii + 1} |'
-            # hdu.header[''] = '-------------------------------------'
             a = self.components_results[key]["coeffs"]
             subkeys = list(a.keys())
             last_index_ = None
             if self.components_results[key]["info"]["type"] == "gaussian":
-                hdu.header[f'CMPTYP{str(ii + 1)}'] = ("Gaussian",  f"Type of fit component {ii + 1}")
+                hdu.header[f'CMPTYP{str(ii + 1)}'] = ("Gaussian", f"Type of fit component {ii + 1}")
                 hdu.header[f'CMPNAM{ii + 1}'] = (key, f'Name of fit component {ii + 1}')
                 hdu.header[f'CMP_NP{ii + 1}'] = (len(subkeys), f'Number of parameters in fit component {ii + 1}')
 
                 for param, letter, name, transa, transb in zip(["I", "x", "s"], ["A", "B", "C"],
                                                                ["Amplitude", "Position", "Width"],
                                                                [1, 1, 0.424661], [0, 0, 0]):
-                    data[index, ...] = self.components_results[key]["coeffs"][param]["results"]
-                    index = index+1
+                    data[index, ...] = self.components_results[key]["coeffs"][param][results_type]
+                    index = index + 1
                     hdu.header[f'PNAME{ii + 1}{letter}'] = (name, f'Name of parameter {name} '
                                                                   f'for component {ii + 1}')
                     hdu.header[f'PUNIT{ii + 1}{letter}'] = (str(a[param]['results'].unit),
@@ -1044,7 +1086,7 @@ class FitResults:
                     if "constrain" in a[param]:
                         if a[param]["constrain"]["operation"] == "constant":
                             hdu.header[f'PCONS{ii + 1}{letter}'] = (
-                            1, f'1 if parameter {name}] for component {ii + 1} is constant')
+                                1, f'1 if parameter {name}] for component {ii + 1} is constant')
                         else:
                             raise NotImplementedError
                     last_index_ = f'PCONS{ii + 1}{letter}'
@@ -1055,8 +1097,8 @@ class FitResults:
                 hdu.header[f'CMP_NP{ii + 1}'] = (len(subkeys), f'Number of parameters in fit component {ii + 1}')
                 ncoef = len(a.keys())
                 for jj, letter in enumerate(string.ascii_lowercase[:ncoef]):
-                    data[index, ...] = self.components_results[key]["coeffs"][letter]["results"]
-                    index = index+1
+                    data[index, ...] = self.components_results[key]["coeffs"][letter][results_type]
+                    index = index + 1
                     transa = 1
                     transb = 0
 
@@ -1082,9 +1124,9 @@ class FitResults:
                     unit = a[letter]['results'].unit
 
                     hdu.header[f'PINIT{ii + 1}{Letter}'] = (
-                    (a[letter]["guess"].to(unit).value - transb) / transa,
-                    f'Initial Value of parameter {Letter} '
-                    f'for component {ii + 1}'
+                        (a[letter]["guess"].to(unit).value - transb) / transa,
+                        f'Initial Value of parameter {Letter} '
+                        f'for component {ii + 1}'
                     )
                     hdu.header[f'PMAX{ii + 1}{Letter}'] = ((a[letter]["max"].to(unit).value - transb) / transa,
                                                            f'Maximum Value of parameter {Letter} '
@@ -1103,15 +1145,15 @@ class FitResults:
                     if "constrain" in a[letter]:
                         if a[letter]["constrain"]["operation"] == "constant":
                             hdu.header[f'PCONS{ii + 1}{Letter}'] = (
-                            1, f'1 if parameter {Letter}] for component {ii + 1} is constant')
+                                1, f'1 if parameter {Letter}] for component {ii + 1} is constant')
                         else:
                             raise NotImplementedError
                     last_index_ = f'PCONS{ii + 1}{letter}'
 
-            elif self.components_results[key]["info"]["type"] == "chi2":
+            elif (self.components_results[key]["info"]["type"] == "chi2"):
                 data[index, ...] = self.components_results[key]["coeffs"]["chi2"]["results"]
                 index = index + 1
-                hdu.header[f'CMPTYP{str(ii + 1)}'] = ("Polynomial"),  f"Type of fit component {ii + 1}"
+                hdu.header[f'CMPTYP{str(ii + 1)}'] = ("Polynomial"), f"Type of fit component {ii + 1}"
                 hdu.header[f'CMPNAM{ii + 1}'] = ('Error of fit curve (Chi^2)', f'Name of component {ii + 1}')
                 hdu.header[f'CMP_NP{ii + 1}'] = (len(subkeys), f'Number of parameters in component {ii + 1}')
                 last_index_ = f'CMP_NP{ii + 1}'
@@ -1132,7 +1174,6 @@ class FitResults:
             hdu.header.insert(last_index_, ('', '      '), after=True)
             hdu.header.insert(last_index_, ('', '      '), after=True)
             hdu.header.insert(last_index_, ('', '      '), after=True)
-
         hdu.header["BTYPE"] = '        '
         hdu.header["UCD"] = '        '
         hdu.header["BUNIT"] = '        '
@@ -1140,26 +1181,23 @@ class FitResults:
         hdu.header["WINNO"] = (0, "Number of windows")
         hdu.header["ANA_MISS"] = 'NaN     '
         hdu.header["WCSNAME"] = 'Helioprojective-cartesian'
-
         hdu.header["CUNIT1"] = '        '
         hdu.header["CRVAL1"] = 1.00000
         hdu.header["CDELT1"] = 1.00000
         hdu.header["CRPIX1"] = 1.00000
         hdu.header["PC1_1"] = 1.00000
-
         for jj in range(2):
-            hdu.header[f"CUNIT{jj+2}"] = header_ref[f"CUNIT{jj+1}"]
-            hdu.header[f"CRVAL{jj+2}"] = header_ref[f"CRVAL{jj+1}"]
-            hdu.header[f"CDELT{jj+2}"] = header_ref[f"CDELT{jj+1}"]
-            hdu.header[f"CRPIX{jj+2}"] = header_ref[f"CRPIX{jj+1}"]
+            hdu.header[f"CUNIT{jj + 2}"] = header_ref[f"CUNIT{jj + 1}"]
+            hdu.header[f"CRVAL{jj + 2}"] = header_ref[f"CRVAL{jj + 1}"]
+            hdu.header[f"CDELT{jj + 2}"] = header_ref[f"CDELT{jj + 1}"]
+            hdu.header[f"CRPIX{jj + 2}"] = header_ref[f"CRPIX{jj + 1}"]
 
-            hdu.header[f"CRDER{jj+2}"] = header_ref[f"CRDER{jj+1}"]
-            hdu.header[f"CWERR{jj+2}"] = header_ref[f"CWERR{jj+1}"]
+            hdu.header[f"CRDER{jj + 2}"] = header_ref[f"CRDER{jj + 1}"]
+            hdu.header[f"CWERR{jj + 2}"] = header_ref[f"CWERR{jj + 1}"]
         hdu.header["PC2_2"] = header_ref[f"PC1_1"]
         hdu.header["PC2_3"] = header_ref[f"PC1_2"]
         hdu.header["PC3_2"] = header_ref[f"PC2_1"]
         hdu.header["PC3_3"] = header_ref[f"PC2_2"]
-
         if "CUNIT4" in header_ref:
             hdu.header[f"CUNIT4"] = header_ref[f"CUNIT4"]
             hdu.header[f"CRVAL4"] = header_ref[f"CRVAL4"]
@@ -1172,10 +1210,6 @@ class FitResults:
             hdu.header[f"PC4_4"] = header_ref[f"PC4_4"]
             hdu.header[f"PC4_1"] = header_ref[f"PC4_1"]
             hdu.header[f"PC4_2"] = header_ref[f"PC4_1"]
-
-
-
-
         key_list = [
             "SPECSYS", "VELOSYS",
             "DSUN_OBS", "DSUN_AU",
@@ -1202,19 +1236,14 @@ class FitResults:
         hdu.header["LEVEL"] = 'L3      '
         hdu.header["CREATOR"] = 'Antoine Dolliou'
         hdu.header["ORIGIN"] = 'Max Planck Institute for Solar System Research'
-
         last_index_ = "BTYPE"
+        hdu.header.insert(last_index_, ('', '      '))
+        hdu.header.insert(last_index_, ('', '      '))
+        hdu.header.insert(last_index_, ('', '      '))
         hdu.header.insert(last_index_, ('', '-------------------------------------'))
         hdu.header.insert(last_index_, ('', '| Keywords valid for this HDU |'))
         hdu.header.insert(last_index_, ('', '-------------------------------------'))
-        hdu.header.insert(last_index_, ('', '      '))
-        hdu.header.insert(last_index_, ('', '      '))
-        hdu.header.insert(last_index_, ('', '      '))
 
-        hdu.data = data
-        hdul = fits.HDUList(hdus=[hdu])
-        hdul.writeto(path_to_save_fits, overwrite=True)
-
-
+        return data
 
     # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

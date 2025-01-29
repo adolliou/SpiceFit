@@ -1166,8 +1166,8 @@ class FitResults:
             hdu.header[f"CDELT4"] = header_ref[f"CDELT4"]
             hdu.header[f"CRPIX4"] = header_ref[f"CRPIX4"]
 
-            hdu.header[f"CRDER4"] = header_ref[f"CRDER4"]
-            hdu.header[f"CWERR4"] = header_ref[f"CWERR4"]
+            # hdu.header[f"CRDER4"] = header_ref[f"CRDER4"]
+            # hdu.header[f"CWERR4"] = header_ref[f"CWERR4"]
 
             hdu.header[f"PC4_4"] = header_ref[f"PC4_4"]
             hdu.header[f"PC4_1"] = header_ref[f"PC4_1"]
@@ -1178,7 +1178,31 @@ class FitResults:
 
         key_list = [
             "SPECSYS", "VELOSYS",
+            "DSUN_OBS", "DSUN_AU",
+            "RSUN_ARC", "RSUN_REF",
+            "SOLAR_B0", "SOLAR_P0", "SOLAR_EP",
+            "CAR_ROT",
+            "HGLT_OBS", "HGLN_OBS", "CRLT_OBS", "CRLN_OBS",
+            "HEEX_OBS", "HEEY_OBS", "HEEZ_OBS",
+            "HCIX_OBS", "HCIY_OBS", "HCIZ_OBS",
+            "HCIX_VOB", "HCIY_VOB", "HCIZ_VOB",
+            "HAEX_OBS", "HAEY_OBS", "HAEZ_OBS",
+            "HEQX_OBS", "HEQY_OBS", "HEQZ_OBS",
+            "GSEX_OBS", "GSEY_OBS", "GSEZ_OBS",
+            "OBS_VR", "EAR_TDEL", "SUN_TIME",
+            "DATE_EAR", "DATE_SUN",
+            "XPOSURE",
+            "TIMESYS",
+            "DATEREF", "DATE-BEG", "DATE-OBS", "DATE-AVG", "DATE-END",
+            "SEQ_BEG", "TELAPSE", "OBT_BEG",
+            "INSTRUME", "OBSRVTRY", "CROTA"
         ]
+        for k in key_list:
+            hdu.header[k] = header_ref[k]
+        hdu.header["LEVEL"] = 'L3      '
+        hdu.header["CREATOR"] = 'Antoine Dolliou'
+        hdu.header["ORIGIN"] = 'Max Planck Institute for Solar System Research'
+
         last_index_ = "BTYPE"
         hdu.header.insert(last_index_, ('', '-------------------------------------'))
         hdu.header.insert(last_index_, ('', '| Keywords valid for this HDU |'))

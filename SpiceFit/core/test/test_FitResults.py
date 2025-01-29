@@ -26,7 +26,7 @@ def spicewindow(hdu):
 
 @pytest.fixture
 def fittemplate():
-    path_yaml = "C:/Users/dolliou/Desktop/code/SpiceFit/SpiceFit/core/test/fit_templates/ne_8_770_42_1c.template.yaml"
+    path_yaml = "./core/test/fit_templates/ne_8_770_42_1c.template.yaml"
     return FittingModel(filename=path_yaml)
 
 
@@ -35,5 +35,7 @@ class TestFitResults:
     def test_fit_window_standard(self, spicewindow, fittemplate):
         f = FitResults(fit_template=fittemplate, verbose=False)
         f.fit_spice_window_standard(spicewindow=spicewindow, parallelism=True, cpu_count=16, )
+        f.to_fits(path_to_save_fits="./core/test/test.fits")
+
 
 

@@ -748,13 +748,18 @@ class FittingModel:
             dict_const = a["type_constrain"]
             s += "("
             b = self.gen_coeff_from_unique_index(dict_const["ref"])
-            s += b["notation"]
-            if dict_const["operation"] == "plus":
-                s += " + "
-            elif dict_const["operation"] == "minus":
-                s += " - "
-            elif dict_const["operation"] == "times":
-                s += " * "
+            if dict_const["operation"] == "constant":
+                pass
+            else:
+                s += b["notation"]
+                if dict_const["operation"] == "plus":
+                    s += " + "
+                elif dict_const["operation"] == "minus":
+                    s += " - "
+                elif dict_const["operation"] == "times":
+                    s += " * "
+                else:
+                    raise NotImplementedError
             s += str(dict_const["value"])
             s += ")"
         return s

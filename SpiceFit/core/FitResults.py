@@ -408,31 +408,28 @@ class FitResults:
 
     def build_components_results(self, components_results: dict):
         type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
-        self.components_results["chi2"] = {
-            "results": self.fit_results["chi2"],
-            "type": "chi2",
 
-        }
-        self.components_results["flagged_pixels"] = {
-            "results": self.fit_results["flagged_pixels"],
-            "type": "flagged_pixels",
-        }
         flagged_pixels = self.fit_results["flagged_pixels"]
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
             a = self.fit_template.params_all[type_][index_][coeff_]
             wha = np.where(a["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
             if a["name_component"] not in self.components_results:
-                self.components_results[a["name_component"]] = {"name_component": a["name_component"],
-                                                                "type": type_, }
+                self.components_results[a["name_component"]] = {
+                    "info": {
+                        "name_component": a["name_component"],
+                        "type": type_,
+                    },
+                    "coeffs": {},
+                }
             if a["free"]:
-                self.components_results[a["name_component"]][coeff_] = {
+                self.components_results[a["name_component"]]["coeffs"][coeff_] = {
                     "results": u.Quantity(self.fit_results["coeff"][wha, ...], self.fit_results["unit"][wha]),
-                    "sigma": u.Quantity(self.fit_results["coeff_error"][wha, ...], self.fit_results["unit"][wha]),
-                    "trans_a": u.Quantity(self.fit_results["trans_a"][wha, ...], self.fit_results["unit"][wha]),
-                    "trans_b": u.Quantity(self.fit_results["trans_b"][wha, ...], self.fit_results["unit"][wha]),
+                    "sigma": u.Quantity(self.fit_results["coeffs_error"][wha, ...], self.fit_results["unit"][wha]),
+                    "trans_a": self.fit_results["trans_a"][wha],
+                    "trans_b": self.fit_results["trans_b"][wha],
                     "guess": u.Quantity(a["guess"], self.fit_results["unit"][wha]),
-                    "max": u.Quantity(a["bounds"][0], self.fit_results["unit"][wha]),
-                    "min": u.Quantity(a["bounds"][1], self.fit_results["unit"][wha]),
+                    "max": u.Quantity(a["bounds"][1], self.fit_results["unit"][wha]),
+                    "min": u.Quantity(a["bounds"][0], self.fit_results["unit"][wha]),
 
                     "type": type_,
 
@@ -440,39 +437,83 @@ class FitResults:
 
 
             else:
-                raise NotImplementedError
                 # Not yet impletented the error in the case the parameters are not free
                 dict_const = a["type_constrain"]
                 b = self.fit_template.gen_coeff_from_unique_index(dict_const["ref"])
                 whb = np.where(b["unique_index"] == np.array(self.fit_results["unique_index"]))[0][0]
+
+                self.components_results[a["name_component"]]["coeffs"][coeff_] = {
+                    "trans_a": self.fit_results["trans_a"][wha],
+                    "trans_b": self.fit_results["trans_b"][wha],
+                    "guess": u.Quantity(a["guess"], self.fit_results["unit"][wha]),
+                    "max": u.Quantity(a["bounds"][1], self.fit_results["unit"][wha]),
+                    "min": u.Quantity(a["bounds"][0], self.fit_results["unit"][wha]),
+                }
+
                 if dict_const["operation"] == "plus":
-                    self.components_results[a["name_component"]][coeff_] = {
-                        "results": self.fit_results["coeff"][whb, ...] + \
-                                   dict_const["value"]
-                    }
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(self.fit_results["coeff"][whb, ...] + \
+                                   dict_const["value"], self.fit_results["unit"][whb])
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"] = u.Quantity(
+                        self.fit_results["sigma"][whb, ...], self.fit_results["unit"][whb])
+
                 elif dict_const["operation"] == "minus":
-                    self.components_results[a["name_component"]][coeff_] = {
-                        "results": self.fit_results["coeff"][whb, ...] - \
-                                   dict_const["value"]
-                    }
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(self.fit_results["coeff"][whb, ...] - \
+                                   dict_const["value"], self.fit_results["unit"][whb])
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"] = u.Quantity(
+                        self.fit_results["sigma"][whb, ...], self.fit_results["unit"][whb])
                 elif dict_const["operation"] == "times":
-                    self.components_results[a["name_component"]][coeff_] = {
-                        "results": self.fit_results["coeff"][whb, ...] * \
-                                   dict_const["value"]
-                    }
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(
+                        self.fit_results["coeff"][whb, ...] * \
+                        dict_const["value"], self.fit_results["unit"][whb])
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"] = u.Quantity(
+                        self.fit_results["sigma"][whb, ...] * dict_const["value"], self.fit_results["unit"][whb])
+                elif dict_const["operation"] == "constant":
+
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(
+                        dict_const["value"], self.fit_results["unit"][whb])
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"] = u.Quantity(
+                        0, self.fit_results["unit"][whb])
+
                 else:
                     raise NotImplementedError
-            self.components_results[a["name_component"]][coeff_]["results"][flagged_pixels] = np.nan
-            self.components_results[a["name_component"]][coeff_]["sigma"][flagged_pixels] = np.nan
+                self.components_results[a["name_component"]]["coeffs"][coeff_]["constrain"] = {
+                    "reference": dict_const["ref"],
+                    "operation": dict_const["operation"],
+                    "value": dict_const["value"],
+                }
+            self.components_results[a["name_component"]]["coeffs"][coeff_]["results"][flagged_pixels] = np.nan
+            self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"][flagged_pixels] = np.nan
+        self.components_results["chi2"] = {
+                "info": {
+                        "name_component": "chi2",
+                        "type": "chi2",
+                },
+                "coeffs": {
+                    "chi2": {
+                        "results": self.fit_results["chi2"],
+                    }
+                }
+            }
 
+        self.components_results["flagged_pixels"] = {
+            "info": {
+                "name_component": "flagged_pixels",
+                "type": "flagged_pixels",
+            },
+            "coeffs": {
+                "flagged_pixels": {
+                    "results": self.fit_results["chi2"],
+                }
+            },
+        }
         for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
 
             if (type_ == "gaussian") and ("radiance" not in self.components_results[a["name_component"]].keys()):
                 a = self.fit_template.params_all[type_][index_][coeff_]
 
-                I = self.components_results[a["name_component"]]["I"]["results"]
-                x = self.components_results[a["name_component"]]["x"]["results"]
-                s = self.components_results[a["name_component"]]["s"]["results"]
+                I = self.components_results[a["name_component"]]["coeffs"]["I"]["results"]
+                x = self.components_results[a["name_component"]]["coeffs"]["x"]["results"]
+                s = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
 
                 line = None
                 for line_ in self.fit_template.parinfo["info"]:
@@ -481,14 +522,14 @@ class FitResults:
                 if line is None:
                     raise NotImplementedError
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
-                self.components_results[a["name_component"]]["velocity"] = {
+                self.components_results[a["name_component"]]["coeffs"]["velocity"] = {
                     "results": (const.c.to("km/s") * (x - lambda_ref) / lambda_ref).to(
                         Constants.conventional_velocity_units)
                 }
-                self.components_results[a["name_component"]]["radiance"] = {
+                self.components_results[a["name_component"]]["coeffs"]["radiance"] = {
                     "results": (I * np.sqrt(2 * np.pi * s * s)).to(Constants.conventional_radiance_units)
                 }
-                self.components_results[a["name_component"]]["fwhm"] = {
+                self.components_results[a["name_component"]]["coeffs"]["fwhm"] = {
                     "results": 2.355 * s
                 }
         dic = copy.deepcopy(self.components_results)
@@ -599,7 +640,6 @@ class FitResults:
         # Set the constant at the -1 index
         index_background = np.where(np.array(type) == "const")[0][0]
         if index_background != len(type) - 1:
-            breakpoint()
             for key in self.fit_template.parinfo["fit"].keys():
                 back_value = copy.deepcopy(
                     self.fit_template.parinfo["fit"][key][index_background]
@@ -747,11 +787,11 @@ class FitResults:
         unit = units[param]
         cmap = cmaps[param]  # viridis is the default colormap for imshow
         cmap.set_bad('white')
-        a = self.components_results[line]
+        a = self.components_results[line]["coeffs"]
         w_xy = self.spectral_window.w_xy
 
         if param == "chi2":
-            data = self.components_results[param]["results"]
+            data = self.components_results["coeffs"][param]["results"]
         else:
             data = a[param].to(unit).value
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
@@ -906,32 +946,36 @@ class FitResults:
             return self.fit_template.fitting_function(x, *coeff)
         else:
             comp = self.components_results[component]
-            if comp["type"] == "gaussian":
-                I = comp["I"]["results"].value[position]
-                x = comp["x"]["results"].value[position]
-                s = comp["s"]["results"].value[position]
+            if comp["info"]["type"] == "gaussian":
+                I = comp["coeffs"]["I"]["results"].value[position]
+                x = comp["coeffs"]["x"]["results"].value[position]
+                s = comp["coeffs"]["s"]["results"].value[position]
 
                 return FittingUtil.gaussian(x, I, x, s, 0)
-            if comp["type"] == "polynomial":
+            elif ["info"]["type"] == "polynomial":
                 value = []
                 for letter in string.ascii_lowercase:
                     if letter in comp.keys():
                         value.append(comp[letter])
                 return FittingUtil.polynomial(x, *value)
+            else:
+                raise NotImplementedError
 
     def to_fits(self, path_to_save_fits: str):
         """
-        Save the basic fitting data into a FITS file that ressembles the ones producted by OSLO.
+        Save the basic fitting data into a FITS file that resembles the ones produced by OSLO.
         The hdulist has between the following windows
         - hdul[0] :  coeffs
         - hdul[1] :  coeffs_sigma
-        - hdul[2] :  data_l2
-        - hdul[3] :  WCSDVAR
+        - hdul[2] :  flagged_pixels
+        - hdul[3] :  data_l2
+        - hdul[4] :  WCSDVAR
 
 
         :param path_to_save_fits: path where the FITS file to be saved
-        :param sigma: if True, then the sigma of the coeffs values will be saved in the
         """
+        header_ref = self.spectral_window.header
+
         hdu = fits.PrimaryHDU()
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
@@ -939,97 +983,214 @@ class FitResults:
         hdu.header["LONGSTRN"] = self.spectral_window.header["LONGSTRN"]
         hdu.header["FILENAME"] = path_to_save_fits
 
-        hdu.header['']
-        hdu.header['']
-        hdu.header['']
-        hdu.header['-------------------------------------']
-        hdu.header['| Keywords describing the whole ANA |']
-        hdu.header['-------------------------------------']
+
+
         hdu.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
         hdu.header['RESEXT'] = ('V03_100663831-000 ext01 results', 'Extension name of results')
         hdu.header['UNCEXT'] = ('V03_100663831-000 ext01 uncertainties', 'Extension name of uncertainties')
         hdu.header['DATAEXT'] = ('V03_100663831-000 ext01 data', 'Extension name of data')
+        shape = self.fit_results["coeff"][0, ...].shape
+        data = np.zeros((len(self.components_results.keys()), *shape), dtype=float)
 
-        for ii, key in enumerate(self.components_results.keys()):
-            if key != 'main':
-                hdu.header['']
-                hdu.header['']
-                hdu.header['']
-                hdu.header['-------------------------------------']
-                hdu.header[f'| Keywords describing fit component {ii + 1} |']
-                hdu.header['-------------------------------------']
-                a = self.components_results[key]
-                hdu.header[f'CMPTYP{ii + 1}'] = a[list(a.keys())[0]]["type"]
-                hdu.header[f'CMPNAM{ii + 1}'] = key
-                if a[list(a.keys())[0]]["type"] == "gaussian":
-                    for param, letter, name, transa, transb in zip(["I", "x", "s"], ["A", "B", "C"],
-                                                                   ["Amplitude", "Position", "Width"],
-                                                                   [1, 1, 0.424661], [0, 0, 0]):
-                        hdu.header[f'PNAME{ii + 1}{letter}'] = (name, f'Name of parameter {name} '
-                                                                      f'for component {ii + 1}')
-                        hdu.header[f'PUNIT{ii + 1}{letter}'] = (a[param]['unit'],
-                                                                f'Phys. unit of parameter {name} '
-                                                                f'for component {ii + 1}')
-                        hdu.header[f'PDESC{ii + 1}{letter}'] = (f'This parameter describes the {name} of the '
-                                                                f'Gaussian, in the'
-                                                                'same units as the data being fitted',
-                                                                f'Description of '
-                                                                f'parameter a for '
-                                                                f'component {ii + 1}')
-                        hdu.header[f'PINIT{ii + 1}{letter}'] = (
-                            (a[param]["guess"].to(a['unit']).value - transb) / transa,
-                            f'Initial value of parameter {name} '
-                            f'for component {ii + 1}')
-                        hdu.header[f'PMAX{ii + 1}{letter}'] = ((a[param]["max"].to(a['unit']).value - transb) / transa,
-                                                               f'Maximum value of parameter {name} '
-                                                               f'for component {ii + 1}')
-                        hdu.header[f'PMIN{ii + 1}{letter}'] = ((a[param]["min"].to(a['unit']).value - transb) / transa,
-                                                               f'Minimum value of parameter {name} '
-                                                               f'for component {ii + 1}')
-                        hdu.header[f'PTRA{ii + 1}{letter}'] = (transa, 'Linear coefficient A in Lambda=PVAL*PTRA+PTRB')
-                        hdu.header[f'PTRB{ii + 1}{letter}'] = (transb, 'Linear coefficient B in Lambda=PVAL*PTRA+PTRB')
-                elif a[list(a.keys())[0]]["type"] == "polynomial":
-                    for ii, letter in enumerate(string.ascii_lowercase):
-                        transa = 1
-                        transb = 0
+        keys_comp = list(self.components_results.keys())
+        keys_comp.remove("main")
+        index = 0
+        last_index = ['DATAEXT']
+        for ii, key in enumerate(keys_comp):
 
-                        Letter = string.ascii_uppercase[ii]
-                        hdu.header[f'CMPDES{ii + 1}{Letter}'] = (f'This component is a polynomial of degree'
-                                                                 f' {len(a.keys()) - 1}',
-                                                                 )
-                        hdu.header[f'CMPDES{ii + 1}{Letter}'] = (f'This component is a polynomial of degree'
-                                                                 f' {len(a.keys()) - 1}',
-                                                                 )
-                        hdu.header[f'PNAME{ii + 1}{Letter}'] = (f'{letter}{ii + 1}',
-                                                                f'Name of parameter {Letter} '
-                                                                f'for component {ii + 1}'
-                                                                )
-                        hdu.header[f'PUNIT{ii + 1}{Letter}'] = (a[letter]["unit"],
-                                                                f'Name of parameter {Letter} '
-                                                                f'for component {ii + 1}'
-                                                                )
-                        hdu.header[f'PDESC{ii + 1}{Letter}'] = (f'This is the coefficient for x^{ii}',
-                                                                f'Description of parameter {Letter} '
-                                                                f'for component {ii + 1}'
-                                                                )
-                        hdu.header[f'PINIT{ii + 1}{Letter}'] = (
-                        (a[letter]["guess"].to(a['unit']).value - transb) / transa,
-                        f'Initial Value of parameter {Letter} '
-                        f'for component {ii + 1}'
-                        )
-                        hdu.header[f'PMAX{ii + 1}{Letter}'] = ((a[letter]["max"].to(a['unit']).value - transb) / transa,
-                                                               f'Maximum Value of parameter {Letter} '
-                                                               f'for component {ii + 1}'
-                                                               )
-                        hdu.header[f'PMIN{ii + 1}{Letter}'] = ((a[letter]["min"].to(a['unit']).value - transb) / transa,
-                                                               f'Minimum Value of parameter {Letter} '
-                                                               f'for component {ii + 1}'
-                                                               )
-                        hdu.header[f'PTRA{ii + 1}{Letter}'] = (transa, 'Linear coefficient A in Lambda=PVAL*PTRA+PTRB'
-                                                               )
-                        hdu.header[f'PTRB{ii + 1}{Letter}'] = (transb, 'Linear coefficient B in Lambda=PVAL*PTRA+PTRB'
-                                                               )
-                elif a[list(a.keys())[0]]["type"] == "chi2":
-                    pass
+            # hdu.header[''] = '-------------------------------------'
+            # hdu.header[''] = f'| Keywords describing fit component {ii + 1} |'
+            # hdu.header[''] = '-------------------------------------'
+            a = self.components_results[key]["coeffs"]
+            subkeys = list(a.keys())
+            last_index_ = None
+            if self.components_results[key]["info"]["type"] == "gaussian":
+                hdu.header[f'CMPTYP{str(ii + 1)}'] = ("Gaussian",  f"Type of fit component {ii + 1}")
+                hdu.header[f'CMPNAM{ii + 1}'] = (key, f'Name of fit component {ii + 1}')
+                hdu.header[f'CMP_NP{ii + 1}'] = (len(subkeys), f'Number of parameters in fit component {ii + 1}')
+
+                for param, letter, name, transa, transb in zip(["I", "x", "s"], ["A", "B", "C"],
+                                                               ["Amplitude", "Position", "Width"],
+                                                               [1, 1, 0.424661], [0, 0, 0]):
+                    data[index, ...] = self.components_results[key]["coeffs"][param]["results"]
+                    index = index+1
+                    hdu.header[f'PNAME{ii + 1}{letter}'] = (name, f'Name of parameter {name} '
+                                                                  f'for component {ii + 1}')
+                    hdu.header[f'PUNIT{ii + 1}{letter}'] = (str(a[param]['results'].unit),
+                                                            f'Phys. unit of parameter {name} '
+                                                            f'for component {ii + 1}')
+                    hdu.header[f'PDESC{ii + 1}{letter}'] = (f'This parameter describes the {name} of the '
+                                                            f'Gaussian, in the'
+                                                            'same units as the data being fitted',
+                                                            f'Description of '
+                                                            f'parameter a for '
+                                                            f'component {ii + 1}')
+                    unit = a[param]['results'].unit
+                    hdu.header[f'PINIT{ii + 1}{letter}'] = (
+                        (a[param]["guess"].to(unit).value - transb) / transa,
+                        f'Initial value of parameter {name} '
+                        f'for component {ii + 1}')
+                    hdu.header[f'PMAX{ii + 1}{letter}'] = ((a[param]["max"].to(unit).value - transb) / transa,
+                                                           f'Maximum value of parameter {name} '
+                                                           f'for component {ii + 1}')
+                    hdu.header[f'PMIN{ii + 1}{letter}'] = ((a[param]["min"].to(unit).value - transb) / transa,
+                                                           f'Minimum value of parameter {name} '
+                                                           f'for component {ii + 1}')
+                    hdu.header[f'PTRA{ii + 1}{letter}'] = (transa, 'Linear coefficient A in Lambda=PVAL*PTRA+PTRB')
+                    hdu.header[f'PTRB{ii + 1}{letter}'] = (transb, 'Linear coefficient B in Lambda=PVAL*PTRA+PTRB')
+
+                    hdu.header[f'PCONS{ii + 1}{letter}'] = (
+                        0, f'1 if parameter {name}] for component {ii + 1} is constant')
+                    if "constrain" in a[param]:
+                        if a[param]["constrain"]["operation"] == "constant":
+                            hdu.header[f'PCONS{ii + 1}{letter}'] = (
+                            1, f'1 if parameter {name}] for component {ii + 1} is constant')
+                        else:
+                            raise NotImplementedError
+                    last_index_ = f'PCONS{ii + 1}{letter}'
+
+            elif self.components_results[key]["info"]["type"] == "polynomial":
+                hdu.header[f'CMPTYP{str(ii + 1)}'] = ("Polynomial", f"Type of fit component {ii + 1}")
+                hdu.header[f'CMPNAM{ii + 1}'] = (key, f'Name of fit component {ii + 1}')
+                hdu.header[f'CMP_NP{ii + 1}'] = (len(subkeys), f'Number of parameters in fit component {ii + 1}')
+                ncoef = len(a.keys())
+                for jj, letter in enumerate(string.ascii_lowercase[:ncoef]):
+                    data[index, ...] = self.components_results[key]["coeffs"][letter]["results"]
+                    index = index+1
+                    transa = 1
+                    transb = 0
+
+                    Letter = string.ascii_uppercase[jj]
+                    hdu.header[f'CMPDES{ii + 1}{Letter}'] = (f'This component is a polynomial of degree'
+                                                             f' {len(a.keys()) - 1}',
+                                                             )
+                    hdu.header[f'CMPDES{ii + 1}{Letter}'] = (f'This component is a polynomial of degree'
+                                                             f' {len(a.keys()) - 1}',
+                                                             )
+                    hdu.header[f'PNAME{ii + 1}{Letter}'] = (f'{letter}{ii + 1}',
+                                                            f'Name of parameter {Letter} '
+                                                            f'for component {ii + 1}'
+                                                            )
+                    hdu.header[f'PUNIT{ii + 1}{Letter}'] = (str(a[letter]['results'].unit),
+                                                            f'Name of parameter {Letter} '
+                                                            f'for component {ii + 1}'
+                                                            )
+                    hdu.header[f'PDESC{ii + 1}{Letter}'] = (f'This is the coefficient for x^{ii}',
+                                                            f'Description of parameter {Letter} '
+                                                            f'for component {ii + 1}'
+                                                            )
+                    unit = a[letter]['results'].unit
+
+                    hdu.header[f'PINIT{ii + 1}{Letter}'] = (
+                    (a[letter]["guess"].to(unit).value - transb) / transa,
+                    f'Initial Value of parameter {Letter} '
+                    f'for component {ii + 1}'
+                    )
+                    hdu.header[f'PMAX{ii + 1}{Letter}'] = ((a[letter]["max"].to(unit).value - transb) / transa,
+                                                           f'Maximum Value of parameter {Letter} '
+                                                           f'for component {ii + 1}'
+                                                           )
+                    hdu.header[f'PMIN{ii + 1}{Letter}'] = ((a[letter]["min"].to(unit).value - transb) / transa,
+                                                           f'Minimum Value of parameter {Letter} '
+                                                           f'for component {ii + 1}'
+                                                           )
+                    hdu.header[f'PTRA{ii + 1}{Letter}'] = (transa, 'Linear coefficient A in Lambda=PVAL*PTRA+PTRB'
+                                                           )
+                    hdu.header[f'PTRB{ii + 1}{Letter}'] = (transb, 'Linear coefficient B in Lambda=PVAL*PTRA+PTRB'
+                                                           )
+                    hdu.header[f'PCONS{ii + 1}{Letter}'] = (
+                        0, f'1 if parameter {Letter}] for component {ii + 1} is constant')
+                    if "constrain" in a[letter]:
+                        if a[letter]["constrain"]["operation"] == "constant":
+                            hdu.header[f'PCONS{ii + 1}{Letter}'] = (
+                            1, f'1 if parameter {Letter}] for component {ii + 1} is constant')
+                        else:
+                            raise NotImplementedError
+                    last_index_ = f'PCONS{ii + 1}{letter}'
+
+            elif self.components_results[key]["info"]["type"] == "chi2":
+                data[index, ...] = self.components_results[key]["coeffs"]["chi2"]["results"]
+                index = index + 1
+                hdu.header[f'CMPTYP{str(ii + 1)}'] = ("Polynomial"),  f"Type of fit component {ii + 1}"
+                hdu.header[f'CMPNAM{ii + 1}'] = ('Error of fit curve (Chi^2)', f'Name of component {ii + 1}')
+                hdu.header[f'CMP_NP{ii + 1}'] = (len(subkeys), f'Number of parameters in component {ii + 1}')
+                last_index_ = f'CMP_NP{ii + 1}'
+            elif self.components_results[key]["info"]["type"] == "flagged_pixels":
+                last_index_ = None
+            if last_index_ is not None:
+                last_index.append(last_index_)
+        hdu.header.insert('FILENAME', ('', '-------------------------------------'), after=True)
+        hdu.header.insert('FILENAME', ('', '| Keywords describing the whole ANA |'), after=True)
+        hdu.header.insert('FILENAME', ('', '-------------------------------------'), after=True)
+        hdu.header.insert('FILENAME', ('', '      '), after=True)
+        hdu.header.insert('FILENAME', ('', '      '), after=True)
+        hdu.header.insert('FILENAME', ('', '      '), after=True)
+        for ii, last_index_ in enumerate(last_index[:-1]):
+            hdu.header.insert(last_index_, ('', '-------------------------------------'), after=True)
+            hdu.header.insert(last_index_, ('', f'| Keywords describing fit component {ii + 1} |'), after=True)
+            hdu.header.insert(last_index_, ('', '-------------------------------------'), after=True)
+            hdu.header.insert(last_index_, ('', '      '), after=True)
+            hdu.header.insert(last_index_, ('', '      '), after=True)
+            hdu.header.insert(last_index_, ('', '      '), after=True)
+
+        hdu.header["BTYPE"] = '        '
+        hdu.header["UCD"] = '        '
+        hdu.header["BUNIT"] = '        '
+        hdu.header["NWIN"] = (5, "Number of windows")
+        hdu.header["WINNO"] = (0, "Number of windows")
+        hdu.header["ANA_MISS"] = 'NaN     '
+        hdu.header["WCSNAME"] = 'Helioprojective-cartesian'
+
+        hdu.header["CUNIT1"] = '        '
+        hdu.header["CRVAL1"] = 1.00000
+        hdu.header["CDELT1"] = 1.00000
+        hdu.header["CRPIX1"] = 1.00000
+        hdu.header["PC1_1"] = 1.00000
+
+        for jj in range(2):
+            hdu.header[f"CUNIT{jj+2}"] = header_ref[f"CUNIT{jj+1}"]
+            hdu.header[f"CRVAL{jj+2}"] = header_ref[f"CRVAL{jj+1}"]
+            hdu.header[f"CDELT{jj+2}"] = header_ref[f"CDELT{jj+1}"]
+            hdu.header[f"CRPIX{jj+2}"] = header_ref[f"CRPIX{jj+1}"]
+
+            hdu.header[f"CRDER{jj+2}"] = header_ref[f"CRDER{jj+1}"]
+            hdu.header[f"CWERR{jj+2}"] = header_ref[f"CWERR{jj+1}"]
+        hdu.header["PC2_2"] = header_ref[f"PC1_1"]
+        hdu.header["PC2_3"] = header_ref[f"PC1_2"]
+        hdu.header["PC3_2"] = header_ref[f"PC2_1"]
+        hdu.header["PC3_3"] = header_ref[f"PC2_2"]
+
+        if "CUNIT4" in header_ref:
+            hdu.header[f"CUNIT4"] = header_ref[f"CUNIT4"]
+            hdu.header[f"CRVAL4"] = header_ref[f"CRVAL4"]
+            hdu.header[f"CDELT4"] = header_ref[f"CDELT4"]
+            hdu.header[f"CRPIX4"] = header_ref[f"CRPIX4"]
+
+            hdu.header[f"CRDER4"] = header_ref[f"CRDER4"]
+            hdu.header[f"CWERR4"] = header_ref[f"CWERR4"]
+
+            hdu.header[f"PC4_4"] = header_ref[f"PC4_4"]
+            hdu.header[f"PC4_1"] = header_ref[f"PC4_1"]
+            hdu.header[f"PC4_2"] = header_ref[f"PC4_1"]
+
+
+
+
+        key_list = [
+            "SPECSYS", "VELOSYS",
+        ]
+        last_index_ = "BTYPE"
+        hdu.header.insert(last_index_, ('', '-------------------------------------'))
+        hdu.header.insert(last_index_, ('', '| Keywords valid for this HDU |'))
+        hdu.header.insert(last_index_, ('', '-------------------------------------'))
+        hdu.header.insert(last_index_, ('', '      '))
+        hdu.header.insert(last_index_, ('', '      '))
+        hdu.header.insert(last_index_, ('', '      '))
+
+        hdu.data = data
+        hdul = fits.HDUList(hdus=[hdu])
+        hdul.writeto(path_to_save_fits, overwrite=True)
+
+
 
     # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

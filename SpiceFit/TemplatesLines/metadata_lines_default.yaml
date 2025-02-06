@@ -4,3 +4,9 @@ list_lines_spice_metadata:
     ion: 8
     central_wave: 770.42
     template_file_name: "ne_8_770_42.1c.template.yaml"
+
+  - name: "Mg IX 706.02+ S IV 706.50"
+    elem: "Mg"
+    ion: 8
+    central_wave: 770.42
+    template_file_name: "ne_8_770_42.1c.template.yaml"

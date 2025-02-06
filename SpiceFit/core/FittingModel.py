@@ -37,7 +37,8 @@ class FittingModel:
                  use_jit: bool = False, cache: bool = True) -> None:
         """
 
-        :param filename: (optional)
+        :param filename: (optional) either the path to the yaml file you want (that can be personalized), 
+        or the name of the standard yaml file to use (e.g. "ne_8_770_42_1c.template") 
         :param parinfo: dictionary, should have the same keys as a parinfo dictionary
         """
         self.verbose = verbose
@@ -59,7 +60,13 @@ class FittingModel:
 
         if (filename is not None) & (parinfo is None):
             if isinstance(filename, str):
-                self.filename = filename
+                
+                if os.path.isfile(filename):
+                    self.filename = filename
+                else:
+                    basis_yaml_templates_file = os.path.join("./TemplateLines/", filename)
+                    if not os.path.isfile(basis_yaml_templates_file):
+                        raise ValueE
                 self._parinfo = {}
                 with open(self.filename, 'r') as f:
                     self._parinfo = safe_load(f)

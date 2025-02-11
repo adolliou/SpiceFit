@@ -66,7 +66,7 @@ class FittingModel:
                 else:
                     basis_yaml_templates_file = os.path.join("./TemplateLines/", filename)
                     if not os.path.isfile(basis_yaml_templates_file):
-                        raise ValueE
+                        raise ValueError("Could not find the template yaml for the given line")
                 self._parinfo = {}
                 with open(self.filename, 'r') as f:
                     self._parinfo = safe_load(f)

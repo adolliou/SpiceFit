@@ -2,11 +2,11 @@
 fit:
   type: ["gaussian",
          "polynomial"]
-  name: ["mg_9 706.02",
+  name: ["c_3 977.03",
          "background"]
-  n_components: [ 3, 1 ]
+  n_components: [ 3,  1 ]
   guess: [
-    [0.01, 706.02 , 0.4,],
+    [5.0, 977.03, 0.4],
           [0.0]
   ]
   coeff_type: [
@@ -18,11 +18,11 @@ fit:
     [ "Angstrom" ]
   ]
   max_arr: [
-    [100.0, 705.52, 1.6,],
+   [1000.0,977.5, 2.0],
     [100.0]
   ]
-  min_arr: [
-    [0.001, 706.52, 0.4,],
+  min_arr:
+    [0.0001, 976.13, 0.4],
      [-0.5]
   ]
   trans_a: [
@@ -34,17 +34,17 @@ fit:
     [ 0.0 ]
   ]
 
-main_line: "mg_9 706.02"
+main_line: "c_3 977.03"
 
 info:
-  - name: "mg_9 706.02"
-    elem: "mg"
-    ion: 9
-    wave: 706.02
+  - name: "c_3 977.03"
+    elem: "c"
+    ion: 3
+    wave: 977.03
     unit_wave: "Angstrom"
-    lvl_low: "1$s^2$ 2$s^2$ $^S_{1/2}$"
-    lvl_up: "1$s^2$ 2s 2p $3P_1$"
-    legend: "Mg IX 706.02 $\\AA$"
+    lvl_low: "2s$^2$ $^1$S$_{0}$"
+    lvl_up: "2s 2p $^1$P$_{1}$"
+    legend: "C III 977.03 $\\AA$"
 
 
 special_instructions:

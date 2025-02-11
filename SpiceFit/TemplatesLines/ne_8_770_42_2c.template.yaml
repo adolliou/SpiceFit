@@ -1,35 +1,44 @@
 
 fit:
   type: ["gaussian",
+         "gaussian",
          "polynomial"]
   name: ["ne_8 770.42",
+         "mg_8 769.38",
          "background"]
-  n_components: [ 3, 1 ]
+  n_components: [ 3, 3,  1 ]
   guess: [
     [0.1, 770.42 , 0.4,],
+    [0.00, 769.38 , 0.4],
           [0.0]
   ]
   coeff_type: [
+    [ "I", "lambda" , "fwhm", ],
     [ "I", "lambda" , "fwhm", ],
     [ "I" ]
   ]
   units: [
     [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
+    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
     [ "Angstrom" ]
   ]
   max_arr: [
     [100.0, 771.02, 1.6,],
+    [1.0, 770.28, 1.5],
     [100.0]
   ]
-  min_arr: [
+  min_arr:
     [0.001, 769.82, 0.4,],
+    [0.0001, 769.82, 0.4]
      [-0.5]
   ]
   trans_a: [
     [ 1.0, 1.0, 0.424661, ],
+    [ 1.0, 1.0, 0.424661, ],
     [ 1.0 ]
   ]
   trans_b: [
+    [ 0.0, 0.0, 0.0, ],
     [ 0.0, 0.0, 0.0, ],
     [ 0.0 ]
   ]
@@ -46,5 +55,13 @@ info:
     lvl_up: "1$s^2$ 2p $P_{3/2}$"
     legend: "Ne VIII 770.42 $\\AA$"
 
+  - name: "mg_8 769.38"
+    elem: "mg"
+    ion: 8
+    wave: 769.38
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^2$ 2p $^2P_{1/2}$"
+    lvl_up: "2s 2$p^2$ 2p $^4P_{1/2}$"
+    legend: "Mg VIII 769.38 $\\AA$"
 
 special_instructions:

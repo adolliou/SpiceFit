@@ -3,14 +3,16 @@ fit:
   type: ["gaussian",
          "gaussian",
          "polynomial"]
-  name: ["mg_9 706.02",
-         "o_3 703.86",
+  name: ["n_4 765.15",
+         "n_3 764.31",
          "background"]
-  n_components: [ 3, 3, 1 ]
+  n_components: [ 3,
+                  3,
+                  1 ]
   guess: [
-    [0.01, 706.02 , 0.4,],
-    [ 0.5, 703.87 , 0.4],
-    [0.0]
+    [2, 765.15 , 0.4],
+    [0.01, 76.43 , 0.4]
+          [0.0]
   ]
   coeff_type: [
     [ "I", "lambda" , "fwhm", ],
@@ -23,13 +25,13 @@ fit:
     [ "Angstrom" ]
   ]
   max_arr: [
-    [100.0, 705.52, 1.6,],
-    [100.0, 704.27, 1.5]
+    [100.0, 765.75, 1.5],
+    [1.0, 764.39, 1.0]
     [100.0]
   ]
   min_arr: [
-    [0.001, 706.52, 0.4,],
-    [0.0001,703.47 , 0.4]
+    [0.0001, 764.45, 0.4],
+    [0.0001, 763.2, 0.4]
      [-0.5]
   ]
   trans_a: [
@@ -43,25 +45,24 @@ fit:
     [ 0.0 ]
   ]
 
-main_line: "mg_9 706.02"
+main_line: "n_4 765.15"
 
 info:
-  - name: "mg_9 706.02"
-    elem: "mg"
-    ion: 9
-    wave: 706.02
+  - name: "n_4 765.15"
+    elem: "n"
+    ion: 4
+    wave: 765.15
     unit_wave: "Angstrom"
-    lvl_low: "1$s^2$ 2$s^2$ $^S_{1/2}$"
-    lvl_up: "1$s^2$ 2s 2p $3P_1$"
-    legend: "Mg IX 706.02 $\\AA$"
+    lvl_low: "2$s^1$ $^1S_{0}$"
+    lvl_up: "2s 2p $^1P_{1}$"
+    legend: "N IV 765.15 $\\AA$"
 
-  - name: "o_3 703.86"
-    elem: "o"
-    ion: 9
-    wave: 703.86
+  - name: "n_3 764.31"
+    elem: "n"
+    ion: 3
+    wave: 764.31
     unit_wave: "Angstrom"
-    lvl_low: "2$s^2$ 2$p^2$  $^3P_{2}$"
-    lvl_up: "2$s$ 2$p^3$  $^3P_{2}"
-    legend: "O III 703.86 $\\AA$"
-
+    lvl_low: "2$s^1$ $^1S_{0}$"
+    lvl_up: "2s 2p $^1P_{1}$"
+    legend: "N III 764.31 $\\AA$"
 special_instructions:

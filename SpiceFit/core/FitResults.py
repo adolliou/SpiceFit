@@ -985,16 +985,24 @@ class FitResults:
 
         if ((path_to_save_fits is None) and (folder_to_save_fits is None)) or ((path_to_save_fits is not None) and (folder_to_save_fits is not None)):
             raise ValueError(" Set only one of those arguments to a str : path_to_save_fits or folder_to_save_fits")
-        header_ref = self.spectral_window.header
+        
 
+        header_ref = self.spectral_window.header
         hdu = fits.PrimaryHDU()
 
-        data = self._write_hdu(hdu, header_ref, path_to_save_fits,  results_type="results", hdu_wcsdvar=hdu_wcsdvar)
+        if path_to_save_fits is not None:
+            path_fits = path_to_save_fits 
+            filename = os.path.basename(path_to_save_fits)
+        elif folder_to_save_fits is not None:
+            filename = header_ref["filename"]
+            path_fits = os.path.join(folder_to_save_fits, header_ref["filename"])
+
+        data = self._write_hdu(hdu, header_ref, path_fits,  results_type="results", hdu_wcsdvar=hdu_wcsdvar)
         hdu.data = data
         hdu.add_checksum()
 
         hdu_sigma = fits.ImageHDU()
-        data_sigma = self._write_hdu(hdu_sigma, header_ref, path_to_save_fits,
+        data_sigma = self._write_hdu(hdu_sigma, header_ref, path_fits,
                                      results_type="sigma", hdu_wcsdvar=hdu_wcsdvar)
         hdu_sigma.data = data_sigma
         hdu_sigma.add_checksum()
@@ -1004,7 +1012,7 @@ class FitResults:
         hdu_data.header = self.spectral_window.header.copy()
 
         hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')
-        hdu_data.header["FILENAME"] = os.path.basename(path_to_save_fits)
+        hdu_data.header["FILENAME"] = filename
         hdu_data.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
         hdu_data.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu_data.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
@@ -1022,21 +1030,21 @@ class FitResults:
             hdu_wcs.header = hdu_wcsdvar.header.copy()
 
             hdu_wcs.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of this window')
-            hdu_wcs.header["FILENAME"] = os.path.basename(path_to_save_fits)
+            hdu_wcs.header["FILENAME"] = filename
             hdu_wcs.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
             hdu_wcs.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
             hdu_wcs.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
             hdu_wcs.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
             hdu_wcs.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
             hdul.append(hdu_wcs)
-        hdul.writeto(path_to_save_fits, overwrite=True)
+        hdul.writeto(path_fits, overwrite=True)
 
-    def _write_hdu(self, hdu, header_ref, path_to_save_fits, results_type="coeffs", hdu_wcsdvar=None):
+    def _write_hdu(self, hdu, header_ref, filename, results_type="coeffs", hdu_wcsdvar=None):
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
         hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} results', 'Extension name of this window')
         hdu.header["LONGSTRN"] = header_ref["LONGSTRN"]
-        hdu.header["FILENAME"] = os.path.basename(path_to_save_fits)
+        hdu.header["FILENAME"] = filename
         hdu.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
         hdu.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')

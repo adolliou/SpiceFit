@@ -921,7 +921,11 @@ class FitResults:
 
                 axs[1].set_xlabel(f"Wavelength [{Constants.conventional_lambda_units}]")
                 axs[1].set_ylabel(f"Spectra [{Constants.conventional_spectral_units}]")
-                axs[1].set_title(f"({str(xpos[ii]), str(ypos[ii])})")
+                title = f"{str(xpos[ii]), str(ypos[ii])}, "
+                for param in self.components_results["main"]["coeffs"].keys():
+                    if (param != "radiance") and (param != "velocity") and (param != "fwhm"):
+                        title += f"{param} : {self.components_results["main"]["coeffs"][param]["results"].value:.2f}, "
+                axs[1].set_title(title)
 
                 pdf.savefig(fig)
 

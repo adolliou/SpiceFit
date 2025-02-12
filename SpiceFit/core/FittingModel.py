@@ -12,7 +12,7 @@ import os
 import importlib.util
 import sys
 import secrets
-
+from pathlib import Path
 
 class FittingModel:
     bound_equation_re = re.compile(
@@ -65,7 +65,7 @@ class FittingModel:
                 if os.path.isfile(filename):
                     self.filename = filename
                 else:
-                    basis_yaml_templates_file = os.path.join(lines_templates_path, filename)
+                    basis_yaml_templates_file = os.path.join(Path(__file__).parents[1], "TemplatesLines", filename)
                     if not os.path.isfile(basis_yaml_templates_file):
                         raise ValueError("Could not find the template yaml for the given line")
                     self.filename = basis_yaml_templates_file

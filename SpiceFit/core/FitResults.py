@@ -996,7 +996,9 @@ class FitResults:
         elif folder_to_save_fits is not None:
             filename = header_ref["filename"].replace("L2", "L3")
             path_fits = os.path.join(folder_to_save_fits, filename)
-
+        keys_comp = list(self.components_results.keys())
+        keys_comp.remove("main")
+        keys_comp.remove("flagged_pixels")
         ncomp = 0
         for ii, key in enumerate(keys_comp):
             if self.components_results[key]["info"]["type"] == "gaussian":
@@ -1064,9 +1066,7 @@ class FitResults:
             hdu.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of data')
 
         shape = self.fit_results["coeff"][0, ...].shape
-        keys_comp = list(self.components_results.keys())
-        keys_comp.remove("main")
-        keys_comp.remove("flagged_pixels")
+
         index = 0
         last_index = ['DATAEXT']
 

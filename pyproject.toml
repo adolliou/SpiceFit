@@ -4,9 +4,7 @@ version = "0.1.1"
 description = "Tools to fit lines with SPICE onboard Solar Orbiter"
 authors = ["dolliou <dolliou@mps.mpg.de>"]
 readme = "README.md"
-packages = [
-    { include = "SpiceFit" },
-]
+
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"

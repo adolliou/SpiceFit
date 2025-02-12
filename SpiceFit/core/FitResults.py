@@ -994,8 +994,8 @@ class FitResults:
             path_fits = path_to_save_fits 
             filename = os.path.basename(path_to_save_fits)
         elif folder_to_save_fits is not None:
-            filename = header_ref["filename"]
-            path_fits = os.path.join(folder_to_save_fits, header_ref["filename"])
+            filename = header_ref["filename"].replace("L2", "L3")
+            path_fits = os.path.join(folder_to_save_fits, filename)
 
         data = self._write_hdu(hdu, header_ref, path_fits,  results_type="results", hdu_wcsdvar=hdu_wcsdvar)
         hdu.data = data

@@ -1,0 +1,85 @@
+
+fit:
+  type: ["gaussian",
+         "gaussian",
+         "gaussian",
+         "polynomial"]
+  name: ["o_3 703.86",
+         "o_3 702.82",
+         "mg_9 706.02",
+         "background"]
+  n_components: [ 3, 3, 3, 1 ]
+  guess: [
+    [0.01, 703.87 , 0.4,],
+    [ 0.5, 702.82 , 0.4],
+    [0.01, 706.02 , 0.4,],
+    [0.0]
+  ]
+  coeff_type: [
+    [ "I", "lambda" , "fwhm", ],
+    [ "I", "lambda" , "fwhm", ],
+    [ "I", "lambda" , "fwhm", ],
+    [ "I" ]
+  ]
+  units: [
+    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
+    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
+    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
+    [ "Angstrom" ]
+  ]
+  max_arr: [
+    [100.0, 704.27, 1.5],
+    [100.0, 703.22, 1.5],
+    [100.0, 705.52, 1.6,],
+    [100.0]
+  ]
+  min_arr: [
+    [0.0001, 703.47 , 0.4],
+    [0.0001, 702.42 , 0.4],
+     [0.001, 706.52, 0.4,],
+     [-0.5]
+  ]
+  trans_a: [
+    [ 1.0, 1.0, 0.424661, ],
+    [ 1.0, 1.0, 0.424661, ],
+    [ 1.0, 1.0, 0.424661, ],
+    [ 1.0 ]
+  ]
+  trans_b: [
+    [ 0.0, 0.0, 0.0, ],
+    [ 0.0, 0.0, 0.0, ],
+    [ 0.0, 0.0, 0.0, ],    
+    [ 0.0 ]
+  ]
+
+main_line: "o_3 703.86"
+
+info:
+
+  - name: "o_3 703.86"
+    elem: "o"
+    ion: 3
+    wave: 703.86
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^2$ 2$p^2$  $^3P_{2}$"
+    lvl_up: "2$s$ 2$p^3$  $^3P_{2}"
+    legend: "O III 703.86 $\\AA$"
+
+  - name:  "o_3 702.82"
+    elem: "o"
+    ion: 3
+    wave: 702.82
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^2$ 2$p^2$  $^3P_{1}$"
+    lvl_up: "2$s$ 2$p^3$  $^3P_{2}"
+    legend: "O III 702.82 $\\AA$"
+
+  - name: "mg_9 706.02"
+    elem: "mg"
+    ion: 9
+    wave: 706.02
+    unit_wave: "Angstrom"
+    lvl_low: "1$s^2$ 2$s^2$ $^S_{1/2}$"
+    lvl_up: "1$s^2$ 2s 2p $3P_1$"
+    legend: "Mg IX 706.02 $\\AA$"
+

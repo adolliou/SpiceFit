@@ -46,6 +46,7 @@ class FittingModel:
         self.cache = cache
         self.use_jit = use_jit
         jit_str = ""
+        self.filename = None
         if self.use_jit:
             jit_str = f"\n@ jit(nopython=True, inline='always', cache={cache})"
         self.template_function = (""
@@ -64,9 +65,10 @@ class FittingModel:
                 if os.path.isfile(filename):
                     self.filename = filename
                 else:
-                    basis_yaml_templates_file = os.path.join("./TemplateLines/", filename)
+                    basis_yaml_templates_file = os.path.join(__file__, "../../TemplatesLines/", filename)
                     if not os.path.isfile(basis_yaml_templates_file):
                         raise ValueError("Could not find the template yaml for the given line")
+                    self.filename = basis_yaml_templates_file
                 self._parinfo = {}
                 with open(self.filename, 'r') as f:
                     self._parinfo = safe_load(f)

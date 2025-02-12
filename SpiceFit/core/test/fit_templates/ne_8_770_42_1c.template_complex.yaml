@@ -57,8 +57,8 @@ constrain_lines:
     ["I0_times_0.1"]                  # x0-3
   ]
   coeff_notation: [
-  ["I0", "x0", "fwhm0"],
-  ["b0"]
+    ["I0", "x0", "fwhm0"],
+    ["b0"]
   ]
   
 

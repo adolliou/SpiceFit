@@ -2,11 +2,11 @@
 fit:
   type: ["gaussian",
          "polynomial"]
-  name: ["n_4 765.15",
+  name: ["h_1 1025.72",
          "background"]
   n_components: [ 3, 1 ]
   guess: [
-    [2, 765.15 , 0.4],
+    [2.0, 1025.72, 1.0],
           [0.0]
   ]
   coeff_type: [
@@ -18,11 +18,11 @@ fit:
     [ "Angstrom" ]
   ]
   max_arr: [
-    [100.0, 765.75, 1.5],
+    [8880.29, 1026.22,2.129],
     [100.0]
   ]
   min_arr: [
-    [0.0001, 764.45, 0.4],
+    [0.0001,1025.22, 0.4],
      [-0.5]
   ]
   trans_a: [
@@ -34,15 +34,15 @@ fit:
     [ 0.0 ]
   ]
 
-main_line: "n_4 765.15"
+main_line: "h_1 1025.72"
 
 info:
-  - name: "n_4 765.15"
-    elem: "n"
-    ion: 4
-    wave: 765.15
+  - name: "h_1 1025.72"
+    elem: "h"
+    ion: 1
+    wave: 1025.72
     unit_wave: "Angstrom"
-    lvl_low: "2$s^1$ $^1S_{0}$"
-    lvl_up: "2s 2p $^1P_{1}$"
-    legend: "N IV 765.15 $\\AA$"
+    lvl_low: "1s $^2$S$_{1/2}$"
+    lvl_up: "3p $^2$P$_{3/2}$"
+    legend: "H I Ly-$\\beta$ 1025.72 $\\AA$"
 

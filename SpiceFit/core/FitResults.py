@@ -794,7 +794,7 @@ class FitResults:
         if param == "chi2":
             data = self.components_results["coeffs"][param]["results"]
         else:
-            data = a[param].to(unit).value
+            data = a[param]["results"].to(unit).value
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
         if data.ndim == 3:
@@ -895,7 +895,7 @@ class FitResults:
 
                 unit = Constants.conventional_radiance_units
                 param = "radiance"
-                data_radiance = self.components_results["main"][param]["results"].to(unit).value
+                data_radiance = self.components_results["main"]["coeffs"][param]["results"].to(unit).value
                 if data_radiance.ndim == 3:
                     data_radiance = data_radiance[0, ...]
                 cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow

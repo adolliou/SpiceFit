@@ -2,11 +2,11 @@
 name = "spicefit"
 version = "0.1.1"
 description = ""
-authors = ["adolliou <antoine.dolliou@universite-paris-saclay.fr>"]
+authors = ["dolliou <dolliou@mps.mpg.de>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<4.0"
+python = ">=3.11,<4.0"
 numpy = "^2.1.2"
 astropy = ">=6.1.4"
 sospice = ">=0.0.8"

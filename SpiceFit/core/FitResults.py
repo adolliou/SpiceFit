@@ -966,7 +966,7 @@ class FitResults:
             else:
                 raise NotImplementedError
 
-    def to_fits(self, path_to_save_fits: str, hdu_wcsdvar = None):
+    def to_fits(self, path_to_save_fits: str = None, folder_to_save_fits:str = None, hdu_wcsdvar = None):
         """
         Save the basic fitting data into a FITS file that resembles the ones produced by OSLO.
         The hdulist has between the following windows
@@ -978,8 +978,13 @@ class FitResults:
 
         :param hdu_wcsdvar: an additional hdu that can be added at the end of the hdulist to correct the jitter
         information
-        :param path_to_save_fits: path where the FITS file to be saved
+        :param path_to_save_fits: path where the FITS file to be saved. default to None if folder_to_save_fits is set instead 
+        :param folder_to_save_fits: folder where to save the FITS file. The name of the output FITS file will be
+        the same as the input L2 file, but with L3 changed into L2 in the filename
         """
+
+        if ((path_to_save_fits is None) and (folder_to_save_fits is None)) or ((path_to_save_fits is not None) and (folder_to_save_fits is not None)):
+            raise ValueError(" Set only one of those arguments to a str : path_to_save_fits or folder_to_save_fits")
         header_ref = self.spectral_window.header
 
         hdu = fits.PrimaryHDU()

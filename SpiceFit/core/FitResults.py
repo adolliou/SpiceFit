@@ -957,7 +957,7 @@ class FitResults:
                 s = comp["coeffs"]["s"]["results"].value[position]
 
                 return FittingUtil.gaussian(x, I, x, s, 0)
-            elif ["info"]["type"] == "polynomial":
+            elif comp["info"]["type"] == "polynomial":
                 value = []
                 for letter in string.ascii_lowercase:
                     if letter in comp.keys():
@@ -997,13 +997,24 @@ class FitResults:
             filename = header_ref["filename"].replace("L2", "L3")
             path_fits = os.path.join(folder_to_save_fits, filename)
 
-        data = self._write_hdu(hdu, header_ref, path_fits,  results_type="results", hdu_wcsdvar=hdu_wcsdvar)
+        ncomp = 0
+        for ii, key in enumerate(keys_comp):
+            if self.components_results[key]["info"]["type"] == "gaussian":
+                ncomp +=3
+            elif self.components_results[key]["info"]["type"] == "polynomial":
+                a = self.components_results[key]["coeffs"]
+                ncoef = len(a.keys())
+                ncomp +=ncoef
+            elif self.components_results[key]["info"]["type"] == "chi2":
+                ncomp += 1 
+
+        data = self._write_hdu(hdu, header_ref, path_fits,  results_type="results", hdu_wcsdvar=hdu_wcsdvar, ncomp=ncomp)
         hdu.data = data
         hdu.add_checksum()
 
         hdu_sigma = fits.ImageHDU()
         data_sigma = self._write_hdu(hdu_sigma, header_ref, path_fits,
-                                     results_type="sigma", hdu_wcsdvar=hdu_wcsdvar)
+                                     results_type="sigma", hdu_wcsdvar=hdu_wcsdvar, ncomp=ncomp)
         hdu_sigma.data = data_sigma
         hdu_sigma.add_checksum()
 
@@ -1013,7 +1024,7 @@ class FitResults:
 
         hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')
         hdu_data.header["FILENAME"] = filename
-        hdu_data.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
+        hdu_data.header['ANA_NCMP'] = (ncomp - 1, 'Number of fit components')
         hdu_data.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu_data.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
         hdu_data.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
@@ -1031,7 +1042,7 @@ class FitResults:
 
             hdu_wcs.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of this window')
             hdu_wcs.header["FILENAME"] = filename
-            hdu_wcs.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
+            hdu_wcs.header['ANA_NCMP'] = (ncomp - 1, 'Number of fit components')
             hdu_wcs.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
             hdu_wcs.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
             hdu_wcs.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
@@ -1039,13 +1050,13 @@ class FitResults:
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
 
-    def _write_hdu(self, hdu, header_ref, filename, results_type="coeffs", hdu_wcsdvar=None):
+    def _write_hdu(self, hdu, header_ref, filename, ncomp, results_type="coeffs", hdu_wcsdvar=None):
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
         hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} results', 'Extension name of this window')
         hdu.header["LONGSTRN"] = header_ref["LONGSTRN"]
         hdu.header["FILENAME"] = filename
-        hdu.header['ANA_NCMP'] = (len(self.components_results.keys()) - 1, 'Number of fit components')
+        hdu.header['ANA_NCMP'] = (ncomp, 'Number of fit components')
         hdu.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
         hdu.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
@@ -1053,11 +1064,15 @@ class FitResults:
             hdu.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of data')
 
         shape = self.fit_results["coeff"][0, ...].shape
-        data = np.zeros((len(self.components_results.keys()), *shape), dtype=float)
         keys_comp = list(self.components_results.keys())
         keys_comp.remove("main")
+        keys_comp.remove("flagged_pixels")
         index = 0
         last_index = ['DATAEXT']
+
+        data = np.zeros((ncomp, *shape), dtype=float)
+
+
         for ii, key in enumerate(keys_comp):
 
             a = self.components_results[key]["coeffs"]
@@ -1071,6 +1086,7 @@ class FitResults:
                 for param, letter, name, transa, transb in zip(["I", "x", "s"], ["A", "B", "C"],
                                                                ["Amplitude", "Position", "Width"],
                                                                [1, 1, 0.424661], [0, 0, 0]):
+                    breakpoint()
                     data[index, ...] = self.components_results[key]["coeffs"][param][results_type]
                     index = index + 1
                     hdu.header[f'PNAME{ii + 1}{letter}'] = (name, f'Name of parameter {name} '

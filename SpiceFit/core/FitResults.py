@@ -47,7 +47,8 @@ class FitResults:
             
     ):
         """
-
+        Initialize a FirResults instance. This class is dedicated to Fit the spectral data on a datacube,
+        and to analyze/plot the results.
         """
         self.verbose = None
         self.fit_template = None
@@ -753,7 +754,7 @@ class FitResults:
     def quicklook(self, line="main", show=True):
         """
         Function to quickly plot the main results of a fitted line
-        :param line:
+        :param line: line to plot the results
         """
 
         if line not in self.components_results.keys():

@@ -28,6 +28,7 @@ from astropy.io import fits
 from datetime import datetime
 from astropy.time import Time
 import os
+import ast
 
 
 def flatten(xss):
@@ -43,17 +44,15 @@ class FitResults:
 
     def __init__(
             self,
-            fit_template: FittingModel,
-            verbose=0,
+            
     ):
         """
-
-        :param fit_template: Fit template class
-        :param verbose: Print text to console
+        Initialize a FirResults instance. This class is dedicated to Fit the spectral data on a datacube,
+        and to analyze/plot the results.
         """
+        self.verbose = None
+        self.fit_template = None
 
-        self.verbose = verbose
-        self.fit_template = fit_template
         self.fit_function_params = None
         self.fit_function = None
 
@@ -82,14 +81,7 @@ class FitResults:
         self._fit_chi2_dict = None  # size : (N, time, Y , X)
         self._flagged_pixels_dict = None  # size : (time, Y , X)
 
-        self.fit_results = {
-            "coeff": [],  # (N, time, Y , X)
-            "chi2": [],  # (time, Y , X)
-            "flagged_pixels": [],  # (time, Y , X)
-            "name": self.fit_template.params_free["notation"],
-            "coeff_unit": []
-        }
-
+        self.fit_results = None
         self.lock = None
         self.cpu_count = None
         self.display_progress_bar = None
@@ -97,12 +89,14 @@ class FitResults:
 
         self.components_results = {}
 
-    def fit_spice_window_standard(self,
-                                  spicewindow: SpiceRasterWindowL2,
-                                  parallelism: bool = True,
-                                  cpu_count: int = None,
-                                  min_data_points: int = 5,
-                                  chi2_limit: float = 20.0, ):
+    def fit_spice_window_standard(  self,
+                                    spicewindow: SpiceRasterWindowL2,
+                                    fit_template: FittingModel,
+                                    parallelism: bool = True,
+                                    cpu_count: int = None,
+                                    min_data_points: int = 5,
+                                    chi2_limit: float = 20.0,
+                                    verbose=0, ):
         """
 
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
@@ -114,7 +108,14 @@ class FitResults:
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
         :param display_progress_bar: display the progress bar
         """
-
+        self.verbose = verbose
+        self.fit_template = fit_template
+        self.fit_results = {
+            "coeff": [],  # (N, time, Y , X)
+            "chi2": [],  # (time, Y , X)
+            "flagged_pixels": [],  # (time, Y , X)
+            "name": self.fit_template.params_free["notation"],
+        }
         if spicewindow.uncertainty is None:
             spicewindow.compute_uncertainty()
 
@@ -392,7 +393,7 @@ class FitResults:
         self.fit_results["trans_a"] = self.fit_template.params_free["trans_a"]
         self.fit_results["trans_b"] = self.fit_template.params_free["trans_b"]
 
-        self.build_components_results(self.components_results)
+        self.build_components_results()
 
         shmm_data.close()
         shmm_data.unlink()
@@ -407,7 +408,7 @@ class FitResults:
         shmm_flagged_pixels.close()
         shmm_flagged_pixels.unlink()
 
-    def build_components_results(self, components_results: dict):
+    def build_components_results(self):
         type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
 
         flagged_pixels = self.fit_results["flagged_pixels"]
@@ -753,7 +754,7 @@ class FitResults:
     def quicklook(self, line="main", show=True):
         """
         Function to quickly plot the main results of a fitted line
-        :param line:
+        :param line: line to plot the results
         """
 
         if line not in self.components_results.keys():
@@ -792,7 +793,7 @@ class FitResults:
         w_xy = self.spectral_window.w_xy
 
         if param == "chi2":
-            data = self.components_results["coeffs"][param]["results"]
+            data = self.components_results["chi2"]["coeffs"]["chi2"]["results"]
         else:
             data = a[param]["results"].to(unit).value
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
@@ -973,8 +974,12 @@ class FitResults:
         - hdul[0] :  coeffs
         - hdul[1] :  coeffs_sigma
         - hdul[2] :  data_l2
+        - hdul[3] : table records that records the fitting model informatin as the _parinfo object.
+        - hdul[4] : table with the self.fits_results dictionnary, that greatly facilitates the reconstruction
+        of the FitResults object.
+        can be used to reconstruct the fitstemplate object.
         if hdu_wcsdvar is not None
-        - hdul[3] :  data_l2
+        - hdul[5] :  data_l2
 
         :param hdu_wcsdvar: an additional hdu that can be added at the end of the hdulist to correct the jitter
         information
@@ -996,37 +1001,40 @@ class FitResults:
         elif folder_to_save_fits is not None:
             filename = header_ref["filename"].replace("L2", "L3")
             path_fits = os.path.join(folder_to_save_fits, filename)
+        else:
+            raise ValueError(" Set only one of those arguments to a str : path_to_save_fits or folder_to_save_fits")
         keys_comp = list(self.components_results.keys())
         keys_comp.remove("main")
         keys_comp.remove("flagged_pixels")
-        ncomp = 0
+        ncoeff = 0
         for ii, key in enumerate(keys_comp):
             if self.components_results[key]["info"]["type"] == "gaussian":
-                ncomp +=3
+                ncoeff +=3
             elif self.components_results[key]["info"]["type"] == "polynomial":
                 a = self.components_results[key]["coeffs"]
                 ncoef = len(a.keys())
-                ncomp +=ncoef
+                ncoeff +=ncoef
             elif self.components_results[key]["info"]["type"] == "chi2":
-                ncomp += 1 
+                ncoeff += 1
 
-        data = self._write_hdu(hdu, header_ref, path_fits,  results_type="results", hdu_wcsdvar=hdu_wcsdvar, ncomp=ncomp)
+        data = self._write_hdu(hdu, header_ref, path_fits, keys_comp=keys_comp,  results_type="results",
+                               hdu_wcsdvar=hdu_wcsdvar, ncoeff=ncoeff)
         hdu.data = data
         hdu.add_checksum()
 
-        hdu_sigma = fits.ImageHDU()
-        data_sigma = self._write_hdu(hdu_sigma, header_ref, path_fits,
-                                     results_type="sigma", hdu_wcsdvar=hdu_wcsdvar, ncomp=ncomp)
+        hdu_sigma = fits.ImageHDU(name="coeffs_sigma")
+        data_sigma = self._write_hdu(hdu_sigma, header_ref, path_fits, keys_comp=keys_comp,
+                                     results_type="sigma", hdu_wcsdvar=hdu_wcsdvar, ncoeff=ncoeff)
         hdu_sigma.data = data_sigma
         hdu_sigma.add_checksum()
 
-        hdu_data = fits.ImageHDU()
+        hdu_data = fits.ImageHDU(name="data_l2")
         hdu_data.data = self.spectral_window.data.copy()
         hdu_data.header = self.spectral_window.header.copy()
 
         hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')
         hdu_data.header["FILENAME"] = filename
-        hdu_data.header['ANA_NCMP'] = (ncomp - 1, 'Number of fit components')
+        hdu_data.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')
         hdu_data.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu_data.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
         hdu_data.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
@@ -1034,7 +1042,50 @@ class FitResults:
         if hdu_wcsdvar is not None:
             hdu_data.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
 
-        hdul = fits.HDUList(hdus=[hdu, hdu_sigma, hdu_data])
+        hdu_parinfo = fits.TableHDU(name="parinfo")
+        dict_str = str(self.fit_template._parinfo)
+        arr = np.array([(dict_str)], dtype=[('parinfo', f'S{len(dict_str)}')])
+        hdu_parinfo.data = arr
+
+        hdu_fits_results = fits.ImageHDU(name="reconstruction_parameters")
+
+        # bytes = arr['parinfo'][0]
+        # sss = bytes.decode("UTF-8")
+        # ddd = ast.literal_eval(sss)
+
+
+        rec_coeffs = copy.deepcopy(self.fit_results["coeff"])
+        rec_chi2 = copy.deepcopy(self.fit_results["chi2"])
+        rec_chi2 = rec_chi2.reshape(1, *rec_chi2.shape)
+        rec_coeffs_error = copy.deepcopy(self.fit_results["coeffs_error"])
+        flagged = np.zeros_like(self.fit_results["flagged_pixels"])
+        flagged[self.fit_results["flagged_pixels"]] = 32000
+        flagged[np.logical_not(self.fit_results["flagged_pixels"])] = 0
+        flagged = flagged.reshape(1, *flagged.shape)
+
+        data_rec = np.append(rec_coeffs, rec_coeffs_error, axis=0)
+        data_rec = np.append(data_rec, rec_chi2, axis=0)
+        data_rec = np.append(data_rec, flagged, axis=0)
+        hdu_fits_results.data = data_rec
+
+        unique_index = self.fit_results["unique_index"]
+        name = self.fit_results["name"]
+        coeff_name = self.fit_results["coeff_name"]
+        unit = self.fit_results["unit"]
+        trans_a = self.fit_results["trans_a"]
+        trans_b = self.fit_results["trans_b"]
+        hdu_fits_results.header["NCOEFF"] = len(unique_index)
+        for ii in range(len(unique_index)):
+
+            hdu_fits_results.header[f"CNAME{ii}"] =  name[ii]
+            hdu_fits_results.header[f"CUI{ii}"] =  unique_index[ii]
+            hdu_fits_results.header[f"CCNAME{ii}"] =  coeff_name[ii]
+            hdu_fits_results.header[f"CUNIT{ii}"] =  unit[ii]
+            hdu_fits_results.header[f"CTRA{ii}"] =  trans_a[ii]
+            hdu_fits_results.header[f"CTRB{ii}"] =  trans_b[ii]
+
+
+        hdul = fits.HDUList(hdus=[hdu, hdu_sigma, hdu_data, hdu_parinfo, hdu_fits_results])
 
         if hdu_wcsdvar is not None:
 
@@ -1044,7 +1095,7 @@ class FitResults:
 
             hdu_wcs.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of this window')
             hdu_wcs.header["FILENAME"] = filename
-            hdu_wcs.header['ANA_NCMP'] = (ncomp - 1, 'Number of fit components')
+            hdu_wcs.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')
             hdu_wcs.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
             hdu_wcs.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
             hdu_wcs.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
@@ -1052,13 +1103,13 @@ class FitResults:
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
 
-    def _write_hdu(self, hdu, header_ref, filename, ncomp, results_type="coeffs", hdu_wcsdvar=None):
+    def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="coeffs", hdu_wcsdvar=None):
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
         hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} results', 'Extension name of this window')
         hdu.header["LONGSTRN"] = header_ref["LONGSTRN"]
         hdu.header["FILENAME"] = filename
-        hdu.header['ANA_NCMP'] = (ncomp, 'Number of fit components')
+        hdu.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')
         hdu.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
         hdu.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
@@ -1070,7 +1121,7 @@ class FitResults:
         index = 0
         last_index = ['DATAEXT']
 
-        data = np.zeros((ncomp, *shape), dtype=float)
+        data = np.zeros((ncoeff, *shape), dtype=float)
 
 
         for ii, key in enumerate(keys_comp):
@@ -1086,7 +1137,6 @@ class FitResults:
                 for param, letter, name, transa, transb in zip(["I", "x", "s"], ["A", "B", "C"],
                                                                ["Amplitude", "Position", "Width"],
                                                                [1, 1, 0.424661], [0, 0, 0]):
-                    breakpoint()
                     data[index, ...] = self.components_results[key]["coeffs"][param][results_type]
                     index = index + 1
                     hdu.header[f'PNAME{ii + 1}{letter}'] = (name, f'Name of parameter {name} '
@@ -1278,5 +1328,67 @@ class FitResults:
         hdu.header.insert(last_index_, ('', '-------------------------------------'))
 
         return data
+
+
+    def from_fits(self, path_to_fits: str = None, hdul = None,
+                  verbose=0):
+        """
+        Creates a Fits_results object from a fits file, either through a
+        path to a FITS object or a HDULIST object directly.
+        The FITS file must have the save format given by the self.to_fits method
+        :param verbose:
+        :param path_to_fits: path to the FITS file.
+        :param hdul: hdulist object of the FITS file.
+
+
+        """
+
+        if (path_to_fits is not None) and (hdul is None):
+            hdul = fits.open(path_to_fits)
+        elif (path_to_fits is None) and (hdul is not None):
+            hdul = hdul
+        else:
+            raise ValueError("path_to_fits and hdul are both None or set to values. Only one of them must be set.")
+
+        hdu_parinfo = hdul["parinfo"]
+        data_par = hdu_parinfo.data
+        bytes = data_par['parinfo'][0]
+        # sss = bytes.decode("UTF-8")
+        parinfo = ast.literal_eval(bytes)
+        fit_template = FittingModel(parinfo=parinfo)
+
+        hdu_re = hdul["reconstruction_parameters"]
+        data_re = hdu_re.data
+        header_re = hdu_re.header
+        ncoeff = header_re["NCOEFF"]
+        coeffs_cp = data_re[:ncoeff, ...]
+        coeffs_error_cp = data_re[ncoeff:(ncoeff+ncoeff), ...]
+        fit_chit2_all = data_re[(ncoeff+ncoeff):(ncoeff+ncoeff+1), ...]
+        fit_chit2_all = fit_chit2_all.reshape(fit_chit2_all[0,...].shape)
+        flagged_pixels_ = data_re[(ncoeff+ncoeff+1):(ncoeff+ncoeff+2), ...]
+        flagged_pixels = np.zeros_like(flagged_pixels_, dtype="bool")
+        flagged_pixels[flagged_pixels_ > 100] = True
+        flagged_pixels = flagged_pixels.reshape(flagged_pixels[0,...].shape)
+        self.verbose = verbose
+        self.fit_template = fit_template
+        self.fit_results = {"coeff": coeffs_cp,
+                            "chi2": copy.deepcopy(fit_chit2_all),
+                            "flagged_pixels": flagged_pixels,
+                            "name": self.fit_template.params_free["notation"],
+                            "unique_index": self.fit_template.params_free["unique_index"],
+                            "coeff_name": self.fit_template.params_free["notation"],
+                            "coeffs_error": coeffs_error_cp,
+                            "unit": self.fit_template.params_free["unit"],
+                            "trans_a": self.fit_template.params_free["trans_a"],
+                            "trans_b": self.fit_template.params_free["trans_b"]}
+
+        self.build_components_results()
+
+        hdu_l2 = hdul[2]
+        spectral_window = SpiceRasterWindowL2(hdu=hdu_l2)
+        self.spectral_window = spectral_window
+
+        return self
+
 
     # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

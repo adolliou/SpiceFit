@@ -1,6 +1,5 @@
 from astropy.io import fits
 from ..SpiceRaster import SpiceRaster
-from matplotlib import pyplot as plt
 import numpy as np
 
 
@@ -19,7 +18,7 @@ def test_SpiceRaster():
         s1.windows_ext[keys[0]].uncertainty["Total"]
     )
     assert (
-        np.abs(np.nansum(s1.windows[0].uncertainty["Total"].value) - 16641.86688057675)
+        np.abs(np.nansum(s1.windows[0].uncertainty["Total"].to("W / (nm sr m2)").value) - 12163.235854294793)
         < 1e-5
     )
 

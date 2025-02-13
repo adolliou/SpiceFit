@@ -56,27 +56,34 @@ def fittemplate():
 class TestFitResults:
 
     def test_save_fit_window_standard(self, spicewindow, fittemplate):
+        path_fig = os.path.join(Path(__file__).parents[0], "test_ql_.png")
+        path_fig_ref = os.path.join(Path(__file__).parents[0], "test_ql.png")
+        path_fits = os.path.join(Path(__file__).parents[0], "test.fits")
+
         f = FitResults()
         f.fit_spice_window_standard(spicewindow=spicewindow, parallelism=True, cpu_count=16,
                                     fit_template=fittemplate, verbose=False)
-        f.to_fits(path_to_save_fits="./core/test/test.fits")
+        f.to_fits(path_fits)
         fig = f.quicklook(show=False)
-        fig.savefig("./core/test/test_ql_.png", dpi=50)
 
-        path_fig_ref = "./core/test/test_ql_.png"
-        path_fig = "./core/test/test_ql.png"
+
+        fig.savefig(path_fig, dpi=50)
+
         base_image = Image.open(path_fig_ref)
         ref_image = Image.open(path_fig)
         assert(image_pixel_differences(base_image, ref_image))
 
     def test_load_fit_window_standard(self):
-        f2 = FitResults()
-        f2.from_fits(path_to_fits="./core/test/test.fits")
-        fig = f2.quicklook(show=False)
-        fig.savefig("./core/test/f2_test_ql.png", dpi=50)
+        path_fig = os.path.join(Path(__file__).parents[0], "test_ql_.png")
+        path_fig_ref = os.path.join(Path(__file__).parents[0], "test_ql.png")
+        path_fits = os.path.join(Path(__file__).parents[0], "test.fits")
 
-        path_fig_ref = "./core/test/test_ql_.png"
-        path_fig = "./core/test/f2_test_ql.png"
+        
+        f2 = FitResults()
+        f2.from_fits(path_to_fits=path_fits)
+        fig = f2.quicklook(show=False)
+        fig.savefig(path_fig, dpi=50)
+
         base_image = Image.open(path_fig_ref)
         ref_image = Image.open(path_fig)
         assert(image_pixel_differences(base_image, ref_image))

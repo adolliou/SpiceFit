@@ -1030,6 +1030,7 @@ class FitResults:
 
         hdu_data = fits.ImageHDU()
         hdu_data.data = self.spectral_window.data.copy()
+        hdu_data.data = hdu_data.data.to(self.spectral_window.header["BUNIT"]).value
         for key in self.spectral_window.header.copy():
             if key != '' and key != 'COMMENT' and key != "HISTORY":
                 hdu_data.header[key] = self.spectral_window.header[key] 

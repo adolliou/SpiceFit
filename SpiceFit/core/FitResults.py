@@ -1022,19 +1022,23 @@ class FitResults:
         hdu.data = data
         hdu.add_checksum()
 
-        hdu_sigma = fits.ImageHDU(name="coeffs_sigma")
+        hdu_sigma = fits.ImageHDU()
         data_sigma = self._write_hdu(hdu_sigma, header_ref, path_fits, keys_comp=keys_comp,
                                      results_type="sigma", hdu_wcsdvar=hdu_wcsdvar, ncoeff=ncoeff)
         hdu_sigma.data = data_sigma
         hdu_sigma.add_checksum()
 
-        hdu_data = fits.ImageHDU(name="data_l2")
+        hdu_data = fits.ImageHDU()
         hdu_data.data = self.spectral_window.data.copy()
-        hdu_data.header = self.spectral_window.header.copy()
-        hdu_data.header["XTENSION"] = 'IMAGE   '
-        hdu_data.header["PCOUNT"] = 0
-        hdu_data.header["GCOUNT"] = 1
-        hdu_data.header["PCOUNT"] = 0
+        for key in self.spectral_window.header.copy():
+            if key != '' and key != 'COMMENT' and key != "HISTORY":
+                hdu_data.header[key] = self.spectral_window.header[key] 
+        if 'XTENSION' not in hdu_data.header:
+            hdu_data.header.insert('SIMPLE', ('XTENSION', 'IMAGE   '))
+        # hdu_data.header["XTENSION"] = 'IMAGE   '
+        # hdu_data.header["PCOUNT"] = 0
+        # hdu_data.header["GCOUNT"] = 1
+        # hdu_data.header["PCOUNT"] = 0
 
 
         hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')

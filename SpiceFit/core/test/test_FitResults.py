@@ -49,7 +49,7 @@ def spicewindow(hdu):
 
 @pytest.fixture
 def fittemplate():
-    path_yaml = "./core/test/fit_templates/ne_8_770_42_1c.template.yaml"
+    path_yaml = os.path.join(Path(__file__).parents[0], "fit_templates/ne_8_770_42_1c.template.yaml")
     return FittingModel(filename=path_yaml)
 
 

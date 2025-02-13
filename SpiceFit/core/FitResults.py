@@ -863,7 +863,7 @@ class FitResults:
         cdelt2 = self.spectral_window.header["CDELT2"]
         ratio = cdelt2 / cdelt1
         if position == "random":
-            for ii in range(30):
+            for ii in range(50):
                 index_r = random.choice(index)
                 xpos.append(xf[index_r])
                 ypos.append(yf[index_r])
@@ -1031,6 +1031,11 @@ class FitResults:
         hdu_data = fits.ImageHDU(name="data_l2")
         hdu_data.data = self.spectral_window.data.copy()
         hdu_data.header = self.spectral_window.header.copy()
+        hdu_data.header["XTENSION"] = 'IMAGE   '
+        hdu_data.header["PCOUNT"] = 0
+        hdu_data.header["GCOUNT"] = 1
+        hdu_data.header["PCOUNT"] = 0
+
 
         hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')
         hdu_data.header["FILENAME"] = filename

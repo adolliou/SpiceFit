@@ -319,7 +319,7 @@ class FittingModel:
         :param filename:
         """
         if directory_path is None:
-            directory_path = "./.fitting_jacobian_functions"
+            directory_path = os.path.join(Path(__file__).parents[1], ".fitting_jacobian_functions")
 
         if filename is None:
             filename = "fitting_jacobian_functions.py"

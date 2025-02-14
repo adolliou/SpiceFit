@@ -407,6 +407,66 @@ class FitResults:
         shmm_fit_chi2.unlink()
         shmm_flagged_pixels.close()
         shmm_flagged_pixels.unlink()
+        shmm_fit_coeffs_all.close()
+        shmm_fit_coeffs_all.unlink()
+        shmm_fit_chi2_all.close()
+        shmm_fit_chi2_all.unlink()
+        shmm_fit_coeffs_error_all.close()
+        shmm_fit_coeffs_error_all.unlink()
+
+    def fit_pixels(self, t_list, i_list, j_list, ModelFit: FittingModel = None, 
+                   minimum_data_points: int = 5, chi_limit: float = 100):
+        """Fit Individual pixels with potentially a new Fitting_model, without parallelism.
+        Ideal to compute different fitting with various parameters on a given specific pixel
+            the datacube has the form data[t, i, j]
+        Args:
+            t_list (_type_): list of the t components, normally time
+            i_list (_type_): list of the x components
+            j_list (_type_): list of the y components
+            ModelFit (FittingModel, optional): Fit according to a new fitting model set by the user. Defaults to None.
+            minimum_data_points (int, optionql): minimum number of datapoints which are not nan to start the fitting. 
+            If below, then the pixel is flagged. 
+        """        
+        if ModelFit is not None:
+            fit_template = ModelFit
+        else:
+            fit_template = self.fit_template
+        
+        
+
+        data_cube = self.spectral_window.data
+        uncertainty_cube = self.spectral_window.uncertainty["Total"]
+        xx, yy, ll, tt = self.spectral_window.return_point_pixels()
+        coords, lambda_cube, t = self.spectral_window.wcs.pixel_to_world(xx, yy, ll, tt)
+
+        lambda_ = np.array(lambda_cube.to(Constants.conventional_lambda_units).value, dtype=np.float64)
+        data_cube =  np.array(data_cube.to(Constants.conventional_spectral_units).value, dtype=np.float64)
+        uncertainty_cube = np.array(uncertainty_cube.to(Constants.conventional_spectral_units).value, dtype=np.float64)
+
+        for t, i, j in tqdm.tqdm(zip(t_list, i_list, j_list), total=len(t_list)):
+            x = lambda_[t, :, i, j]
+            y = data_cube[t, :, i, j]
+            dy = uncertainty_cube[t, :, i, j]
+
+            try:
+                popt, pcov = fit_spectra(x=x,
+                                                y=y,
+                                                dy=dy,
+                                                fit_template=fit_template,
+                                                minimum_data_points=minimum_data_points)
+
+                chi2 = np.sum(np.diag(pcov))
+                if chi2 <= chi_limit:
+                    self.fit_results["coeff"][:, t, i, j] = popt
+                    self.fit_results["coeffs_error"][:, t, i, j]  =  np.sqrt(np.diag(pcov))
+                    self.fit_results["chi2"][t, i, j]  = chi2
+                    self.fit_results["flagged_pixels"][t, i, j]  = False
+
+                else:
+                    self.fit_results["flagged_pixels"][t, i, j] = True
+            except ValueError:
+                self.fit_results["flagged_pixels"][t, i, j] = True
+        self.build_components_results()
 
     def build_components_results(self):
         type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
@@ -537,7 +597,9 @@ class FitResults:
                 self.components_results[a["name_component"]]["coeffs"]["velocity"]["results"][flagged_pixels] = np.nan
                 self.components_results[a["name_component"]]["coeffs"]["radiance"]["results"][flagged_pixels] = np.nan
                 self.components_results[a["name_component"]]["coeffs"]["fwhm"]["results"][flagged_pixels] = np.nan
-
+                self.components_results[a["name_component"]]["coeffs"]["I"]["results"][flagged_pixels] = np.nan
+                self.components_results[a["name_component"]]["coeffs"]["x"]["results"][flagged_pixels] = np.nan
+                self.components_results[a["name_component"]]["coeffs"]["s"]["results"][flagged_pixels] = np.nan
         dic = copy.deepcopy(self.components_results)
 
         for line_ in dic.keys():
@@ -632,6 +694,7 @@ class FitResults:
         shmm_fit_coeffs_all.close()
         shmm_fit_chi2_all.close()
         shmm_flagged_pixels.close()
+        shmm_fit_coeffs_all_error.close()
 
     def _gen_function(self):
         type = self.fit_template.parinfo["fit"]["type"]
@@ -863,7 +926,7 @@ class FitResults:
         show example of the spectra with the fitting.
         :param path_to_save_figure: path where to save the PDF figure. Must end by "pdf".
         :param position: "random" or 2-tuple with the positions of the pixel where the spectra is shown
-        ex : position = ( (0, 1, 2) , (0, 0, 0) ) shows the spectrum at data[0, 0] ; data[1, 0]... etc
+        ex : position = ( (0, 0, 0), (0, 1, 2) , (0, 0, 0) ) shows the spectrum at data[0, 0, 0] ; data[0, 1, 0]... etc
         """
         x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]), np.arange(self.spectral_window.data.shape[2]))
         xf = x.flatten()
@@ -884,6 +947,10 @@ class FitResults:
         elif isinstance(position, tuple):
             xpos = position[0]
             ypos = position[1]
+            if isinstance(xpos, int):
+                xpos = [xpos]
+                ypos = [ypos]
+
 
         if self.spectral_window is None:
             raise NotImplementedError
@@ -939,7 +1006,7 @@ class FitResults:
                 axs[1].set_ylabel(f"Spectra [{Constants.conventional_spectral_units}]")
                 title = f"{str(xpos[ii]), str(ypos[ii])}, "
                 for param in self.components_results["main"]["coeffs"].keys():
-                    if (param != "radiance") and (param != "velocity") and (param != "fwhm"):
+                    if (param != "radiance") and (param != "velocity") and (param != "s"):
                         title += f"{param} : {self.components_results["main"]["coeffs"][param]["results"].value[0, ypos[ii], xpos[ii]]:.2f}, "
                 axs[1].set_title(title)
 
@@ -1392,7 +1459,7 @@ class FitResults:
         fit_chit2_all = fit_chit2_all.reshape(fit_chit2_all[0,...].shape)
         flagged_pixels_ = data_re[(ncoeff+ncoeff+1):(ncoeff+ncoeff+2), ...]
         flagged_pixels = np.zeros_like(flagged_pixels_, dtype="bool")
-        flagged_pixels[flagged_pixels_ > 100] = True
+        flagged_pixels[flagged_pixels_ > 0.5] = True
         flagged_pixels = flagged_pixels.reshape(flagged_pixels[0,...].shape)
         self.verbose = verbose
         self.fit_template = fit_template
@@ -1412,6 +1479,8 @@ class FitResults:
         hdu_l2 = hdul[2]
         spectral_window = SpiceRasterWindowL2(hdu=hdu_l2)
         self.spectral_window = spectral_window
+        if  self.spectral_window.uncertainty is None:
+             self.spectral_window.compute_uncertainty()
 
         return self
 

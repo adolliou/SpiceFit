@@ -90,6 +90,12 @@ class SpiceRasterWindowL2:
     def return_fov(self):
         pass
 
+    def return_wavelength_array(self) -> list:
+        lenlambda = self.data.shape[1]
+        z = np.arange(lenlambda)
+        lamb = self.w_spec.world_to_pixel(z)
+        return lamb
+
     def return_wavelength_interval(self) -> list:
         lenlambda = self.data.shape[1]
         z = np.arange(lenlambda)

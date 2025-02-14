@@ -269,7 +269,7 @@ class FittingModel:
         _type_list, _index_list, _coeff_list = self.gen_mapping_params()
         for _type, _index, _coeff in zip(_type_list, _index_list, _coeff_list):
             if not self.params_all[_type][_index][_coeff]["free"]:
-                if self.verbose > 1:
+                if self.verbose > 0:
                     warnings.warn("The jacobian function is set to None due to Constrained parameters ")
                 return None
 
@@ -312,18 +312,16 @@ class FittingModel:
         # self.fitting_function = fitting_function
         # self.jacobian_function = jacobian_function
 
-    def generate_callable_fitting_jacobian_function_from_module(self, directory_path: str = None, filename: str = None):
+    def generate_callable_fitting_jacobian_function_from_module(self, directory_path: str = None, ):
         """
         Write physical python functions to the directory_path and generate callable self.fit_function() and self.jacobian_function().
         Those are used during the fitting in the FitResults class. 
         :param directory_path: path where the functions will be written 
-        :param filename: name of the function file. 
         """
         if directory_path is None:
             directory_path = os.path.join(Path(__file__).parents[1], ".fitting_jacobian_functions")
 
-        if filename is None:
-            filename = "fitting_jacobian_functions.py"
+        filename = "fitting_jacobian_functions.py"
 
         Path(directory_path).mkdir(exist_ok=True)
         with open(os.path.join(directory_path, filename), "w") as f:
@@ -332,9 +330,10 @@ class FittingModel:
                 f.write("\n\n\n")
                 f.write(self.create_jacobian_function_str())
 
-        sys.path.append(directory_path)
         if "fitting_jacobian_functions" in sys.modules:
+            breakpoint()
             del fitting_jacobian_functions
+        sys.path.append(directory_path)
         import fitting_jacobian_functions
         # spec = importlib.util.spec_from_file_location(location=os.path.join(directory_path, filename),
         #                                               name=filename, )
@@ -344,7 +343,7 @@ class FittingModel:
 
         # module = self._load_module(source=os.path.join(directory_path, filename), module_name = "FittingJacobian")
         # self.fitting_function = getattr(module, "fitting_function")
-        if self.verbose > 1:
+        if self.verbose > 0:
             print(f"Use fitting function at {Path(directory_path).aboslute()}")
         self.fitting_function = fitting_jacobian_functions.fitting_function
 

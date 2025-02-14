@@ -534,6 +534,10 @@ class FitResults:
                 self.components_results[a["name_component"]]["coeffs"]["fwhm"] = {
                     "results": 2.355 * s
                 }
+                self.components_results[a["name_component"]]["coeffs"]["velocity"]["results"][flagged_pixels] = np.nan
+                self.components_results[a["name_component"]]["coeffs"]["radiance"]["results"][flagged_pixels] = np.nan
+                self.components_results[a["name_component"]]["coeffs"]["fwhm"]["results"][flagged_pixels] = np.nan
+
         dic = copy.deepcopy(self.components_results)
 
         for line_ in dic.keys():
@@ -579,6 +583,9 @@ class FitResults:
                         lock.release()
                     else:
                         lock.acquire()
+                        fit_coeffs_all[:, t, i, j] = popt
+                        fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                        fit_chit2_all[t, i, j] = chi2
                         flagged_pixels[t, i, j] = True
                         lock.release()
                 except ValueError:
@@ -806,7 +813,6 @@ class FitResults:
         # min_ = np.percentile(data[isnotnan], 1)
         # max_ = np.percentile(data[isnotnan], 100)
         # norm_ = ImageNormalize(stretch=LogStretch(a=30))
-
         norms = {
             "radiance": PlotFits.get_range(data, stre="log", imin=0, imax=100),
             # "radiance": norm_,
@@ -896,6 +902,7 @@ class FitResults:
 
                 unit = Constants.conventional_radiance_units
                 param = "radiance"
+                
                 data_radiance = self.components_results["main"]["coeffs"][param]["results"].to(unit).value
                 if data_radiance.ndim == 3:
                     data_radiance = data_radiance[0, ...]

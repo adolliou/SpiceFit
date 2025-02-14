@@ -1,3 +1,4 @@
+from importlib import reload
 import warnings
 
 import astropy.units as u
@@ -332,9 +333,10 @@ class FittingModel:
 
         if "fitting_jacobian_functions" in sys.modules:
             breakpoint()
-            del fitting_jacobian_functions
-        sys.path.append(directory_path)
-        import fitting_jacobian_functions
+            reload(fitting_jacobian_functions)
+        else:
+            sys.path.append(directory_path)
+            import fitting_jacobian_functions
         # spec = importlib.util.spec_from_file_location(location=os.path.join(directory_path, filename),
         #                                               name=filename, )
         # module = importlib.util.module_from_spec(spec)

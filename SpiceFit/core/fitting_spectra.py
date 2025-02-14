@@ -24,7 +24,7 @@ def fit_spectra(x, y, dy, fit_template: FittingModel, minimum_data_points: int =
                 nan_policy="raise",
                 method="trf",
                 full_output=False,
-                absolute_sigma=True,
+                # absolute_sigma=True,
                 jac=fit_template.jacobian_function,
             )
 

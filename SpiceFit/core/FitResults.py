@@ -822,29 +822,34 @@ class FitResults:
         }
 
         norm = norms[param]
-        coords = w_xy.pixel_to_world(x, y)
-        long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
-        long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
-        latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
-        dlon = dlon.to("arcsec").value
-        dlat = dlat.to("arcsec").value
-        coordsg = SkyCoord(long, latg, frame=coords.frame)
-        xg, yg = w_xy.world_to_pixel(coordsg)
-        data_rep = CommonUtil.interpol2d(data, x=xg, y=yg, order=3, fill=np.nan)
-        if unit is not None:
-            im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
-                           extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
+        # coords = w_xy.pixel_to_world(x, y)
+        # long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
+        # long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
+        # latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
+        # dlon = dlon.to("arcsec").value
+        # dlat = dlat.to("arcsec").value
+        # coordsg = SkyCoord(long, latg, frame=coords.frame)
+        # xg, yg = w_xy.world_to_pixel(coordsg)
+        # data_rep = CommonUtil.interpol2d(data, x=xg, y=yg, order=3, fill=np.nan)
+        im = ax.imshow(data, origin="lower", interpolation="none", cmap=cmap,
                            norm=norm, )
-            cbar = fig.colorbar(im, ax=ax, label=unit,
-                                )
+                                
+
+        if unit is not None:
+            # im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
+            #                extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+            #                        latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
+            #                norm=norm, )
+            # cbar = fig.colorbar(im, ax=ax, label=unit,
+            #                     )
+            cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
 
         else:
-            im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
-                           extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
-                           norm=norm,
-                           )
+            # im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
+            #                extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+            #                        latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
+            #                norm=norm,
+            #                )
             cbar = fig.colorbar(im, ax=ax, pad=0)
         ax.set_xlabel("Solar-X")
         ax.set_ylabel("Solar-Y")

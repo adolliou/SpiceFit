@@ -831,8 +831,11 @@ class FitResults:
         # coordsg = SkyCoord(long, latg, frame=coords.frame)
         # xg, yg = w_xy.world_to_pixel(coordsg)
         # data_rep = CommonUtil.interpol2d(data, x=xg, y=yg, order=3, fill=np.nan)
+        cdelt1 = self.spectral_window.header["CDELT1"]
+        cdelt2 = self.spectral_window.header["CDELT2"]
+        ratio = cdelt2 / cdelt1
         im = ax.imshow(data, origin="lower", interpolation="none", cmap=cmap,
-                           norm=norm, )
+                           norm=norm, aspect=ratio)
                                 
 
         if unit is not None:

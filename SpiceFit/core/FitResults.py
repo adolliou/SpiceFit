@@ -808,13 +808,15 @@ class FitResults:
         cmap = mpl.colormaps.get_cmap('viridis')  # viridis is the default colormap for imshow
         cmap.set_bad('white')
         coeff = self.fit_results["coeff"][coeff_index, 0, :, :]
-        coeff[not self.fit_results["flagged_pixels"][0, :, :]] = np.nan
+        cdelt1 = self.spectral_window.header["CDELT1"]
+        cdelt2 = self.spectral_window.header["CDELT2"]
+        ratio = cdelt2 / cdelt1
         im = ax.imshow(coeff, origin="lower", interpolation="none",
-                       cmap=cmap)
+                       cmap=cmap, aspect=ratio)
 
-        plt.colorbar(im, ax=ax)
+        fig.colorbar(im, ax=ax)
 
-        fig.savefig("test.pdf")
+        return fig
 
     def quicklook(self, line="main", show=True):
         """

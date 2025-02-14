@@ -344,7 +344,7 @@ class FittingModel:
         # module = self._load_module(source=os.path.join(directory_path, filename), module_name = "FittingJacobian")
         # self.fitting_function = getattr(module, "fitting_function")
         if self.verbose > 0:
-            print(f"Use fitting function at {Path(directory_path).aboslute()}")
+            print(f"Use fitting function at {Path(directory_path).absolute()}")
         self.fitting_function = fitting_jacobian_functions.fitting_function
 
         if self.create_jacobian_function_str() is not None:

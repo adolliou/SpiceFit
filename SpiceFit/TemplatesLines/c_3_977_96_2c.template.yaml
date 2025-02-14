@@ -55,13 +55,13 @@ info:
     lvl_up: "2s 2p $^1$P$_{1}$"
     legend: "C III 977.03 $\\AA$"
 
-  - name: "fe_18 974.86"
-    elem: "fe"
-    ion: 18
-    wave: 974.86
+  - name: "h_1 972.54"
+    elem: "h"
+    ion: 1
+    wave: 972.54
     unit_wave: "Angstrom"
     lvl_low: ""
     lvl_up: ""
-    legend: "Fe XVIII 974.86 $\\AA$"
+    legend: "H I Ly-gamma 972.54 $\\AA$"
 
 

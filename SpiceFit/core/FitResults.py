@@ -903,7 +903,7 @@ class FitResults:
                 cmap.set_bad('white')
                 im = axs[0].imshow(data_radiance, origin="lower", interpolation="none", cmap=cmap,
                                    aspect=ratio)
-                cbar = fig.colorbar(im, ax=axs[0], label=unit)
+                cbar = fig.colorbar(im, ax=axs[0], label=unit, fraction=0.046, pad=0.04)
                 axs[0].set_label(param)
 
                 rect = Rectangle((xpos[ii] - 0.5, ypos[ii] - 0.5,), height=1, width=1, linewidth=0.7,

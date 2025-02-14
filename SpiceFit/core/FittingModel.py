@@ -314,9 +314,10 @@ class FittingModel:
 
     def generate_callable_fitting_jacobian_function_from_module(self, directory_path: str = None, filename: str = None):
         """
-
-        :param directory_path:
-        :param filename:
+        Write physical python functions to the directory_path and generate callable self.fit_function() and self.jacobian_function().
+        Those are used during the fitting in the FitResults class. 
+        :param directory_path: path where the functions will be written 
+        :param filename: name of the function file. 
         """
         if directory_path is None:
             directory_path = os.path.join(Path(__file__).parents[1], ".fitting_jacobian_functions")
@@ -332,6 +333,8 @@ class FittingModel:
                 f.write(self.create_jacobian_function_str())
 
         sys.path.append(directory_path)
+        if "fitting_jacobian_functions" in sys.modules:
+            del fitting_jacobian_functions
         import fitting_jacobian_functions
         # spec = importlib.util.spec_from_file_location(location=os.path.join(directory_path, filename),
         #                                               name=filename, )
@@ -341,6 +344,8 @@ class FittingModel:
 
         # module = self._load_module(source=os.path.join(directory_path, filename), module_name = "FittingJacobian")
         # self.fitting_function = getattr(module, "fitting_function")
+        if self.verbose > 1:
+            print(f"Use fitting function at {Path(directory_path).aboslute()}")
         self.fitting_function = fitting_jacobian_functions.fitting_function
 
         if self.create_jacobian_function_str() is not None:

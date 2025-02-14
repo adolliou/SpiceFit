@@ -334,6 +334,7 @@ class FittingModel:
         if "fitting_jacobian_functions" in sys.modules:
             if directory_path not in sys.path:
                  sys.path.append(directory_path)
+            import fitting_jacobian_functions
             fitting_jacobian_functions = reload(fitting_jacobian_functions)
         else:
             sys.path.append(directory_path)

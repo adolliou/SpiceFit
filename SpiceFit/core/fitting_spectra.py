@@ -25,9 +25,15 @@ def fit_spectra(x, y, dy, fit_template: FittingModel, minimum_data_points: int =
                 method="trf",
                 full_output=False,
                 absolute_sigma=True,
-                jac=fit_template.jacobian_function,
+                # jac=fit_template.jacobian_function,
             )
-
+        # from matplotlib import pyplot as plt
+        # y2 = fit_template.fitting_function(x, *fit_template.params_free["guess"])
+        # y3 = fit_template.fitting_function(x, *popt)
+        # plt.plot(x, y)
+        # plt.plot(x, y2)
+        # plt.plot(x, y3)
+        # plt.show()
         except RuntimeError:
             if verbose == 2:
                 print("Fitting failed")

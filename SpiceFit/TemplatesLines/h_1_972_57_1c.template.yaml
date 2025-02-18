@@ -1,11 +1,13 @@
+
 fit:
   type: ["gaussian",
          "polynomial"]
-  name: ["ne_8 770.42",
+  name: ["c_3 977.03",
+         "h_1 972.54",
          "background"]
   n_components: [ 3,  1 ]
   guess: [
-    [10., 770.42 , 1.5,],
+    [2.0, 972.33, 2.6],
           [0.0]
   ]
   coeff_type: [
@@ -17,12 +19,12 @@ fit:
     [ "Angstrom" ]
   ]
   max_arr: [
-    [100.0, 771.02, 5.0,],
+   [232421,972.601,10.0],
     [100.0]
   ]
   min_arr: [
-    [0.0, 769.82, 0.4],
-     [-0.5]
+    [0.0001,972.067,0.4],
+    [-5.0]
   ]
   trans_a: [
     [ 1.0, 1.0, 0.424661, ],
@@ -33,15 +35,16 @@ fit:
     [ 0.0 ]
   ]
 
-main_line: "ne_8 770.42"
+main_line: "h_1 972.54"
 
 info:
-  - name: "ne_8 770.42"
-    elem: "ne"
-    ion: 8
-    wave: 770.42
+  - name: "h_1 972.54"
+    elem: "h"
+    ion: 1
+    wave: 972.54
     unit_wave: "Angstrom"
-    lvl_low: "1$s^2$ 2s $^2S_{1/2}$"
-    lvl_up: "1$s^2$ 2p $P_{3/2}$"
-    legend: "Ne VIII 770.42 $\\AA$"
+    lvl_low: ""
+    lvl_up: ""
+    legend: "H I Ly-gamma 972.54 $\\AA$"
+
 

@@ -1,12 +1,11 @@
-
 fit:
   type: ["gaussian",
          "polynomial"]
   name: ["ne_8 770.42",
          "background"]
-  n_components: [ 3, 1 ]
+  n_components: [ 3, 3, 3,  1 ]
   guess: [
-    [0.1, 770.42 , 0.4,],
+    [10., 770.42 , 1.5,],
           [0.0]
   ]
   coeff_type: [
@@ -18,11 +17,11 @@ fit:
     [ "Angstrom" ]
   ]
   max_arr: [
-    [100.0, 771.02, 1.6,],
+    [100.0, 771.02, 5.0,],
     [100.0]
   ]
   min_arr: [
-    [0.001, 769.82, 0.4,],
+    [0.0, 769.82, 0.4],
      [-0.5]
   ]
   trans_a: [

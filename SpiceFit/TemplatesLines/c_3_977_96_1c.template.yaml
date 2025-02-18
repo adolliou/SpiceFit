@@ -3,9 +3,8 @@ fit:
   type: ["gaussian",
          "polynomial"]
   name: ["c_3 977.03",
-         "h_1 972.54",
          "background"]
-  n_components: [ 3, 3,  1 ]
+  n_components: [ 3, 1 ]
   guess: [
     [5.0, 977.03, 3.0],
           [0.0]

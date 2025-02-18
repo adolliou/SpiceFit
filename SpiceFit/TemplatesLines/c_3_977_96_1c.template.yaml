@@ -3,10 +3,11 @@ fit:
   type: ["gaussian",
          "polynomial"]
   name: ["c_3 977.03",
+         "h_1 972.54",
          "background"]
-  n_components: [ 3,  1 ]
+  n_components: [ 3, 3,  1 ]
   guess: [
-    [5.0, 977.03, 0.4],
+    [5.0, 977.03, 3.0],
           [0.0]
   ]
   coeff_type: [
@@ -18,12 +19,12 @@ fit:
     [ "Angstrom" ]
   ]
   max_arr: [
-   [1000.0,977.5, 2.0],
+   [1000.0,978.0, 10.0],
     [100.0]
   ]
   min_arr: [
     [0.0001, 976.13, 0.4],
-    [-0.5]
+    [-5.0]
   ]
   trans_a: [
     [ 1.0, 1.0, 0.424661, ],
@@ -45,4 +46,3 @@ info:
     lvl_low: "2s$^2$ $^1$S$_{0}$"
     lvl_up: "2s 2p $^1$P$_{1}$"
     legend: "C III 977.03 $\\AA$"
-

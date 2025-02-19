@@ -1011,6 +1011,7 @@ class FitResults:
                 axs[1].set_title(title)
 
                 pdf.savefig(fig)
+                plt.close("all")
 
     def get_fitted_spectra(self, x: np.array, position: tuple, component: str = "total"):
         """

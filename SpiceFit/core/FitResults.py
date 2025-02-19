@@ -31,9 +31,11 @@ import os
 import ast
 
 import warnings
+
 warnings.filterwarnings("ignore", message="Card is too long, comment will be truncated.")
-warnings.filterwarnings("ignore", 
-                        message="'UTC' did not parse as fits unit: At col 0, Unit 'UTC'",)
+warnings.filterwarnings("ignore",
+                        message="'UTC' did not parse as fits unit: At col 0, Unit 'UTC'", )
+
 
 def flatten(xss):
     """
@@ -48,7 +50,7 @@ class FitResults:
 
     def __init__(
             self,
-            
+
     ):
         """
         Initialize a FirResults instance. This class is dedicated to Fit the spectral data on a datacube,
@@ -93,14 +95,14 @@ class FitResults:
 
         self.components_results = {}
 
-    def fit_spice_window_standard(  self,
-                                    spicewindow: SpiceRasterWindowL2,
-                                    fit_template: FittingModel,
-                                    parallelism: bool = True,
-                                    cpu_count: int = None,
-                                    min_data_points: int = 5,
-                                    chi2_limit: float = 20.0,
-                                    verbose=0, ):
+    def fit_spice_window_standard(self,
+                                  spicewindow: SpiceRasterWindowL2,
+                                  fit_template: FittingModel,
+                                  parallelism: bool = True,
+                                  cpu_count: int = None,
+                                  min_data_points: int = 5,
+                                  chi2_limit: float = 20.0,
+                                  verbose=0, ):
         """
 
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
@@ -415,8 +417,7 @@ class FitResults:
         shmm_fit_coeffs_error_all.close()
         shmm_fit_coeffs_error_all.unlink()
 
-
-    def fit_pixels(self, t_list, i_list, j_list, ModelFit: FittingModel = None, 
+    def fit_pixels(self, t_list, i_list, j_list, ModelFit: FittingModel = None,
                    minimum_data_points: int = 5, chi_limit: float = 100):
         """Fit Individual pixels with potentially a new Fitting_model, without parallelism.
         Ideal to compute different fitting with various parameters on a given specific pixel
@@ -428,13 +429,11 @@ class FitResults:
             ModelFit (FittingModel, optional): Fit according to a new fitting model set by the user. Defaults to None.
             minimum_data_points (int, optionql): minimum number of datapoints which are not nan to start the fitting. 
             If below, then the pixel is flagged. 
-        """        
+        """
         if ModelFit is not None:
             fit_template = ModelFit
         else:
             fit_template = self.fit_template
-        
-        
 
         data_cube = self.spectral_window.data
         uncertainty_cube = self.spectral_window.uncertainty["Total"]
@@ -442,7 +441,7 @@ class FitResults:
         coords, lambda_cube, t = self.spectral_window.wcs.pixel_to_world(xx, yy, ll, tt)
 
         lambda_ = np.array(lambda_cube.to(Constants.conventional_lambda_units).value, dtype=np.float64)
-        data_cube =  np.array(data_cube.to(Constants.conventional_spectral_units).value, dtype=np.float64)
+        data_cube = np.array(data_cube.to(Constants.conventional_spectral_units).value, dtype=np.float64)
         uncertainty_cube = np.array(uncertainty_cube.to(Constants.conventional_spectral_units).value, dtype=np.float64)
 
         for t, i, j in tqdm.tqdm(zip(t_list, i_list, j_list), total=len(t_list)):
@@ -452,17 +451,17 @@ class FitResults:
 
             try:
                 popt, pcov = fit_spectra(x=x,
-                                                y=y,
-                                                dy=dy,
-                                                fit_template=fit_template,
-                                                minimum_data_points=minimum_data_points)
+                                         y=y,
+                                         dy=dy,
+                                         fit_template=fit_template,
+                                         minimum_data_points=minimum_data_points)
 
                 chi2 = np.sum(np.diag(pcov))
                 if chi2 <= chi_limit:
                     self.fit_results["coeff"][:, t, i, j] = popt
-                    self.fit_results["coeffs_error"][:, t, i, j]  =  np.sqrt(np.diag(pcov))
-                    self.fit_results["chi2"][t, i, j]  = chi2
-                    self.fit_results["flagged_pixels"][t, i, j]  = False
+                    self.fit_results["coeffs_error"][:, t, i, j] = np.sqrt(np.diag(pcov))
+                    self.fit_results["chi2"][t, i, j] = chi2
+                    self.fit_results["flagged_pixels"][t, i, j] = False
 
                 else:
                     self.fit_results["flagged_pixels"][t, i, j] = True
@@ -515,14 +514,16 @@ class FitResults:
                 }
 
                 if dict_const["operation"] == "plus":
-                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(self.fit_results["coeff"][whb, ...] + \
-                                   dict_const["value"], self.fit_results["unit"][whb])
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(
+                        self.fit_results["coeff"][whb, ...] + \
+                        dict_const["value"], self.fit_results["unit"][whb])
                     self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"] = u.Quantity(
                         self.fit_results["sigma"][whb, ...], self.fit_results["unit"][whb])
 
                 elif dict_const["operation"] == "minus":
-                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(self.fit_results["coeff"][whb, ...] - \
-                                   dict_const["value"], self.fit_results["unit"][whb])
+                    self.components_results[a["name_component"]]["coeffs"][coeff_]["results"] = u.Quantity(
+                        self.fit_results["coeff"][whb, ...] - \
+                        dict_const["value"], self.fit_results["unit"][whb])
                     self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"] = u.Quantity(
                         self.fit_results["sigma"][whb, ...], self.fit_results["unit"][whb])
                 elif dict_const["operation"] == "times":
@@ -548,16 +549,16 @@ class FitResults:
             self.components_results[a["name_component"]]["coeffs"][coeff_]["results"][flagged_pixels] = np.nan
             self.components_results[a["name_component"]]["coeffs"][coeff_]["sigma"][flagged_pixels] = np.nan
         self.components_results["chi2"] = {
-                "info": {
-                        "name_component": "chi2",
-                        "type": "chi2",
-                },
-                "coeffs": {
-                    "chi2": {
-                        "results": self.fit_results["chi2"],
-                    }
+            "info": {
+                "name_component": "chi2",
+                "type": "chi2",
+            },
+            "coeffs": {
+                "chi2": {
+                    "results": self.fit_results["chi2"],
                 }
             }
+        }
 
         self.components_results["flagged_pixels"] = {
             "info": {
@@ -846,7 +847,15 @@ class FitResults:
         else:
             return fig
 
-    def plot_fitted_map(self, ax, fig, line, param):
+    def plot_fitted_map(self, ax, fig, line, param, regular_grid=False):
+        """
+
+        :param ax: ax of the image
+        :param fig: figure object
+        :param line: line name
+        :param param: parameter to plot, between radiance,  fwhm, velocity and chi2.
+        :param regular_grid:
+        """
         units = {
             "radiance": Constants.conventional_radiance_units,
             "fwhm": Constants.conventional_lambda_units,
@@ -889,38 +898,32 @@ class FitResults:
         }
 
         norm = norms[param]
-        # coords = w_xy.pixel_to_world(x, y)
-        # long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
-        # long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
-        # latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
-        # dlon = dlon.to("arcsec").value
-        # dlat = dlat.to("arcsec").value
-        # coordsg = SkyCoord(long, latg, frame=coords.frame)
-        # xg, yg = w_xy.world_to_pixel(coordsg)
-        # data_rep = CommonUtil.interpol2d(data, x=xg, y=yg, order=3, fill=np.nan)
-        cdelt1 = self.spectral_window.header["CDELT1"]
-        cdelt2 = self.spectral_window.header["CDELT2"]
-        ratio = cdelt2 / cdelt1
-        im = ax.imshow(data, origin="lower", interpolation="none", cmap=cmap,
-                           norm=norm, aspect=ratio)
-                                
 
-        if unit is not None:
-            # im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
-            #                extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-            #                        latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
-            #                norm=norm, )
-            # cbar = fig.colorbar(im, ax=ax, label=unit,
-            #                     )
-            cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
+        if regular_grid:
+            coords = w_xy.pixel_to_world(x, y)
+            long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
+            long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
+            latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
+            dlon = dlon.to("arcsec").value
+            dlat = dlat.to("arcsec").value
+            coordsg = SkyCoord(long, latg, frame=coords.frame)
+            xg, yg = w_xy.world_to_pixel(coordsg)
+            data_rep = CommonUtil.interpol2d(data, x=xg, y=yg, order=3, fill=np.nan)
 
+            im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
+                           extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
+                                   latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
+                           norm=norm, )
         else:
-            # im = ax.imshow(data_rep, origin="lower", interpolation="none", cmap=cmap,
-            #                extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
-            #                        latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
-            #                norm=norm,
-            #                )
-            cbar = fig.colorbar(im, ax=ax, pad=0)
+            cdelt1 = self.spectral_window.header["CDELT1"]
+            cdelt2 = self.spectral_window.header["CDELT2"]
+            ratio = cdelt2 / cdelt1
+
+            im = ax.imshow(data, origin="lower", interpolation="none", cmap=cmap,
+                           norm=norm, aspect=ratio)
+
+        cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
+
         ax.set_xlabel("Solar-X")
         ax.set_ylabel("Solar-Y")
         ax.set_title(param)
@@ -955,7 +958,6 @@ class FitResults:
                 xpos = [xpos]
                 ypos = [ypos]
 
-
         if self.spectral_window is None:
             raise NotImplementedError
         data_cube = self.spectral_window.data
@@ -981,7 +983,7 @@ class FitResults:
 
                 unit = Constants.conventional_radiance_units
                 param = "radiance"
-                
+
                 data_radiance = self.components_results["main"]["coeffs"][param]["results"].to(unit).value
                 if data_radiance.ndim == 3:
                     data_radiance = data_radiance[0, ...]
@@ -1054,7 +1056,7 @@ class FitResults:
             else:
                 raise NotImplementedError
 
-    def to_fits(self, path_to_save_fits: str = None, folder_to_save_fits:str = None, hdu_wcsdvar = None):
+    def to_fits(self, path_to_save_fits: str = None, folder_to_save_fits: str = None, hdu_wcsdvar=None):
         """
         Save the basic fitting data into a FITS file that resembles the ones produced by OSLO.
         The hdulist has between the following windows
@@ -1075,15 +1077,15 @@ class FitResults:
         the same as the input L2 file, but with L3 changed into L2 in the filename
         """
 
-        if ((path_to_save_fits is None) and (folder_to_save_fits is None)) or ((path_to_save_fits is not None) and (folder_to_save_fits is not None)):
+        if ((path_to_save_fits is None) and (folder_to_save_fits is None)) or (
+                (path_to_save_fits is not None) and (folder_to_save_fits is not None)):
             raise ValueError(" Set only one of those arguments to a str : path_to_save_fits or folder_to_save_fits")
-        
 
         header_ref = self.spectral_window.header
         hdu = fits.PrimaryHDU()
 
         if path_to_save_fits is not None:
-            path_fits = path_to_save_fits 
+            path_fits = path_to_save_fits
             filename = os.path.basename(path_to_save_fits)
         elif folder_to_save_fits is not None:
             filename = header_ref["filename"].replace("L2", "L3")
@@ -1096,15 +1098,15 @@ class FitResults:
         ncoeff = 0
         for ii, key in enumerate(keys_comp):
             if self.components_results[key]["info"]["type"] == "gaussian":
-                ncoeff +=3
+                ncoeff += 3
             elif self.components_results[key]["info"]["type"] == "polynomial":
                 a = self.components_results[key]["coeffs"]
                 ncoef = len(a.keys())
-                ncoeff +=ncoef
+                ncoeff += ncoef
             elif self.components_results[key]["info"]["type"] == "chi2":
                 ncoeff += 1
 
-        data = self._write_hdu(hdu, header_ref, path_fits, keys_comp=keys_comp,  results_type="results",
+        data = self._write_hdu(hdu, header_ref, path_fits, keys_comp=keys_comp, results_type="results",
                                hdu_wcsdvar=hdu_wcsdvar, ncoeff=ncoeff)
         hdu.data = data
         hdu.add_checksum()
@@ -1120,14 +1122,13 @@ class FitResults:
         hdu_data.data = hdu_data.data.to(self.spectral_window.header["BUNIT"]).value
         for key in self.spectral_window.header.copy():
             if key != '' and key != 'COMMENT' and key != "HISTORY":
-                hdu_data.header[key] = self.spectral_window.header[key] 
+                hdu_data.header[key] = self.spectral_window.header[key]
         if 'XTENSION' not in hdu_data.header:
             hdu_data.header.insert('SIMPLE', ('XTENSION', 'IMAGE   '))
         # hdu_data.header["XTENSION"] = 'IMAGE   '
         # hdu_data.header["PCOUNT"] = 0
         # hdu_data.header["GCOUNT"] = 1
         # hdu_data.header["PCOUNT"] = 0
-
 
         hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')
         hdu_data.header["FILENAME"] = filename
@@ -1149,7 +1150,6 @@ class FitResults:
         # bytes = arr['parinfo'][0]
         # sss = bytes.decode("UTF-8")
         # ddd = ast.literal_eval(sss)
-
 
         rec_coeffs = copy.deepcopy(self.fit_results["coeff"])
         rec_chi2 = copy.deepcopy(self.fit_results["chi2"])
@@ -1173,19 +1173,16 @@ class FitResults:
         trans_b = self.fit_results["trans_b"]
         hdu_fits_results.header["NCOEFF"] = len(unique_index)
         for ii in range(len(unique_index)):
-
-            hdu_fits_results.header[f"CNAME{ii}"] =  name[ii]
-            hdu_fits_results.header[f"CUI{ii}"] =  unique_index[ii]
-            hdu_fits_results.header[f"CCNAME{ii}"] =  coeff_name[ii]
-            hdu_fits_results.header[f"CUNIT{ii}"] =  unit[ii]
-            hdu_fits_results.header[f"CTRA{ii}"] =  trans_a[ii]
-            hdu_fits_results.header[f"CTRB{ii}"] =  trans_b[ii]
-
+            hdu_fits_results.header[f"CNAME{ii}"] = name[ii]
+            hdu_fits_results.header[f"CUI{ii}"] = unique_index[ii]
+            hdu_fits_results.header[f"CCNAME{ii}"] = coeff_name[ii]
+            hdu_fits_results.header[f"CUNIT{ii}"] = unit[ii]
+            hdu_fits_results.header[f"CTRA{ii}"] = trans_a[ii]
+            hdu_fits_results.header[f"CTRB{ii}"] = trans_b[ii]
 
         hdul = fits.HDUList(hdus=[hdu, hdu_sigma, hdu_data, hdu_parinfo, hdu_fits_results])
 
         if hdu_wcsdvar is not None:
-
             hdu_wcs = fits.ImageHDU()
             hdu_wcs.data = hdu_wcsdvar.data.copy()
             hdu_wcs.header = hdu_wcsdvar.header.copy()
@@ -1219,7 +1216,6 @@ class FitResults:
         last_index = ['DATAEXT']
 
         data = np.zeros((ncoeff, *shape), dtype=float)
-
 
         for ii, key in enumerate(keys_comp):
 
@@ -1426,8 +1422,7 @@ class FitResults:
 
         return data
 
-
-    def from_fits(self, path_to_fits: str = None, hdul = None,
+    def from_fits(self, path_to_fits: str = None, hdul=None,
                   verbose=0):
         """
         Creates a Fits_results object from a fits file, either through a
@@ -1459,13 +1454,13 @@ class FitResults:
         header_re = hdu_re.header
         ncoeff = header_re["NCOEFF"]
         coeffs_cp = data_re[:ncoeff, ...]
-        coeffs_error_cp = data_re[ncoeff:(ncoeff+ncoeff), ...]
-        fit_chit2_all = data_re[(ncoeff+ncoeff):(ncoeff+ncoeff+1), ...]
-        fit_chit2_all = fit_chit2_all.reshape(fit_chit2_all[0,...].shape)
-        flagged_pixels_ = data_re[(ncoeff+ncoeff+1):(ncoeff+ncoeff+2), ...]
+        coeffs_error_cp = data_re[ncoeff:(ncoeff + ncoeff), ...]
+        fit_chit2_all = data_re[(ncoeff + ncoeff):(ncoeff + ncoeff + 1), ...]
+        fit_chit2_all = fit_chit2_all.reshape(fit_chit2_all[0, ...].shape)
+        flagged_pixels_ = data_re[(ncoeff + ncoeff + 1):(ncoeff + ncoeff + 2), ...]
         flagged_pixels = np.zeros_like(flagged_pixels_, dtype="bool")
         flagged_pixels[flagged_pixels_ > 0.5] = True
-        flagged_pixels = flagged_pixels.reshape(flagged_pixels[0,...].shape)
+        flagged_pixels = flagged_pixels.reshape(flagged_pixels[0, ...].shape)
         self.verbose = verbose
         self.fit_template = fit_template
         self.fit_results = {"coeff": coeffs_cp,
@@ -1484,10 +1479,9 @@ class FitResults:
         hdu_l2 = hdul[2]
         spectral_window = SpiceRasterWindowL2(hdu=hdu_l2)
         self.spectral_window = spectral_window
-        if  self.spectral_window.uncertainty is None:
-             self.spectral_window.compute_uncertainty()
+        if self.spectral_window.uncertainty is None:
+            self.spectral_window.compute_uncertainty()
 
         return self
-
 
     # def gen_shmm(self, spicewindow: SpiceRasterWindowL2):

@@ -3,7 +3,7 @@ fit:
   type: ["gaussian",
          "gaussian",
          "polynomial"]
-  name: ["o_3 703.86",
+  name: ["o_3 703.87",
          "o_3 702.82",
          "background"]
   n_components: [ 3, 3, 1 ]
@@ -43,11 +43,11 @@ fit:
     [ 0.0 ]
   ]
 
-main_line: "o_3 703.86"
+main_line: "o_3 703.87"
 
 info:
 
-  - name: "o_3 703.86"
+  - name: "o_3 703.87"
     elem: "o"
     ion: 3
     wave: 703.86

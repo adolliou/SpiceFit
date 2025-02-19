@@ -401,12 +401,15 @@ class FitResults:
         shmm_lambda_.unlink()
         shmm_uncertainty.close()
         shmm_uncertainty.unlink()
-        shmm_fit_coeffs.close()
-        shmm_fit_coeffs.unlink()
-        shmm_fit_chi2.close()
-        shmm_fit_chi2.unlink()
+
         shmm_flagged_pixels.close()
         shmm_flagged_pixels.unlink()
+        shmm_fit_chi2_all.close()
+        shmm_fit_chi2_all.unlink()
+        shmm_fit_coeffs_all.close()
+        shmm_fit_coeffs_all.unlink()
+        shmm_fit_coeffs_error_all.close()
+        shmm_fit_coeffs_error_all.unlink()
 
 
     def fit_pixels(self, t_list, i_list, j_list, ModelFit: FittingModel = None, 

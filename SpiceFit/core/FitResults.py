@@ -850,7 +850,7 @@ class FitResults:
     def plot_fitted_map(self, ax, fig, line, param, regular_grid=False):
         """
 
-        :param ax: ax of the image
+        :param ax: ax of the image.
         :param fig: figure object
         :param line: line name
         :param param: parameter to plot, between radiance,  fwhm, velocity and chi2.

@@ -30,6 +30,10 @@ from astropy.time import Time
 import os
 import ast
 
+import warnings
+warnings.filterwarnings("ignore", message="Card is too long, comment will be truncated.")
+warnings.filterwarnings("ignore", 
+                        message="'UTC' did not parse as fits unit: At col 0, Unit 'UTC'",)
 
 def flatten(xss):
     """

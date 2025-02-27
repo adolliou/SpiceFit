@@ -1382,7 +1382,7 @@ class FitResults:
             # hdu.header[f"CWERR4"] = header_ref[f"CWERR4"]
 
             hdu.header[f"PC3_3"] = header_ref[f"PC4_4"]
-            hdu.header[f"PC3_2"] = header_ref[f"PC4_1"]
+            hdu.header[f"PC3_1"] = header_ref[f"PC4_1"]
         hdu.header["CTYPE4"] = 'FITCMP'
         hdu.header["CUNIT4"] = '        '
         hdu.header["CRVAL4"] = 1.00000

@@ -1358,7 +1358,7 @@ class FitResults:
         hdu.header["ANA_MISS"] = 'NaN     '
         hdu.header["WCSNAME"] = 'Helioprojective-cartesian'
 
-        for jj in range(2):
+        for jj in [1, 2]:
             hdu.header[f"CTYPE{jj}"] = header_ref[f"CTYPE{jj}"]
             hdu.header[f"CUNIT{jj}"] = header_ref[f"CUNIT{jj}"]
             hdu.header[f"CRVAL{jj}"] = header_ref[f"CRVAL{jj}"]
@@ -1382,8 +1382,8 @@ class FitResults:
             # hdu.header[f"CWERR4"] = header_ref[f"CWERR4"]
 
             hdu.header[f"PC3_3"] = header_ref[f"PC4_4"]
-            hdu.header[f"PC3_1"] = header_ref[f"PC4_1"]
-        hdu.header["CTYPE4"] = 'COMPONENTS'
+            hdu.header[f"PC3_2"] = header_ref[f"PC4_1"]
+        hdu.header["CTYPE4"] = 'FITCMP'
         hdu.header["CUNIT4"] = '        '
         hdu.header["CRVAL4"] = 1.00000
         hdu.header["CDELT4"] = 1.00000

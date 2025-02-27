@@ -1357,37 +1357,38 @@ class FitResults:
         hdu.header["WINNO"] = (0, "Number of windows")
         hdu.header["ANA_MISS"] = 'NaN     '
         hdu.header["WCSNAME"] = 'Helioprojective-cartesian'
-        hdu.header["CTYPE1"] = 'COMPONENTS'
-        hdu.header["CUNIT1"] = '        '
-        hdu.header["CRVAL1"] = 1.00000
-        hdu.header["CDELT1"] = 1.00000
-        hdu.header["CRPIX1"] = 1.00000
-        hdu.header["PC1_1"] = 1.00000
-        for jj in range(2):
-            hdu.header[f"CTYPE{jj + 2}"] = header_ref[f"CTYPE{jj + 1}"]
-            hdu.header[f"CUNIT{jj + 2}"] = header_ref[f"CUNIT{jj + 1}"]
-            hdu.header[f"CRVAL{jj + 2}"] = header_ref[f"CRVAL{jj + 1}"]
-            hdu.header[f"CDELT{jj + 2}"] = header_ref[f"CDELT{jj + 1}"]
-            hdu.header[f"CRPIX{jj + 2}"] = header_ref[f"CRPIX{jj + 1}"]
 
-            hdu.header[f"CRDER{jj + 2}"] = header_ref[f"CRDER{jj + 1}"]
-            hdu.header[f"CWERR{jj + 2}"] = header_ref[f"CWERR{jj + 1}"]
-        hdu.header["PC2_2"] = header_ref[f"PC1_1"]
-        hdu.header["PC2_3"] = header_ref[f"PC1_2"]
-        hdu.header["PC3_2"] = header_ref[f"PC2_1"]
-        hdu.header["PC3_3"] = header_ref[f"PC2_2"]
+        for jj in range(2):
+            hdu.header[f"CTYPE{jj}"] = header_ref[f"CTYPE{jj}"]
+            hdu.header[f"CUNIT{jj}"] = header_ref[f"CUNIT{jj}"]
+            hdu.header[f"CRVAL{jj}"] = header_ref[f"CRVAL{jj}"]
+            hdu.header[f"CDELT{jj}"] = header_ref[f"CDELT{jj}"]
+            hdu.header[f"CRPIX{jj}"] = header_ref[f"CRPIX{jj}"]
+
+            hdu.header[f"CRDER{jj}"] = header_ref[f"CRDER{jj}"]
+            hdu.header[f"CWERR{jj}"] = header_ref[f"CWERR{jj}"]
+        hdu.header["PC1_1"] = header_ref[f"PC1_1"]
+        hdu.header["PC1_3"] = header_ref[f"PC1_2"]
+        hdu.header["PC2_2"] = header_ref[f"PC2_1"]
+        hdu.header["PC2_3"] = header_ref[f"PC2_2"]
         if "CUNIT4" in header_ref:
-            hdu.header[f"CTYPE4"] = header_ref[f"CTYPE4"]
-            hdu.header[f"CUNIT4"] = header_ref[f"CUNIT4"]
-            hdu.header[f"CRVAL4"] = header_ref[f"CRVAL4"]
-            hdu.header[f"CDELT4"] = header_ref[f"CDELT4"]
-            hdu.header[f"CRPIX4"] = header_ref[f"CRPIX4"]
+            hdu.header[f"CTYPE3"] = header_ref[f"CTYPE4"]
+            hdu.header[f"CUNIT3"] = header_ref[f"CUNIT4"]
+            hdu.header[f"CRVAL3"] = header_ref[f"CRVAL4"]
+            hdu.header[f"CDELT3"] = header_ref[f"CDELT4"]
+            hdu.header[f"CRPIX2"] = header_ref[f"CRPIX4"]
 
             # hdu.header[f"CRDER4"] = header_ref[f"CRDER4"]
             # hdu.header[f"CWERR4"] = header_ref[f"CWERR4"]
 
-            hdu.header[f"PC4_4"] = header_ref[f"PC4_4"]
-            hdu.header[f"PC4_2"] = header_ref[f"PC4_1"]
+            hdu.header[f"PC3_3"] = header_ref[f"PC4_4"]
+            hdu.header[f"PC3_1"] = header_ref[f"PC4_1"]
+        hdu.header["CTYPE4"] = 'COMPONENTS'
+        hdu.header["CUNIT4"] = '        '
+        hdu.header["CRVAL4"] = 1.00000
+        hdu.header["CDELT4"] = 1.00000
+        hdu.header["CRPIX4"] = 1.00000
+        hdu.header["PC4_4"] = 1.00000
         key_list = [
             "SPECSYS", "VELOSYS",
             "DSUN_OBS", "DSUN_AU",

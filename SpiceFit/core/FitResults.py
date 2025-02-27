@@ -1357,12 +1357,14 @@ class FitResults:
         hdu.header["WINNO"] = (0, "Number of windows")
         hdu.header["ANA_MISS"] = 'NaN     '
         hdu.header["WCSNAME"] = 'Helioprojective-cartesian'
+        hdu.header["CTYPE1"] = 'COMPONENTS'
         hdu.header["CUNIT1"] = '        '
         hdu.header["CRVAL1"] = 1.00000
         hdu.header["CDELT1"] = 1.00000
         hdu.header["CRPIX1"] = 1.00000
         hdu.header["PC1_1"] = 1.00000
         for jj in range(2):
+            hdu.header[f"CTYPE{jj + 2}"] = header_ref[f"CTYPE{jj + 1}"]
             hdu.header[f"CUNIT{jj + 2}"] = header_ref[f"CUNIT{jj + 1}"]
             hdu.header[f"CRVAL{jj + 2}"] = header_ref[f"CRVAL{jj + 1}"]
             hdu.header[f"CDELT{jj + 2}"] = header_ref[f"CDELT{jj + 1}"]
@@ -1375,6 +1377,7 @@ class FitResults:
         hdu.header["PC3_2"] = header_ref[f"PC2_1"]
         hdu.header["PC3_3"] = header_ref[f"PC2_2"]
         if "CUNIT4" in header_ref:
+            hdu.header[f"CTYPE4"] = header_ref[f"CTYPE4"]
             hdu.header[f"CUNIT4"] = header_ref[f"CUNIT4"]
             hdu.header[f"CRVAL4"] = header_ref[f"CRVAL4"]
             hdu.header[f"CDELT4"] = header_ref[f"CDELT4"]

@@ -1376,7 +1376,7 @@ class FitResults:
             hdu.header[f"CUNIT3"] = header_ref[f"CUNIT4"]
             hdu.header[f"CRVAL3"] = header_ref[f"CRVAL4"]
             hdu.header[f"CDELT3"] = header_ref[f"CDELT4"]
-            hdu.header[f"CRPIX2"] = header_ref[f"CRPIX4"]
+            hdu.header[f"CRPIX3"] = header_ref[f"CRPIX4"]
 
             # hdu.header[f"CRDER4"] = header_ref[f"CRDER4"]
             # hdu.header[f"CWERR4"] = header_ref[f"CWERR4"]

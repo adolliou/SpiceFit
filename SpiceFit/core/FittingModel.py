@@ -14,6 +14,8 @@ import importlib.util
 import sys
 import secrets
 from pathlib import Path
+import importlib
+
 
 class FittingModel:
     bound_equation_re = re.compile(
@@ -336,11 +338,11 @@ class FittingModel:
         if f"fitting_jacobian_functions_{filename_yaml}" in sys.modules:
             if directory_path not in sys.path:
                  sys.path.append(directory_path)
-            import fitting_jacobian_functions
+            fitting_jacobian_functions = importlib.import_module(f"fitting_jacobian_functions_{filename_yaml}")
             fitting_jacobian_functions = reload(fitting_jacobian_functions)
         else:
             sys.path.append(directory_path)
-            import fitting_jacobian_functions
+            fitting_jacobian_functions = importlib.import_module(f"fitting_jacobian_functions_{filename_yaml}")
         # spec = importlib.util.spec_from_file_location(location=os.path.join(directory_path, filename),
         #                                               name=filename, )
         # module = importlib.util.module_from_spec(spec)

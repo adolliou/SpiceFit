@@ -2,7 +2,7 @@ from ..FittingModel import FittingModel
 from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
-
+import os
 
 
 def test_init_fit_model():

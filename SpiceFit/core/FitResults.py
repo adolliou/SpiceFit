@@ -1114,6 +1114,7 @@ class FitResults:
         hdu_sigma = fits.ImageHDU()
         data_sigma = self._write_hdu(hdu_sigma, header_ref, path_fits, keys_comp=keys_comp,
                                      results_type="sigma", hdu_wcsdvar=hdu_wcsdvar, ncoeff=ncoeff)
+
         hdu_sigma.data = data_sigma
         hdu_sigma.add_checksum()
 
@@ -1132,20 +1133,22 @@ class FitResults:
 
         hdu_data.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} data', 'Extension name of this window')
         hdu_data.header["FILENAME"] = filename
-        hdu_data.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')
+        hdu_data.header["ORNAME"] = (header_ref["EXTNAME"], 'Original Extension name')
         hdu_data.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu_data.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
         hdu_data.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
+        hdu_data.header['PAREXT'] = (f'{header_ref["EXTNAME"]} parinfo', 'Extension name of data')
+        hdu_data.header['RECEXT'] = (f'{header_ref["EXTNAME"]} reconstruction', 'Extension name of data')
 
         if hdu_wcsdvar is not None:
             hdu_data.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
 
-        hdu_parinfo = fits.TableHDU(name="parinfo")
+        hdu_parinfo = fits.TableHDU(name=f"{header_ref["EXTNAME"]} parinfo")
         dict_str = str(self.fit_template._parinfo)
         arr = np.array([(dict_str)], dtype=[('parinfo', f'S{len(dict_str)}')])
         hdu_parinfo.data = arr
 
-        hdu_fits_results = fits.ImageHDU(name="reconstruction_parameters")
+        hdu_fits_results = fits.ImageHDU(name=f'{header_ref["EXTNAME"]} reconstruction')
 
         # bytes = arr['parinfo'][0]
         # sss = bytes.decode("UTF-8")
@@ -1197,16 +1200,19 @@ class FitResults:
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
 
-    def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="coeffs", hdu_wcsdvar=None):
+    def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="results", hdu_wcsdvar=None):
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
-        hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} results', 'Extension name of this window')
+        hdu.header["ORNAME"] = (header_ref["EXTNAME"], 'Original Extension name')
+        hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} {results_type}', 'Extension name of this window')
         hdu.header["LONGSTRN"] = header_ref["LONGSTRN"]
         hdu.header["FILENAME"] = filename
         hdu.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')
         hdu.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
         hdu.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
+        hdu.header['PAREXT'] = (f'{header_ref["EXTNAME"]} parinfo', 'Extension name of data')
+        hdu.header['RECEXT'] = (f'{header_ref["EXTNAME"]} reconstruction', 'Extension name of data')
         if hdu_wcsdvar is not None:
             hdu.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of data')
 
@@ -1368,9 +1374,9 @@ class FitResults:
             hdu.header[f"CRDER{jj}"] = header_ref[f"CRDER{jj}"]
             hdu.header[f"CWERR{jj}"] = header_ref[f"CWERR{jj}"]
         hdu.header["PC1_1"] = header_ref[f"PC1_1"]
-        hdu.header["PC1_3"] = header_ref[f"PC1_2"]
+        hdu.header["PC1_2"] = header_ref[f"PC1_2"]
         hdu.header["PC2_2"] = header_ref[f"PC2_1"]
-        hdu.header["PC2_3"] = header_ref[f"PC2_2"]
+        hdu.header["PC2_2"] = header_ref[f"PC2_2"]
         if "CUNIT4" in header_ref:
             hdu.header[f"CTYPE3"] = header_ref[f"CTYPE4"]
             hdu.header[f"CUNIT3"] = header_ref[f"CUNIT4"]
@@ -1444,15 +1450,17 @@ class FitResults:
             hdul = hdul
         else:
             raise ValueError("path_to_fits and hdul are both None or set to values. Only one of them must be set.")
+        hdu0 = hdul[0]
+        orname = hdu0.header["ORNAME"]
 
-        hdu_parinfo = hdul["parinfo"]
+        hdu_parinfo = hdul[f"{orname} parinfo"]
         data_par = hdu_parinfo.data
         bytes = data_par['parinfo'][0]
         # sss = bytes.decode("UTF-8")
         parinfo = ast.literal_eval(bytes)
         fit_template = FittingModel(parinfo=parinfo)
 
-        hdu_re = hdul["reconstruction_parameters"]
+        hdu_re = hdul[f"{orname} reconstruction"]
         data_re = hdu_re.data
         header_re = hdu_re.header
         ncoeff = header_re["NCOEFF"]

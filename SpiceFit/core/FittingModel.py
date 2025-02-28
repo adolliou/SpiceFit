@@ -321,7 +321,7 @@ class FittingModel:
         """
         if directory_path is None:
             directory_path = os.path.join(Path(__file__).parents[1], ".fitting_jacobian_functions")
-        filename_yaml = self.filename
+        filename_yaml = os.path.basename(self.filename)
         filename_yaml = filename_yaml.replace(".", "_")
         filename_yaml = filename_yaml.replace("_yaml", "")
         filename = f"fitting_jacobian_functions_{filename_yaml}.py"

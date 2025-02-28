@@ -321,8 +321,10 @@ class FittingModel:
         """
         if directory_path is None:
             directory_path = os.path.join(Path(__file__).parents[1], ".fitting_jacobian_functions")
-
-        filename = "fitting_jacobian_functions.py"
+        filename_yaml = self.filename
+        filename_yaml = filename_yaml.replace(".", "_")
+        filename_yaml = filename_yaml.replace("_yaml", "")
+        filename = f"fitting_jacobian_functions_{filename_yaml}.py"
 
         Path(directory_path).mkdir(exist_ok=True)
         with open(os.path.join(directory_path, filename), "w") as f:
@@ -331,7 +333,7 @@ class FittingModel:
                 f.write("\n\n\n")
                 f.write(self.create_jacobian_function_str())
 
-        if "fitting_jacobian_functions" in sys.modules:
+        if f"fitting_jacobian_functions_{filename_yaml}" in sys.modules:
             if directory_path not in sys.path:
                  sys.path.append(directory_path)
             import fitting_jacobian_functions

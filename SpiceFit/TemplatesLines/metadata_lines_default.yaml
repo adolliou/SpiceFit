@@ -5,3 +5,62 @@ list_lines_spice_metadata:
     central_wave: 770.42
     template_file_name: "ne_8_770_42.1c.template.yaml"
 
+  - window:  'O III 703 / Mg IX 706 (Merged)'
+    window_subfolder: 0
+    template_line: "o_3_703_87_3c.template.yaml"
+    line_str: "o_3_703_87_3c"
+
+  - window:  'N IV 765 - Peak'
+    window_subfolder: 1
+    template_line: "n_4_765_15_2c.template.yaml"
+    line_str: "n_4_765_15_2c"
+
+  - window:  'Ne VIII 770 - Peak'
+    window_subfolder: 2
+    template_line: "ne_8_770_42_1c.template.yaml"
+    line_str: "ne_8_770_42_1c"
+
+  - window:  'C III 977 - Peak'
+    window_subfolder: 3
+    template_line: "c_3_977_96_1c.template.yaml"
+    line_str: "c_3_977_96_1c"
+
+  - window:  'Ly Beta 1025 (Merged)'
+    window_subfolder: 4
+    template_line: "h_1_1025_72_1c.template.yaml"
+    line_str: "h_1_1025_72_1c"
+
+  - window:  'O VI 1032 - Peak'
+    window_subfolder: 4
+    template_line: "o_6_1031_93_1c.template.yaml"
+    line_str: "o_6_1031_93_1c"
+
+  - window:  'O III 703 Peak'
+    window_subfolder: 0
+    template_line: "o_3_703_87_2c.template.yaml"
+    line_str: "o_3_703_87_2c"
+
+  - window:  'N IV 765 - Peak'
+    window_subfolder: 1
+    template_line: "n_4_765_15_2c.template.yaml"
+    line_str: "n_4_765_15_2c"
+
+  - window:  'Ne VIII 770 - Peak'
+    window_subfolder: 2
+    template_line: "ne_8_770_42_1c.template.yaml"
+    line_str: "ne_8_770_42_1c"
+
+  - window:   'C III 977 (Merged)'
+    window_subfolder: 3
+    template_line:  'c_3_977_96_1c.template.yaml'
+    line_str: "c_3_977_96_1c"
+
+  - window: 'Ly Beta 1025 (Merged)'
+    window_subfolder: 4
+    template_line: 'h_1_1025_72_1c.template.yaml'
+    line_str: "h_1_1025_72_1c"
+
+  - window:  'O VI 1032 - Peak'
+    window_subfolder: 5
+    template_line: 'o_6_1031_93_1c.template.yaml'
+    line_str: "o_6_1031_93_1c"

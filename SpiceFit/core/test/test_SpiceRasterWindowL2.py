@@ -4,10 +4,15 @@ from ..SpiceRasterWindow import SpiceRasterWindowL2
 from astropy.io import fits
 import numpy as np
 import unittest
+from ..FitResults import FitResults
+from ..FittingModel import FittingModel
+import os
+from pathlib import Path
+import astropy.units as u
 
 
 @pytest.fixture
-def hdu():
+def hdu1():
     url = (
         "https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/2022/03/17/solo_L2_spice-n-ras"
         "_20220317T002536_V03_100663832-017.fits"
@@ -17,12 +22,29 @@ def hdu():
     yield hdu
     hdu_list.close()
 
+@pytest.fixture
+def hdu2():
+    url = (
+        "https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/2022/03/17/solo_L2_spice-n-ras"
+        "_20220317T002536_V03_100663832-017.fits"
+    )  # noqa: E501
+    hdu_list = fits.open(url)
+    hdu = hdu_list["Ne VIII 770 - Peak"]
+    yield hdu
+    hdu_list.close()
+
+
+
+@pytest.fixture
+def fittemplate():
+    return FittingModel(filename="ne_8_770_42_1c.template.yaml")
+
 
 class TestSpiceRasterWindowL2:
 
-    def test_return_point_pixels(self, hdu):
+    def test_return_point_pixels(self, hdu1):
 
-        s1 = SpiceRasterWindowL2(hdu=hdu)
+        s1 = SpiceRasterWindowL2(hdu=hdu1)
         xx, yy, ll, tt = s1.return_point_pixels()
         assert np.nanmax(xx) == 2
         assert np.nansum(tt) == 0
@@ -45,3 +67,35 @@ class TestSpiceRasterWindowL2:
         data = s1.data[0, 0, :, :]
         assert np.nanmax(xx) == 2
         assert xx.shape == data.shape
+
+    def test_average_spectra_over_region(self, hdu2, fittemplate):
+
+        s1 = SpiceRasterWindowL2(hdu=hdu2)
+
+        x = [[0, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]]
+        y = [[450, 450, 450], [451, 451, 451], [453, 453, 453], [452, 452, 452]]
+        
+        # x, y = np.meshgrid(np.arange(s1.data.shape[3]), np.arange(s1.data.shape[2]))
+        # coords = s1.w_xy.pixel_to_world(x, y)
+        # x, y = s1.w_xy.world_to_pixel(coords)
+        pixels = (x, y)
+        s2 = s1.average_spectra_over_region(pixels=pixels)
+        coords = s1.w_xy.pixel_to_world(x, y)
+        s3 = s1.average_spectra_over_region(coords=coords)
+        
+
+        s = np.nansum(np.abs(s3.data - s2.data)).value
+        assert (s < 1.0E-7)
+        results = FitResults()
+        results.fit_spice_window_standard(spicewindow=s2, parallelism=True, cpu_count=16,fit_template=fittemplate, verbose=False)
+        results.check_spectra(path_to_save_figure= os.path.join(Path(__file__).parents[0],"checks2.pdf"), position = ((0, 0), (0, 0), (0, 0)))
+        
+        
+
+        s4 = s1.average_spectra_over_region(lonlat_lims= [[472 * u.arcsec, 476*u.arcsec], [-47*u.arcsec, -44.5*u.arcsec]], allow_reprojection=True)
+        results.fit_spice_window_standard(spicewindow=s4, parallelism=True, cpu_count=16,fit_template=fittemplate, verbose=False)
+        results.check_spectra(path_to_save_figure= os.path.join(Path(__file__).parents[0],"checks4.pdf"), position = ((0, 0), (0, 0), (0, 0)))
+
+
+        # s3 = s1.average_spectra_over_region(lonlat_lims=[[]], allo)
+

@@ -11,7 +11,7 @@ from .RasterWindow import RasterWindowL2
 import sunpy.map
 import math
 from ..util.common_util import CommonUtil
-
+from ..util.plotting_fits import PlotFits
 
 
 def rss(a: np.array, axis=0):
@@ -21,11 +21,11 @@ def rss(a: np.array, axis=0):
 class SpiceRasterWindowL2(RasterWindowL2):
 
     def __init__(
-        self,
-        hdu: astropy.io.fits.hdu.image.ImageHDU = None,
-        data: np.ndarray = None,
-        header: astropy.io.fits.header.Header = None,
-        remove_dumbbells = True,
+            self,
+            hdu: astropy.io.fits.hdu.image.ImageHDU = None,
+            data: np.ndarray = None,
+            header: astropy.io.fits.header.Header = None,
+            remove_dumbbells=True,
     ) -> None:
         """
 
@@ -70,9 +70,6 @@ class SpiceRasterWindowL2(RasterWindowL2):
         self.w_xy.wcs.pc[2, 0] = 0
         self.w_xy = self.w_xy.dropaxis(2)
         self.w_spec = copy.deepcopy(self.wcs).sub(["spectral"])
-
-
-
 
     def return_wavelength_array(self) -> list:
         lenlambda = self.data.shape[1]
@@ -139,7 +136,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
             allow_reprojection(bool, optional) if set to true, then the spectrum can be reprojected over the given region. 
             The spatial reprojection (the both the data and the sigma) is done for each wavelength step individually.
             If false, the the spectrum is directly taken from the given pixels (or their given coordinates)
-        """        
+        """
         count_arguments = 0
         error_str_lonlatlims = "lonlat_lims has the wrong format. it should be of the form ((240*u.arcsec, 260*u.arcsec,), (-25*u.arcsec, 25*u.arcsec,))"
         error_str_coords = "coords has the wrong format. it should be a astropy.coordintes.SkyCoord object"
@@ -149,11 +146,12 @@ class SpiceRasterWindowL2(RasterWindowL2):
             if arg is not None:
                 count_arguments += 1
         if count_arguments != 1:
-            raise ValueError("average_spectra_over_region only accepts one argument among coords, lonlat_lims or pixels.")
-        
+            raise ValueError(
+                "average_spectra_over_region only accepts one argument among coords, lonlat_lims or pixels.")
+
         if coords is not None:
-            try :
-                if not('Tx' in coords.representation_component_names):
+            try:
+                if not ('Tx' in coords.representation_component_names):
                     raise ValueError("Frame in Skycoord not recognised. Can only use helioprojective frame as of now")
                 lon = coords.Tx
                 lat = coords.Ty
@@ -162,40 +160,35 @@ class SpiceRasterWindowL2(RasterWindowL2):
                 y = y.ravel()
             except:
                 raise ValueError(error_str_coords)
-            
+
         if lonlat_lims is not None:
-            if not(allow_reprojection):
-                raise ValueError("Please allow reprojection if you want to average over a given region in longitude/latitudes limits.")
-            try:
-                if isinstance(lonlat_lims, tuple) & len(lonlat_lims) == 2 & isinstance(lonlat_lims[0], tuple) & \
+            if not (allow_reprojection):
+                raise ValueError(
+                    "Please allow reprojection if you want to average over a given region in longitude/latitudes limits.")
+            if isinstance(lonlat_lims, tuple) & (len(lonlat_lims) == 2) & isinstance(lonlat_lims[0], tuple) & \
                     isinstance(lonlat_lims[0], tuple) & isinstance(lonlat_lims[0][0], u.Quantity):
-                    
-                    coords_tmp = self.w_xy.pixel_to_world(0, 0)
-                    lonlim = lonlat_lims[0]
-                    latlim = lonlat_lims[1]
-                    coord_tmp = self.w_xy.pixel_to_world([0, 1], [0, 1])
-                    ln = coord_tmp.Tx
-                    lt = coord_tmp.Ty
-                    dlon = ln[1, 1] - ln[0, 0]
-                    dlat = lt[1, 1] - lt[0, 0]
-                    dlon = dlon.to(ln.unit).value
-                    dlat = dlat.to(lt.unit).value
-                    lon = np.arange(lonlim[0].to(ln.unit).value, lonlim[1].to(ln.unit).value, dlon)
-                    lat = np.arange(latlim[0].to(lt.unit).value, latlim[1].to(lt.unit).value, dlat)
-                    
 
-                    coords = SkyCoord(lonlim, latlim, frame= coords_tmp.frame)
-                    lon = coords.Tx
-                    lat = coords.Ty
-                    x, y = self.w_xy.world_to_pixel(coords)
-                    x = x.ravel()
-                    y = y.ravel()
+                x, y = self.return_point_pixels(type="xy")
+                coords_tmp = self.w_xy.pixel_to_world(x, y)
+                lon_tmp = coords_tmp.Tx
+                lat_tmp = coords_tmp.Ty
+                lonlim = lonlat_lims[0]
+                latlim = lonlat_lims[1]
+                lon, lat, dlon, dlat = PlotFits.build_regular_grid(lon_tmp, lat_tmp, lonlims=lonlim, latlims=latlim, )
 
-                else:
-                    raise ValueError(error_str_lonlatlims)
-            except:
+                dlon = dlon.to(lon.unit).value
+                dlat = dlat.to(lat.unit).value
+
+                coords = SkyCoord(lon, lat, frame=coords_tmp.frame)
+                lon = coords.Tx
+                lat = coords.Ty
+                x, y = self.w_xy.world_to_pixel(coords)
+                x = x.ravel()
+                y = y.ravel()
+
+            else:
                 raise ValueError(error_str_lonlatlims)
-        
+
         if pixels is not None:
             try:
                 if (len(pixels) == 2) & isinstance(pixels, tuple):
@@ -207,17 +200,17 @@ class SpiceRasterWindowL2(RasterWindowL2):
                     lat = coords.Ty
                 else:
                     ValueError
-            except :
+            except:
                 raise ValueError(error_str_pixels)
-        if not(allow_reprojection):
+        if not (allow_reprojection):
             decx = np.abs(x - np.array(np.round(x), dtype=int))
             decy = np.abs(y - np.array(np.round(y), dtype=int))
 
             if ((decx < 1.0E-10).all()) & ((decy < 1.0E-10).all()):
                 pass
             else:
-                raise ValueError("The pixel position you want to average the spectra are not integers. For now, the interpolation of the spectra is not yet implemented")
-        
+                raise ValueError(
+                    "The pixel position you want to average the spectra are not integers. For now, the interpolation of the spectra is not yet implemented")
 
             x = np.array(np.round(x), dtype=int)
             y = np.array(np.round(y), dtype=int)
@@ -229,14 +222,14 @@ class SpiceRasterWindowL2(RasterWindowL2):
         header_av["CRPIX2"] = 1
         header_av["CRVAL1"] = lon_mid.to(header_av["CUNIT1"]).value
         header_av["CRVAL2"] = lat_mid.to(header_av["CUNIT1"]).value
-        
-        data_av =copy.deepcopy(self.data)
+
+        data_av = copy.deepcopy(self.data)
         if allow_reprojection:
-            assert data_av_rep.shape[0] == 1
-            data_av_rep = np.zeros(data_av.shape[0], data_av.shape[1], len(x))
+            assert data_av.shape[0] == 1
+            data_av = np.zeros((data_av.shape[0], data_av.shape[1], len(x)), dtype=data_av.dtype)
             for l in range(self.data.shape[1]):
-                data_av_rep[0, l, :] = CommonUtil.interpol2d(self.data[0, l, :, :], x=x, y=y, order=1, fill=np.nan,)
-            data_av_rep = np.nanmean(data_av_rep, axis=2)
+                data_av[0, l, :] = CommonUtil.interpol2d(self.data[0, l, :, :], x=x, y=y, order=1, fill=np.nan, )
+            data_av = np.nanmean(data_av, axis=2)
         else:
             data_av = np.nanmean(data_av[:, :, y, x], axis=2)
         data_av = data_av.reshape(data_av.shape[0], data_av.shape[1], 1, 1)
@@ -246,23 +239,24 @@ class SpiceRasterWindowL2(RasterWindowL2):
         if self.uncertainty is None:
             self.compute_uncertainty()
         uncertainty_av = copy.deepcopy(self.uncertainty)
-        
+
         N = len(y)
         for l in ["Signal", "Total"]:
             data_sigma_av = copy.deepcopy(self.uncertainty[l])
             if allow_reprojection:
                 assert data_sigma_av.shape[0] == 1
-                data_sigma_av = np.zeros(self.uncertainty[l].shape[0], self.uncertainty[l].shape[1], len(x))
-                for l in range(self.uncertainty[l].shape[1]):
-                    data_sigma_av[0, l, :] = CommonUtil.interpol2d(self.uncertainty[l][0, l, :, :], x=x, y=y, order=1, fill=np.nan,)
+                data_sigma_av = np.zeros((self.uncertainty[l].shape[0], self.uncertainty[l].shape[1], len(x)),
+                                         dtype=data_sigma_av.dtype)
+                for pp in range(self.uncertainty[l].shape[1]):
+                    data_sigma_av[0, pp, :] = CommonUtil.interpol2d(self.uncertainty[l][0, pp, :, :],
+                                                                    x=x, y=y, order=1, fill=np.nan, )
                 data_sigma_av = (1 / N) * rss(data_sigma_av, axis=2)
             else:
                 data_sigma_av = data_sigma_av[:, :, y, x]
                 data_sigma_av = (1 / N) * rss(data_sigma_av, axis=2)
             data_sigma_av = data_sigma_av.reshape(data_av.shape[0], data_av.shape[1], 1, 1)
-            uncertainty_av[l] = data_sigma_av
- 
+            uncertainty_av[l] = u.Quantity(data_sigma_av, self.uncertainty[l].unit)
+
         results.uncertainty = uncertainty_av
 
         return results
-

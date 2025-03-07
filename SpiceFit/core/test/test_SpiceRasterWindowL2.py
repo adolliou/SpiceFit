@@ -89,11 +89,14 @@ class TestSpiceRasterWindowL2:
         results.check_spectra(path_to_save_figure=os.path.join(Path(__file__).parents[0], "checks2.pdf"),
                               position=((0, 0), (0, 0), (0, 0)))
 
-        s4 = s1.average_spectra_over_region(lonlat_lims=((472 * u.arcsec, 476 * u.arcsec),
+        s4 = s1.average_spectra_over_region(lonlat_lims=((456 * u.arcsec, 463 * u.arcsec),
                                                          (-47 * u.arcsec, -44.5 * u.arcsec)), allow_reprojection=True)
-        results.fit_spice_window_standard(spicewindow=s4, parallelism=False, cpu_count=16,
-                                          fit_template=fittemplate, verbose=False)
-        results.check_spectra(path_to_save_figure=os.path.join(Path(__file__).parents[0],
-                                                               "checks4.pdf"), position=((0, 0), (0, 0), (0, 0)))
+        results2 = FitResults()
 
+        results2.fit_spice_window_standard(spicewindow=s4, parallelism=False, cpu_count=16,
+                                          fit_template=fittemplate, verbose=False)
+        results2.check_spectra(path_to_save_figure=os.path.join(Path(__file__).parents[0],
+                                                               "checks4.pdf"), position=((0, 0), (0, 0), (0, 0)))
+        assert np.abs(results2.components_results["main"]["coeffs"]["I"]["results"].value -
+                      results.components_results["main"]["coeffs"]["I"]["results"].value - 0.05324779000000002)   < 0.001
         # s3 = s1.average_spectra_over_region(lonlat_lims=[[]], allo)

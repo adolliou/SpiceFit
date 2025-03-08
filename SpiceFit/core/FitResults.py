@@ -847,14 +847,25 @@ class FitResults:
         else:
             return fig
 
-    def plot_fitted_map(self, ax, fig, line, param, regular_grid=False):
+    def plot_fitted_map(self, ax, fig, line, param, regular_grid=False,
+                        coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
+                        allow_reprojection: bool = False
+                        ):
         """
 
+        Plot fitted parameters (such as radiance of a given map.)
         :param ax: ax of the image.
         :param fig: figure object
-        :param line: line name
+        :param line: line name. write "main" for the main line of the template.
         :param param: parameter to plot, between radiance,  fwhm, velocity and chi2.
         :param regular_grid:
+
+        The following parameters are used if one want to show a sub fov.
+         Please refer to RasterWindow.average_spectra_over_region for a detailed description of the parameters
+        :param coords:
+        :param pixels:
+        :param lonlat_lims:
+        :param allow_reprojection:
         """
         units = {
             "radiance": Constants.conventional_radiance_units,
@@ -927,6 +938,20 @@ class FitResults:
         ax.set_xlabel("Solar-X")
         ax.set_ylabel("Solar-Y")
         ax.set_title(param)
+
+        if (coords is not None) or (lonlat_lims is not None) or (pixels is not None):
+            (lat_subfov, lon_subfov,
+             x_subfov, y_subfov) = self.spectral_window.extract_subfield_coordinates(coords,lonlat_lims,
+                                                                                    pixels,
+                                                                                    allow_reprojection, )
+            if regular_grid:
+                lon_subfov_arcsec = lon_subfov.to("arcsec").value
+                lat_subfov_arcsec = lat_subfov.to("arcsec").value
+
+                ax.plot(lon_subfov_arcsec, lat_subfov_arcsec, '+', ms=0.7, mew=0.5, c="r")
+
+            else:
+                ax.plot(x_subfov, y_subfov, '+', ms=0.7, mew=0.5, c="r")
 
     def check_spectra(self, path_to_save_figure: str, position="random"):
         """

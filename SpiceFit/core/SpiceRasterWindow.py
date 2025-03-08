@@ -11,7 +11,6 @@ from .RasterWindow import RasterWindowL2
 import sunpy.map
 import math
 from ..util.common_util import CommonUtil
-from ..util.plotting_fits import PlotFits
 
 
 def rss(a: np.array, axis=0):
@@ -138,9 +137,6 @@ class SpiceRasterWindowL2(RasterWindowL2):
             If false, the the spectrum is directly taken from the given pixels (or their given coordinates)
         """
         count_arguments = 0
-        error_str_lonlatlims = "lonlat_lims has the wrong format. it should be of the form ((240*u.arcsec, 260*u.arcsec,), (-25*u.arcsec, 25*u.arcsec,))"
-        error_str_coords = "coords has the wrong format. it should be a astropy.coordintes.SkyCoord object"
-        error_str_pixels = "pixels has the wrong format. it should be a tuple (x, y)"
 
         for arg in [coords, lonlat_lims, pixels]:
             if arg is not None:
@@ -149,60 +145,8 @@ class SpiceRasterWindowL2(RasterWindowL2):
             raise ValueError(
                 "average_spectra_over_region only accepts one argument among coords, lonlat_lims or pixels.")
 
-        if coords is not None:
-            try:
-                if not ('Tx' in coords.representation_component_names):
-                    raise ValueError("Frame in Skycoord not recognised. Can only use helioprojective frame as of now")
-                lon = coords.Tx
-                lat = coords.Ty
-                x, y = self.w_xy.world_to_pixel(coords)
-                x = x.ravel()
-                y = y.ravel()
-            except:
-                raise ValueError(error_str_coords)
-
-        if lonlat_lims is not None:
-            if not (allow_reprojection):
-                raise ValueError(
-                    "Please allow reprojection if you want to average over a given region in longitude/latitudes limits.")
-            if isinstance(lonlat_lims, tuple) & (len(lonlat_lims) == 2) & isinstance(lonlat_lims[0], tuple) & \
-                    isinstance(lonlat_lims[0], tuple) & isinstance(lonlat_lims[0][0], u.Quantity):
-
-                x, y = self.return_point_pixels(type="xy")
-                coords_tmp = self.w_xy.pixel_to_world(x, y)
-                lon_tmp = coords_tmp.Tx
-                lat_tmp = coords_tmp.Ty
-                lonlim = lonlat_lims[0]
-                latlim = lonlat_lims[1]
-                lon, lat, dlon, dlat = PlotFits.build_regular_grid(lon_tmp, lat_tmp, lonlims=lonlim, latlims=latlim, )
-
-                dlon = dlon.to(lon.unit).value
-                dlat = dlat.to(lat.unit).value
-
-                coords = SkyCoord(lon, lat, frame=coords_tmp.frame)
-                lon = coords.Tx
-                lat = coords.Ty
-                x, y = self.w_xy.world_to_pixel(coords)
-                x = x.ravel()
-                y = y.ravel()
-
-            else:
-                raise ValueError(error_str_lonlatlims)
-
-        if pixels is not None:
-            try:
-                if (len(pixels) == 2) & isinstance(pixels, tuple):
-                    x = np.array(pixels[0]).ravel()
-                    y = np.array(pixels[1]).ravel()
-                    assert len(x) == len(y)
-                    coords = self.w_xy.pixel_to_world(x, y)
-                    lon = coords.Tx
-                    lat = coords.Ty
-                else:
-                    ValueError
-            except:
-                raise ValueError(error_str_pixels)
-        if not (allow_reprojection):
+        lat, lon, x, y = self.extract_subfield_coordinates(coords, lonlat_lims, pixels, allow_reprojection, )
+        if not allow_reprojection:
             decx = np.abs(x - np.array(np.round(x), dtype=int))
             decy = np.abs(y - np.array(np.round(y), dtype=int))
 
@@ -210,7 +154,8 @@ class SpiceRasterWindowL2(RasterWindowL2):
                 pass
             else:
                 raise ValueError(
-                    "The pixel position you want to average the spectra are not integers. For now, the interpolation of the spectra is not yet implemented")
+                    "The pixel position you want to average the spectra are not integers. For now, the interpolation "
+                    "of the spectra is not yet implemented")
 
             x = np.array(np.round(x), dtype=int)
             y = np.array(np.round(y), dtype=int)
@@ -260,3 +205,4 @@ class SpiceRasterWindowL2(RasterWindowL2):
         results.uncertainty = uncertainty_av
 
         return results
+

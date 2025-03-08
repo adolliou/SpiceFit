@@ -9,6 +9,8 @@ from pathlib import Path
 from PIL import Image
 # This module contains a number of arithmetical image operations
 from PIL import ImageChops
+from matplotlib import pyplot as plt
+import astropy.units as u
 
 
 def image_pixel_differences(base_image, compare_image):
@@ -33,7 +35,8 @@ def image_pixel_differences(base_image, compare_image):
 @pytest.fixture
 def hdu():
     url = (
-        "https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/2022/03/17/solo_L2_spice-n-ras"
+        "https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/"
+        "2022/03/17/solo_L2_spice-n-ras"
         "_20220317T002536_V03_100663832-017.fits"
     )  # noqa: E501
     hdu_list = fits.open(url)
@@ -89,3 +92,36 @@ class TestFitResults:
         assert(image_pixel_differences(base_image, ref_image))
 
 
+    def test_plot_fitted_map(self, hdu):
+
+        path_fits = os.path.join(Path(__file__).parents[0], "test.fits")
+
+        path_fig = os.path.join(Path(__file__).parents[0], "test_fm_.png")
+        path_fig2 = os.path.join(Path(__file__).parents[0], "test_fm_2.png")
+        path_fig3 = os.path.join(Path(__file__).parents[0], "test_fm_3.png")
+        path_fig4 = os.path.join(Path(__file__).parents[0], "test_fm_4.png")
+
+        f2 = FitResults()
+        f2.from_fits(path_to_fits=path_fits)
+        x = [[0, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]]
+        y = [[450, 450, 450], [451, 451, 451], [453, 453, 453], [452, 452, 452]]
+        pixels = (x, y)
+
+        fig = plt.figure()
+        ax=fig.add_subplot()
+        f2.plot_fitted_map(fig=fig, ax=ax, line="main", param="radiance",
+                           regular_grid=False, pixels=pixels)
+        fig.savefig(path_fig2, dpi=50)
+        base_image = Image.open(path_fig2)
+        ref_image = Image.open(path_fig)
+        assert(image_pixel_differences(base_image, ref_image))
+
+        lonlat_lim = ((456 * u.arcsec, 463 * u.arcsec),(-47 * u.arcsec, -44.5 * u.arcsec))
+        fig = plt.figure()
+        ax=fig.add_subplot()
+        f2.plot_fitted_map(fig=fig, ax=ax, line="main", param="radiance",
+                           regular_grid=False, lonlat_lims=lonlat_lim, allow_reprojection=True)
+        fig.savefig(path_fig4, dpi=50)
+        base_image = Image.open(path_fig3)
+        ref_image = Image.open(path_fig3)
+        assert(image_pixel_differences(base_image, ref_image))

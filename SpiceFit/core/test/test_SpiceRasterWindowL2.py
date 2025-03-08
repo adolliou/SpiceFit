@@ -72,11 +72,11 @@ class TestSpiceRasterWindowL2:
 
         x = [[0, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]]
         y = [[450, 450, 450], [451, 451, 451], [453, 453, 453], [452, 452, 452]]
+        pixels = (x, y)
 
         # x, y = np.meshgrid(np.arange(s1.data.shape[3]), np.arange(s1.data.shape[2]))
         # coords = s1.w_xy.pixel_to_world(x, y)
         # x, y = s1.w_xy.world_to_pixel(coords)
-        pixels = (x, y)
         s2 = s1.average_spectra_over_region(pixels=pixels)
         coords = s1.w_xy.pixel_to_world(x, y)
         s3 = s1.average_spectra_over_region(coords=coords)

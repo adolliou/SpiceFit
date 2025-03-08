@@ -91,7 +91,6 @@ class TestFitResults:
         ref_image = Image.open(path_fig)
         assert(image_pixel_differences(base_image, ref_image))
 
-
     def test_plot_fitted_map(self, hdu):
 
         path_fits = os.path.join(Path(__file__).parents[0], "test.fits")

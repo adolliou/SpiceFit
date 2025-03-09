@@ -1007,7 +1007,8 @@ class FitResults:
                 title = f"{str(xpos[ii]), str(ypos[ii])}, "
                 for param in self.components_results["main"]["coeffs"].keys():
                     if (param != "radiance") and (param != "velocity") and (param != "s"):
-                        title += f"{param} : {self.components_results["main"]["coeffs"][param]["results"].value[0, ypos[ii], xpos[ii]]:.2f}, "
+                        title += f"{param} : {self.components_results['main']['coeffs'][param]['results'].value[0,
+                        ypos[ii], xpos[ii]]:.2f}, "
                 axs[1].set_title(title)
 
                 pdf.savefig(fig)

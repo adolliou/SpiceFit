@@ -1137,12 +1137,12 @@ class FitResults:
         if hdu_wcsdvar is not None:
             hdu_data.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
 
-        hdu_parinfo = fits.TableHDU(name=f"{header_ref["EXTNAME"]} parinfo")
+        hdu_parinfo = fits.TableHDU(name=f"{header_ref['EXTNAME']} parinfo")
         dict_str = str(self.fit_template._parinfo)
         arr = np.array([(dict_str)], dtype=[('parinfo', f'S{len(dict_str)}')])
         hdu_parinfo.data = arr
 
-        hdu_fits_results = fits.ImageHDU(name=f'{header_ref["EXTNAME"]} reconstruction')
+        hdu_fits_results = fits.ImageHDU(name=f'{header_ref['EXTNAME']} reconstruction')
 
         # bytes = arr['parinfo'][0]
         # sss = bytes.decode("UTF-8")
@@ -1184,13 +1184,13 @@ class FitResults:
             hdu_wcs.data = hdu_wcsdvar.data.copy()
             hdu_wcs.header = hdu_wcsdvar.header.copy()
 
-            hdu_wcs.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of this window')
+            hdu_wcs.header["EXTNAME"] = (f'{header_ref['EXTNAME']} WCSDVARR', 'Extension name of this window')
             hdu_wcs.header["FILENAME"] = filename
             hdu_wcs.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')
-            hdu_wcs.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
-            hdu_wcs.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
-            hdu_wcs.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
-            hdu_wcs.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
+            hdu_wcs.header['RESEXT'] = (f'{header_ref['EXTNAME']} results', 'Extension name of results')
+            hdu_wcs.header['UNCEXT'] = (f'{header_ref['EXTNAME']} sigma', 'Extension name of uncertainties')
+            hdu_wcs.header['DATAEXT'] = (f'{header_ref['EXTNAME']} data', 'Extension name of data')
+            hdu_wcs.header['WCSEXT'] = (f'{header_ref['EXTNAME']} WCSDVARR', 'Extension name of WCSDVARR')
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
 
@@ -1198,17 +1198,17 @@ class FitResults:
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
         hdu.header["ORNAME"] = (header_ref["EXTNAME"], 'Original Extension name')
-        hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} {results_type}', 'Extension name of this window')
+        hdu.header["EXTNAME"] = (f'{header_ref['EXTNAME']} {results_type}', 'Extension name of this window')
         hdu.header["LONGSTRN"] = header_ref["LONGSTRN"]
         hdu.header["FILENAME"] = filename
         hdu.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')
-        hdu.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
-        hdu.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
-        hdu.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
-        hdu.header['PAREXT'] = (f'{header_ref["EXTNAME"]} parinfo', 'Extension name of data')
-        hdu.header['RECEXT'] = (f'{header_ref["EXTNAME"]} reconstruction', 'Extension name of data')
+        hdu.header['RESEXT'] = (f'{header_ref['EXTNAME']} results', 'Extension name of results')
+        hdu.header['UNCEXT'] = (f'{header_ref['EXTNAME']} sigma', 'Extension name of uncertainties')
+        hdu.header['DATAEXT'] = (f'{header_ref['EXTNAME']} data', 'Extension name of data')
+        hdu.header['PAREXT'] = (f'{header_ref['EXTNAME']} parinfo', 'Extension name of data')
+        hdu.header['RECEXT'] = (f'{header_ref['EXTNAME']} reconstruction', 'Extension name of data')
         if hdu_wcsdvar is not None:
-            hdu.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of data')
+            hdu.header['WCSEXT'] = (f'{header_ref['EXTNAME']} WCSDVARR', 'Extension name of data')
 
         shape = self.fit_results["coeff"][0, ...].shape
 

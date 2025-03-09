@@ -94,6 +94,7 @@ class FitResults:
         self.spectral_window = None
 
         self.components_results = {}
+        self.main_line = None
 
     def fit_spice_window_standard(self,
                                   spicewindow: SpiceRasterWindowL2,
@@ -107,6 +108,8 @@ class FitResults:
 
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
 
+        :param verbose:
+        :param fit_template: FittingModel object.
         :param spicewindow: SpiceRasterWindowL2 class
         :param parallelism: allow parallelism or not.
         :param cpu_count: cpu counts to use for parallelism.
@@ -608,6 +611,7 @@ class FitResults:
         for line_ in dic.keys():
             if line_ == self.fit_template.parinfo["main_line"]:
                 self.components_results["main"] = self.components_results[line_]
+        self.main_line = self.fit_template.parinfo["main_line"]
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
 
@@ -729,41 +733,6 @@ class FitResults:
         """
         raise NotImplementedError
 
-    # def _prepare_fitting_parameters(self):
-    #     p0 = flatten(self.fit_template.parinfo["fit"]["guess"])
-    #     max_arr = flatten(self.fit_template.parinfo["fit"]["max_arr"])
-    #     min_arr = flatten(self.fit_template.parinfo["fit"]["min_arr"])
-    #     unit = flatten(self.fit_template.parinfo["fit"]["units"])
-    #     trans_a = flatten(self.fit_template.parinfo["fit"]["trans_a"])
-    #     trans_b = flatten(self.fit_template.parinfo["fit"]["trans_b"])
-    #
-    #     self.fit_guess = []
-    #     self.fit_max_arr = []
-    #     self.fit_min_arr = []
-    #     self._unit_coeffs_during_fitting = []
-    #
-    #     # convert into the right units ("W/ (m2 sr nm)" and "nm)
-    #     for jj in range(len(p0)):
-    #         p = u.Quantity(p0[jj], unit[jj]) * trans_a[jj] + u.Quantity(
-    #             trans_b[jj], unit[jj]
-    #         )
-    #         mx = u.Quantity(max_arr[jj], unit[jj]) * trans_a[jj] + u.Quantity(
-    #             trans_b[jj], unit[jj]
-    #         )
-    #         mn = u.Quantity(min_arr[jj], unit[jj]) * trans_a[jj] + u.Quantity(
-    #             trans_b[jj], unit[jj]
-    #         )
-    #
-    #         p = self._transform_to_conventional_unit(p)
-    #         mx = self._transform_to_conventional_unit(mx)
-    #         mn = self._transform_to_conventional_unit(mn)
-    #
-    #         self.fit_guess.append(p.value)
-    #         self.fit_max_arr.append(mx.value)
-    #         self.fit_min_arr.append(mn.value)
-    #         if (p.unit != mx.unit) or (p.unit != mn.unit):
-    #             raise ValueError("Not consistent units among fitting parameters")
-    #         self._unit_coeffs_during_fitting.append(p.unict)
 
     def _flag_pixels_with_not_enough_data(self):
 

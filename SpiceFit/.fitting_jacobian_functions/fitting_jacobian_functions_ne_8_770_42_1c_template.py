@@ -4,6 +4,7 @@ from numba import jit
 
 
 
+@ jit(nopython=True, inline='always', cache=True)
 def fitting_function(x, I0,x0,s0,a0):
 	m = 0
 	sum = np.zeros(len(x), dtype=np.float64)
@@ -18,6 +19,7 @@ def fitting_function(x, I0,x0,s0,a0):
 
 
 
+@ jit(nopython=True, inline='always', cache=True)
 def jacobian_function(x, I0,x0,s0,a0):
 	m = np.zeros((len(x), 4), dtype=np.float64)
 	sum = np.zeros(len(x), dtype=np.float64)

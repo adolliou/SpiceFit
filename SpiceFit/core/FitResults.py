@@ -501,7 +501,6 @@ class FitResults:
 
                 }
 
-
             else:
                 # Not yet impletented the error in the case the parameters are not free
                 dict_const = a["type_constrain"]
@@ -580,8 +579,13 @@ class FitResults:
                 a = self.fit_template.params_all[type_][index_][coeff_]
 
                 I = self.components_results[a["name_component"]]["coeffs"]["I"]["results"]
+                dI = self.components_results[a["name_component"]]["coeffs"]["I"]["sigma"]
+
                 x = self.components_results[a["name_component"]]["coeffs"]["x"]["results"]
+                dx = self.components_results[a["name_component"]]["coeffs"]["x"]["sigma"]
+
                 s = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
+                ds = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
 
                 line = None
                 for line_ in self.fit_template.parinfo["info"]:
@@ -592,13 +596,23 @@ class FitResults:
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 self.components_results[a["name_component"]]["coeffs"]["velocity"] = {
                     "results": (const.c.to("km/s") * (x - lambda_ref) / lambda_ref).to(
-                        Constants.conventional_velocity_units)
+                        Constants.conventional_velocity_units
+                    ),
+                    "sigma": (const.c.to("km/s") * dx / lambda_ref).to(
+                        Constants.conventional_velocity_units
+                    ),
                 }
                 self.components_results[a["name_component"]]["coeffs"]["radiance"] = {
-                    "results": (I * np.sqrt(2 * np.pi * s * s)).to(Constants.conventional_radiance_units)
+                    "results": (I * s * np.sqrt(2 * np.pi)).to(
+                        Constants.conventional_radiance_units
+                    ),
+                    "sigma": (
+                        dI * s * np.sqrt(2 * np.pi) + I * ds * np.sqrt(2 * np.pi)
+                    ).to(Constants.conventional_radiance_units),
                 }
                 self.components_results[a["name_component"]]["coeffs"]["fwhm"] = {
-                    "results": 2.355 * s
+                    "results": (2.355 * s).to(Constants.conventional_lambda_units),
+                    "sigma": (2.355 * ds).to(Constants.conventional_lambda_units),
                 }
                 self.components_results[a["name_component"]]["coeffs"]["velocity"]["results"][flagged_pixels] = np.nan
                 self.components_results[a["name_component"]]["coeffs"]["radiance"]["results"][flagged_pixels] = np.nan
@@ -732,7 +746,6 @@ class FitResults:
         Create a complex function by writing a str, then running this str with the exec method to execute it.
         """
         raise NotImplementedError
-
 
     def _flag_pixels_with_not_enough_data(self):
 

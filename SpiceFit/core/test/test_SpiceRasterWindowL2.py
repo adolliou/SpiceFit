@@ -78,6 +78,11 @@ class TestSpiceRasterWindowL2:
         # coords = s1.w_xy.pixel_to_world(x, y)
         # x, y = s1.w_xy.world_to_pixel(coords)
         s2 = s1.average_spectra_over_region(pixels=pixels)
+        pixels_lims = ((0, 2), (450, 453))
+        s6 = s1.average_spectra_over_region(pixels_lims=pixels_lims)
+        s = np.nansum(np.abs(s2.data - s6.data)).value
+
+        assert (s < 1.0e-7)
         coords = s1.w_xy.pixel_to_world(x, y)
         s3 = s1.average_spectra_over_region(coords=coords)
 
@@ -103,7 +108,5 @@ class TestSpiceRasterWindowL2:
     def test_return_wavelength_array(self, hdu2):
         s1 = SpiceRasterWindowL2(hdu=hdu2)
         lam = s1.return_wavelength_array()
-
-        
 
     # s3 = s1.average_spectra_over_region(lonlat_lims=[[]], allo)

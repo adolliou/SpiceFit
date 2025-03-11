@@ -54,8 +54,14 @@ class RasterWindowL2(ABC):
     def return_fov(self):
         pass
 
-    def extract_subfield_coordinates(self,coords: SkyCoord = None, lonlat_lims: tuple = None,
-                                     pixels: tuple = None, allow_reprojection: bool = False,):
+    def extract_subfield_coordinates(
+        self,
+        coords: SkyCoord = None,
+        lonlat_lims: tuple = None,
+        pixels: tuple = None,
+        pixels_lims: tuple=None, 
+        allow_reprojection: bool = False,
+    ):
         """
             extract coordinates in pixels and in world coordinates of a given subfov.
             called by average_spectra_over_region. Please refer to this function
@@ -74,16 +80,13 @@ class RasterWindowL2(ABC):
         error_str_coords = "coords has the wrong format. it should be a astropy.coordintes.SkyCoord object"
         error_str_pixels = "pixels has the wrong format. it should be a tuple (x, y)"
         if coords is not None:
-            try:
-                if not ('Tx' in coords.representation_component_names):
-                    raise ValueError("Frame in Skycoord not recognised. Can only use helioprojective frame as of now")
-                lon = coords.Tx
-                lat = coords.Ty
-                x, y = self.w_xy.world_to_pixel(coords)
-                x = x.ravel()
-                y = y.ravel()
-            except:
-                raise ValueError(error_str_coords)
+            if not ('Tx' in coords.representation_component_names):
+                raise ValueError("Frame in Skycoord not recognised. Can only use helioprojective frame as of now")
+            lon = coords.Tx
+            lat = coords.Ty
+            x, y = self.w_xy.world_to_pixel(coords)
+            x = x.ravel()
+            y = y.ravel()
         if lonlat_lims is not None:
             if not (allow_reprojection):
                 raise ValueError(
@@ -112,20 +115,24 @@ class RasterWindowL2(ABC):
             else:
                 raise ValueError(error_str_lonlatlims)
         if pixels is not None:
-            try:
-                if (len(pixels) == 2) & isinstance(pixels, tuple):
-                    x = np.array(pixels[0]).ravel()
-                    y = np.array(pixels[1]).ravel()
-                    assert len(x) == len(y)
-                    coords = self.w_xy.pixel_to_world(x, y)
-                    lon = coords.Tx
-                    lat = coords.Ty
-                else:
-                    ValueError
-            except:
-                raise ValueError(error_str_pixels)
+            if (len(pixels) == 2) & isinstance(pixels, tuple):
+                x = np.array(pixels[0]).ravel()
+                y = np.array(pixels[1]).ravel()
+                assert len(x) == len(y)
+                coords = self.w_xy.pixel_to_world(x, y)
+                lon = coords.Tx
+                lat = coords.Ty
+        if pixels_lims is not None:
+            x = np.array(np.arange(pixels_lims[0][0], pixels_lims[0][1] + 1, 1))
+            y = np.array(np.arange(pixels_lims[1][0], pixels_lims[1][1] + 1, 1))
+            x, y = np.meshgrid(x, y)
+            x = x.ravel()
+            y = y.ravel()
+            assert len(x) == len(y)
+            coords = self.w_xy.pixel_to_world(x, y)
+            lon = coords.Tx
+            lat = coords.Ty
         return lat, lon, x, y
-
 
     def average_spectra_over_region(self, coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
                                     allow_reprojection=False):

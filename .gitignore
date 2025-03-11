@@ -160,8 +160,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-core/test/check4.pdf
-core/test/check2.pdf
+core/test/checks4.pdf
+core/test/checks2.pdf
 
 core/test/test_ql_.png
 core/test/test_fm_2.png
@@ -169,8 +169,8 @@ core/test/test_fm_3.png
 core/test/test_fm_4.png
 core/test/test.fits
 
-check4.pdf
-check2.pdf
+checks4.pdf
+checks2.pdf
 
 test_ql_.png
 test_fm_2.png

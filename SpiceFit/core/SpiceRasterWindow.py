@@ -121,31 +121,32 @@ class SpiceRasterWindowL2(RasterWindowL2):
             l = np.meshgrid(np.arange(self.data.shape[1]), indexing="ij")
             return l
 
-    def average_spectra_over_region(self, coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
+    def average_spectra_over_region(self, coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None, pixels_lims:tuple = None,
                                     allow_reprojection=False):
-        """Average the spectra and error over a given spatial region. 
+        """Average the spectra and error over a given spatial region.
         Returns a SpiceRasterWindow object.
 
         Args:
             coords (SkyCoord, optional): skycoord coordinate object where to average the spectra. Defaults to None.
-            lonlat_lims (tuple, optional): limits in longitude and latitude where to average the spectra. 
+            lonlat_lims (tuple, optional): limits in longitude and latitude where to average the spectra.
             Format is ((240*u.arcsec, 260*u.arcsec,), (-25*u.arcsec, 25*u.arcsec,)). Defaults to None.
             pixels (tuple, optional): pixels where to average the spectra. format is (x, y). Defaults to None.
-            seld.data[:, : y, x]. x refers to the longitude. 
-            allow_reprojection(bool, optional) if set to true, then the spectrum can be reprojected over the given region. 
+            seld.data[:, : y, x]. x refers to the longitude.
+            pixels_lims (tuple, optional): limits pixels where to average the spectra. format is ((x0, x1), (y0, y1)). Defaults to None.
+            allow_reprojection(bool, optional) if set to true, then the spectrum can be reprojected over the given region.
             The spatial reprojection (the both the data and the sigma) is done for each wavelength step individually.
             If false, the the spectrum is directly taken from the given pixels (or their given coordinates)
         """
         count_arguments = 0
 
-        for arg in [coords, lonlat_lims, pixels]:
+        for arg in [coords, lonlat_lims, pixels, pixels_lims]:
             if arg is not None:
                 count_arguments += 1
         if count_arguments != 1:
             raise ValueError(
                 "average_spectra_over_region only accepts one argument among coords, lonlat_lims or pixels.")
 
-        lat, lon, x, y = self.extract_subfield_coordinates(coords, lonlat_lims, pixels, allow_reprojection, )
+        lat, lon, x, y = self.extract_subfield_coordinates(coords, lonlat_lims, pixels,pixels_lims, allow_reprojection, )
         if not allow_reprojection:
             decx = np.abs(x - np.array(np.round(x), dtype=int))
             decy = np.abs(y - np.array(np.round(y), dtype=int))
@@ -177,6 +178,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
             data_av = np.nanmean(data_av, axis=2)
         else:
             data_av = np.nanmean(data_av[:, :, y, x], axis=2)
+
         data_av = data_av.reshape(data_av.shape[0], data_av.shape[1], 1, 1)
 
         results = SpiceRasterWindowL2(data=data_av, header=header_av, remove_dumbbells=False)
@@ -184,8 +186,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
         if self.uncertainty is None:
             self.compute_uncertainty()
         uncertainty_av = copy.deepcopy(self.uncertainty)
-
-        N = len(y)
+        N = len(x)
         for l in ["Signal", "Total"]:
             data_sigma_av = copy.deepcopy(self.uncertainty[l])
             if allow_reprojection:
@@ -205,4 +206,3 @@ class SpiceRasterWindowL2(RasterWindowL2):
         results.uncertainty = uncertainty_av
 
         return results
-

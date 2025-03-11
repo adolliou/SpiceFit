@@ -167,6 +167,7 @@ core/test/test_ql_.png
 core/test/test_fm_2.png
 core/test/test_fm_3.png
 core/test/test_fm_4.png
+core/test/test.fits
 
 check4.pdf
 check2.pdf
@@ -175,3 +176,4 @@ test_ql_.png
 test_fm_2.png
 test_fm_3.png
 test_fm_4.png
+test.fits

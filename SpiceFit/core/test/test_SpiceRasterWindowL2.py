@@ -99,4 +99,11 @@ class TestSpiceRasterWindowL2:
                                                                "checks4.pdf"), position=((0, 0), (0, 0), (0, 0)))
         assert np.abs(results2.components_results["main"]["coeffs"]["I"]["results"].value -
                       results.components_results["main"]["coeffs"]["I"]["results"].value - 0.05324779000000002)   < 0.001
-        # s3 = s1.average_spectra_over_region(lonlat_lims=[[]], allo)
+
+    def test_return_wavelength_array(self, hdu2):
+        s1 = SpiceRasterWindowL2(hdu=hdu2)
+        lam = s1.return_wavelength_array()
+
+        
+
+    # s3 = s1.average_spectra_over_region(lonlat_lims=[[]], allo)

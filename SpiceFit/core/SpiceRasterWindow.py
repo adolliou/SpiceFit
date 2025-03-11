@@ -73,7 +73,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
     def return_wavelength_array(self) -> list:
         lenlambda = self.data.shape[1]
         z = np.arange(lenlambda)
-        lamb = self.w_spec.world_to_pixel(z)
+        lamb = self.w_spec.pixel_to_world(z)
         return lamb
 
     def return_wavelength_interval(self) -> list:

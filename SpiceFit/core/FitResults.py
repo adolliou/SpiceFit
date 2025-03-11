@@ -585,7 +585,7 @@ class FitResults:
                 dx = self.components_results[a["name_component"]]["coeffs"]["x"]["sigma"]
 
                 s = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
-                ds = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
+                ds = self.components_results[a["name_component"]]["coeffs"]["s"]["sigma"]
 
                 line = None
                 for line_ in self.fit_template.parinfo["info"]:

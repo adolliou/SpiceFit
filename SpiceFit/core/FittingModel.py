@@ -36,7 +36,7 @@ class FittingModel:
 
     # Template used to compute fitting and Jacobian functions
 
-    def __init__(self, filename: str = None, parinfo: dict = None, verbose: int = 1,
+    def __init__(self, filename: str = None, parinfo: dict = None, verbose: int = 0,
                  use_jit: bool = False, cache: bool = True) -> None:
         """
 

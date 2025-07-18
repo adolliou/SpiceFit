@@ -177,7 +177,15 @@ class SpiceRasterWindowL2(RasterWindowL2):
         header_av["CRVAL2"] = lat_mid.to(header_av["CUNIT2"]).value
 
         header_av["CRPIX4"] = 1
+        times = (self.return_time_list_slits() - header_av["DATEREF"]).to(header_av["CUNIT4"]).value
+        x_unique = np.unique(x)
+        xmid = x_unique.mean()
+        xbasis = np.arange(len(times))
+        time_av = np.interp(x=xmid, xp=xbasis, yp=times)
+        header_av["CRVAL4"] = time_av
+
         dt = (self.return_time_list_slits().mean() - Time(header_av["DATEREF"]))
+
         header_av["CRVAL4"] = dt.to(header_av["CUNIT4"]).value
 
         data_av = copy.deepcopy(self.data)

@@ -8,4 +8,4 @@ The code is currently under development. If you encounter problems, or want to a
 
 Antoine Dolliou (dolliou@mps.mpg.de)
 
-Credit : Slimane Mzergat [saffron-spice](https://github.com/slimguat/saffron-spice) for concepts to fit the lines.
+Credit : Slimane Mzergat [saffron-spice](https://github.com/slimguat/saffron-spice) for development concepts.

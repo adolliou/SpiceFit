@@ -438,7 +438,7 @@ class FittingModel:
         unique_index = 0
         for ii, type_function in enumerate(type_list):
             if type_function not in params_all.keys():
-                params_all[type] = []
+                params_all[type_function] = []
 
             if type_function == "gaussian":
                 params_all[type_function].append({})

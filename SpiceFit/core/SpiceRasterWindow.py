@@ -184,10 +184,6 @@ class SpiceRasterWindowL2(RasterWindowL2):
         time_av = np.interp(x=xmid, xp=xbasis, yp=times)
         header_av["CRVAL4"] = time_av
 
-        dt = (self.return_time_list_slits().mean() - Time(header_av["DATEREF"]))
-
-        header_av["CRVAL4"] = dt.to(header_av["CUNIT4"]).value
-
         data_av = copy.deepcopy(self.data)
         if allow_reprojection:
             assert data_av.shape[0] == 1

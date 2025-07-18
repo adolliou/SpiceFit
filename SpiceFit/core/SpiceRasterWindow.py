@@ -123,6 +123,12 @@ class SpiceRasterWindowL2(RasterWindowL2):
             return l
 
     def return_time_list_slits(self):
+        """
+        returns a list of astropy.Time object for the times of all slit exposures. Is valid for a raster
+        only, not for a sit-n-stare position. The length of the list is the number of slit exposures
+        Returns:
+            list: times_list
+        """        
         x, y, l, t = self.return_point_pixels()
         coords, lamb, times = self.wcs.pixel_to_world(x, y, l, t)
         times_list = times[0, 0, 0, :]

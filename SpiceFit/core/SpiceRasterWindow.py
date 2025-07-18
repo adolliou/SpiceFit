@@ -187,7 +187,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
         x_unique = np.unique(x)
         xmid = x_unique.mean()
         xbasis = np.arange(len(times))
-        time_av = np.interp(x=xmid, xp=xbasis, yp=times)
+        time_av = np.interp(x=xmid, xp=xbasis, fp=times)
         header_av["CRVAL4"] = time_av
 
         data_av = copy.deepcopy(self.data)

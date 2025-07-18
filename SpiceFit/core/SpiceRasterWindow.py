@@ -11,6 +11,7 @@ from .RasterWindow import RasterWindowL2
 import sunpy.map
 import math
 from ..util.common_util import CommonUtil
+from astropy.time import Time
 
 
 def rss(a: np.array, axis=0):
@@ -121,6 +122,12 @@ class SpiceRasterWindowL2(RasterWindowL2):
             l = np.meshgrid(np.arange(self.data.shape[1]), indexing="ij")
             return l
 
+    def return_time_list_slits(self):
+        x, y, l, t = self.return_point_pixels()
+        coords, lamb, times = self.wcs.pixel_to_world(x, y, l, t)
+        times_list = times[0, 0, 0, :]
+        return times_list
+
     def average_spectra_over_region(self, coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None, pixels_lims:tuple = None,
                                     allow_reprojection=False):
         """Average the spectra and error over a given spatial region.
@@ -167,7 +174,19 @@ class SpiceRasterWindowL2(RasterWindowL2):
         header_av["CRPIX1"] = 1
         header_av["CRPIX2"] = 1
         header_av["CRVAL1"] = lon_mid.to(header_av["CUNIT1"]).value
-        header_av["CRVAL2"] = lat_mid.to(header_av["CUNIT1"]).value
+        header_av["CRVAL2"] = lat_mid.to(header_av["CUNIT2"]).value
+
+        header_av["CRPIX4"] = 1
+        times = (self.return_time_list_slits() - header_av["DATEREF"]).to(header_av["CUNIT4"]).value
+        x_unique = np.unique(x)
+        xmid = x_unique.mean()
+        xbasis = np.arange(len(times))
+        time_av = np.interp(x=xmid, xp=xbasis, yp=times)
+        header_av["CRVAL4"] = time_av
+
+        dt = (self.return_time_list_slits().mean() - Time(header_av["DATEREF"]))
+
+        header_av["CRVAL4"] = dt.to(header_av["CUNIT4"]).value
 
         data_av = copy.deepcopy(self.data)
         if allow_reprojection:

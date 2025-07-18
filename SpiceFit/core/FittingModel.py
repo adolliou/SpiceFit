@@ -64,7 +64,7 @@ class FittingModel:
 
         if (filename is not None) & (parinfo is None):
             if isinstance(filename, str):
-                
+
                 if os.path.isfile(filename):
                     self.filename = filename
                 else:
@@ -117,11 +117,14 @@ class FittingModel:
     def params_free(self):
         """
         getter of the free_params dictionary, containing all the informations about the free parameters of the function.
+        The free parameters are defined as the ones that do not directly depend on another parameter. The 
+        other parametesr (not free) are called "locked". 
+
         format : self.free_params["gaussian"][0]["I"/"x"/"s"]["notation"/"guess"/"bounds"/"unit/"type_constrain"]
         "notation" (str) : how the coefficient appears in the fitting and jacobian functions, must be unique ("I1")
         "guess" : (float64) guess value in "unit"
         "bounds" : (tuple[float64, float64]) bounds tuple value in "unit"
-        "unit" : must be consistent with
+        "unit" : must be consistent with guess and bounds.
 
         :return:
         # """
@@ -134,6 +137,9 @@ class FittingModel:
     def params_free(self, params_free: dict):
         """
         Setter of the free params dictionary, containing all the informations about the free parameters of the function.
+        They are defined as the parameters taken as input for the fitting function in curve_fit.
+        The fitting function python code itself will include the locked parameters directly written in the python code (i.e. I1 = 0.1 * I_0)
+        and therefore do not appear as input of the fitting function. 
         Must change the self._all_params dictionnary for the contrained coefficients, according to their constraints.
         :param params_free:
         """
@@ -144,6 +150,9 @@ class FittingModel:
     @property
     def params_all(self):
         """
+        Dictionnary containing the information about all the parameters, free and locked.
+        
+
         self.params_all getter.
         """
         return self._params_all
@@ -242,7 +251,6 @@ class FittingModel:
                 self._params_free["trans_a"].append(self.params_all[type_][idx_][coeff_]["trans_a"], )
                 self._params_free["trans_b"].append(self.params_all[type_][idx_][coeff_]["trans_b"], )
 
-
         self._params_free["guess"] = np.array(self._params_free["guess"], dtype=np.float64)
         self._params_free["bounds"] = tuple(self._params_free["bounds"])
 
@@ -311,9 +319,9 @@ class FittingModel:
 
     # def generate_callable_fitting_jacobian_function_exec(self):
 
-        # exec(self.create_fitting_function_str())
-        # self.fitting_function = fitting_function
-        # self.jacobian_function = jacobian_function
+    # exec(self.create_fitting_function_str())
+    # self.fitting_function = fitting_function
+    # self.jacobian_function = jacobian_function
 
     def generate_callable_fitting_jacobian_function_from_module(self, directory_path: str = None, ):
         """
@@ -337,7 +345,7 @@ class FittingModel:
 
         if f"fitting_jacobian_functions_{filename_yaml}" in sys.modules:
             if directory_path not in sys.path:
-                 sys.path.append(directory_path)
+                sys.path.append(directory_path)
             fitting_jacobian_functions = importlib.import_module(f"fitting_jacobian_functions_{filename_yaml}")
             fitting_jacobian_functions = reload(fitting_jacobian_functions)
         else:
@@ -428,13 +436,13 @@ class FittingModel:
         index_gaussian = 0
         index_polynomial = 0
         unique_index = 0
-        for ii, type in enumerate(type_list):
-            if type not in params_all.keys():
+        for ii, type_function in enumerate(type_list):
+            if type_function not in params_all.keys():
                 params_all[type] = []
 
-            if type == "gaussian":
-                params_all[type].append({})
-                params_all[type][-1] = {
+            if type_function == "gaussian":
+                params_all[type_function].append({})
+                params_all[type_function][-1] = {
                     "I": {},
                     "x": {},
                     "s": {},
@@ -454,17 +462,17 @@ class FittingModel:
                 index = copy.deepcopy(index_gaussian)
                 index_gaussian = index_gaussian + 1
 
-            elif type == "polynomial":
+            elif type_function == "polynomial":
 
                 ncomp = n_components_list[ii]
                 if ncomp > 10:
                     raise ValueError("Polynom power too large above 10")
 
-                params_all[type].append({})
+                params_all[type_function].append({})
 
                 coeffs = list(string.ascii_lowercase)[:ncomp]
-                for n in coeffs:
-                    params_all[type][-1][n] = {}
+                for coeff in coeffs:
+                    params_all[type_function][-1][coeff] = {}
                 indexes_in_yaml = range(ncomp)
 
                 index = copy.deepcopy(index_polynomial)
@@ -489,7 +497,7 @@ class FittingModel:
 
                 notation = f'{str(coeff)}{index:d}'
 
-                params_all[type][-1][coeff] = {
+                params_all[type_function][-1][coeff] = {
                     "guess": guess.value,
                     "bounds": bounds,
                     "unit": str(guess.unit),
@@ -537,7 +545,12 @@ class FittingModel:
 
     def gen_mapping_params(self, additional_value: str = None):
         """
-        can generate a mapping for all the coefficients
+        can generate a mapping for all the coefficients, over :
+        - type_list : the function type (e.g. Gaussian, Polynomial)
+        - index_list: the index of the function (Gaussian1, Gaussian2) etc. For multiple line fitting.
+        - coeff_list: the coefficient for each function
+
+        one can then iterate over the zip of all parameters to reach all coefficients of each function.
         :param args: (str) additionnal keys of the coefficient dictionnary to return
         :return:
         """

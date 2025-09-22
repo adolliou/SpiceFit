@@ -63,6 +63,8 @@ class SpiceRasterWindowL2(RasterWindowL2):
         self.uncertainty = None
         self.uncertainty_average = None
 
+        self.window_name = self.header["EXTNAME"]
+
         # Building the different wcs depending on the axes
         self.wcs = WCS(self.header)
         self.w_xyt = copy.deepcopy(self.wcs).dropaxis(2)

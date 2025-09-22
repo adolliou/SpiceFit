@@ -3,7 +3,7 @@ import string
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.visualization import ImageNormalize, LogStretch
-
+from ..linefit_modules.skew_parameter_search import search_spice_window
 from .FittingModel import FittingModel
 from .SpiceRasterWindow import SpiceRasterWindowL2
 from ..util.shared_memory import gen_shmm
@@ -132,6 +132,63 @@ class FitResults:
         uncertainty_cube = spicewindow.uncertainty["Total"]
         xx, yy, ll, tt = spicewindow.return_point_pixels()
         coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+
+        self.fit_window_standard_3d(
+            data_cube=data_cube,
+            uncertainty_cube=uncertainty_cube,
+            lambda_cube=lambda_cube,
+            parallelism=parallelism,
+            cpu_count=cpu_count,
+            min_data_points=min_data_points,
+            chi2_limit=chi2_limit,
+        )
+
+        self.spectral_window = spicewindow
+
+    def fit_spice_window_skew(
+        self,
+        spicewindow: SpiceRasterWindowL2,
+        fit_template: FittingModel,
+        parallelism: bool = True,
+        cpu_count: int = None,
+        min_data_points: int = 5,
+        chi2_limit: float = 20.0,
+        verbose=0,
+    ):
+        """
+
+        Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance. This method skew and deskew 
+        the spectra following the Joe plowman method.
+
+        :param verbose:
+        :param fit_template: FittingModel object.
+        :param spicewindow: SpiceRasterWindowL2 class
+        :param parallelism: allow parallelism or not.
+        :param cpu_count: cpu counts to use for parallelism.
+        :param min_data_points: minimum data points for each pixel with for the fitting.
+        :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
+        :param display_progress_bar: display the progress bar
+        """
+        self.verbose = verbose
+        self.fit_template = fit_template
+        self.fit_results = {
+            "coeff": [],  # (N, time, Y , X)
+            "chi2": [],  # (time, Y , X)
+            "flagged_pixels": [],  # (time, Y , X)
+            "name": self.fit_template.params_free["notation"],
+        }
+        if spicewindow.uncertainty is None:
+            spicewindow.compute_uncertainty()
+
+        data_cube = spicewindow.data
+        uncertainty_cube = spicewindow.uncertainty["Total"]
+        xx, yy, ll, tt = spicewindow.return_point_pixels()
+        coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+
+        cpu_count_j = cpu_count
+        if cpu_count is None:
+            cpu_count_j = 8
+        shift_vars = search_spice_window(spicewindow.data[0], spicewindow.header, spicewindow.window_name, nthreads=cpu_count_j)
 
         self.fit_window_standard_3d(
             data_cube=data_cube,

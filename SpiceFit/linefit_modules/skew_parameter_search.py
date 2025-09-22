@@ -13,6 +13,8 @@ from .linefit_leastsquares import lsq_fitter, check_for_waves
 from .util import get_mask_errs, get_spice_err, get_spice_data_yrange, make_yrange_check_plot
 from .linefit_storage import linefits
 from astropy.io import fits
+from pathlib import Path
+
 
 def simple_lls(dat, err, funcs_in): # Simple LLS fit of funcs with linear coeffs to data
 	nf = len(funcs_in)
@@ -130,6 +132,9 @@ class shift_holder(object):
 		self.save_file = kwargs.get('save_file','shift_vars_'+self.hdr['filename']+self.hdr['EXTNAME']+self.fitter_name+'.csv')
 		self.save_file = self.save_file.replace('/','_')
 		save_path = os.path.join(self.save_dir,self.save_file)
+		
+		a = np.array([1])
+		np.save(os.path.join(self.save_dir, "a.npy"), a)
 		self.discretization = kwargs.get('discretization',1000)
 		self.valdict = {}
 		if(kwargs.get('noload') is None and os.path.exists(save_path)): self.load()
@@ -235,9 +240,10 @@ def refine_points(shift_vars, xgrange, ygrange, ngx, ngy, npts_refine, min_input
 # yrange_plots: diagnostic plots to see if the y range of the observation window is correctly selected
 # figs: Contains the final plot showing goodness of fit as function of x and y shift
 def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5, n0=5, n1=11, n2=31, 
-			n_refine=20, save_dir='../spice_shift_vars/', linelist=None, 
+			n_refine=20, save_dir=None, linelist=None, 
 			fitter=lsq_fitter, nthreads=8):
-
+	if save_dir is None:
+		save_dir = os.path.join(Path(__file__).parents[0], 'tmp/')
 	yrange_plot_dir = os.path.join(save_dir,'yrange_plots')
 	shift_save_dir = os.path.join(save_dir,'save')
 	shift_plot_dir = os.path.join(save_dir,'figs')

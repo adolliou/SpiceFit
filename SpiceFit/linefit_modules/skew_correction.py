@@ -8,6 +8,8 @@ from scipy.interpolate import RegularGridInterpolator, LinearNDInterpolator as l
 from .linefit_leastsquares import lsq_fitter, check_for_waves
 from .util import get_mask_errs, get_spice_err, get_spice_data_yrange, make_yrange_check_plot
 from .linefit_storage import linefits
+from sospice.calibrate import spice_error
+from matplotlib import pyplot as plt
 
 default_bin_fac = [3,3] # How much to bin up when interpolating. Large values result in slightly higher quality but take longer.
 
@@ -17,12 +19,12 @@ def bindown2(d,f):
     n = np.round(np.array(d.shape)/f).astype(np.int32)
     inds = np.ravel_multi_index(np.floor((np.indices(d.shape).T*n/np.array(d.shape))).T.astype(np.uint32),n)
     return np.bincount(inds.flatten(),weights=d.flatten(),minlength=np.prod(n)).reshape(n)
-    
+
 def binup(d,f):
     n = np.round(np.array(d.shape)*np.round(f)).astype(np.int32)
     inds = np.ravel_multi_index(np.floor((np.indices(n).T/np.array(f))).T.astype(np.uint32),d.shape)
     return np.reshape(d.flatten()[inds],n)
-  
+
 # Names and wavelengths of the standard lines to search:
 default_linelist = {'Ar VIII+S III 700':700.3, 'O III 703':702.9, 'O III 704':703.9, 'Mg IX 706':706.0,
 			'O II 718':718.5, 'S IV 745':744.9, 'S IV 748':748.4, 'S IV 750':750.2,
@@ -35,13 +37,13 @@ default_linelist = {'Ar VIII+S III 700':700.3, 'O III 703':702.9, 'O III 704':70
 
 # This code applies a 'skew' correction in order to remove x-y-lambda PSF artifacts seen
 # in SPICE data. These artifacts make features appear to shift across the solar surface
-# if a image sequence scanning through wavelength is plotted.  When spectral lines are 
+# if a image sequence scanning through wavelength is plotted.  When spectral lines are
 # fitted to affected data, the result is that apparent blue and red doppler shift features
 # appear at the borders of bright regions in the data, when none are present.
 # This compromises the scientific utility of SPICE Dopplers, and a reverse shift is therefore
 # applied to the data to counteract it. However, the artifact is not truly a shift but is
 # instead a rotation of an elliptical PSF in x, y and lambda. Using the reverse shift/skew
-# as a correction for this PSF removes the blue and red doppler shift features. However, it 
+# as a correction for this PSF removes the blue and red doppler shift features. However, it
 # also ends up moving features in x and y, so a further distortion removing step to be applied
 # after fitting. This is done by the routines deskew_doppler and deskew_fits below.
 # Inputs to skew_correct:
@@ -139,48 +141,59 @@ def deskew_linefit_window(win_in, xlshift, ylshift, skew_bin_facs=default_bin_fa
 # do line fits, deskew them, and return both results:
 def full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
 
-	skew_bin_facs = kwargs.get('skew_bin_facs',[3,3]); spice_sdev_guess=kwargs.get('spice_sdev_guess',0.1)
-	fitter = kwargs.get('fitter',lsq_fitter); lcen = kwargs.get('lcen')
-	spice_dx, spice_dy, spice_dl = spice_hdr['CDELT1'],spice_hdr['CDELT2'],10*spice_hdr['CDELT3']
-	spice_wl0 = 10*spice_hdr['CRVAL3']-spice_dl*spice_hdr['CRPIX3']
-	spice_la = spice_wl0+spice_dl*np.arange(spice_dat.shape[2],dtype=np.float64)
-	# Offseting the interpolated points is important. Otherwise there will be ridges
-	# in the variance at xlshift=0 and ylshift=0 because that results in some points
-	# with no interpolation which in turn have less interpolation smoothing and there
-	# for higher variance. 
-	offsets = kwargs.get('offsets',[[0.0,0.0]])
-	if(lcen is None): lcen = np.mean(spice_la)
+    skew_bin_facs = kwargs.get('skew_bin_facs',[3,3]); spice_sdev_guess=kwargs.get('spice_sdev_guess',0.1)
+    fitter = kwargs.get('fitter',lsq_fitter); lcen = kwargs.get('lcen')
+    spice_dx, spice_dy, spice_dl = spice_hdr['CDELT1'],spice_hdr['CDELT2'],10*spice_hdr['CDELT3']
+    spice_wl0 = 10*spice_hdr['CRVAL3']-spice_dl*spice_hdr['CRPIX3']
+    spice_la = spice_wl0+spice_dl*np.arange(spice_dat.shape[2],dtype=np.float64)
+    # Offseting the interpolated points is important. Otherwise there will be ridges
+    # in the variance at xlshift=0 and ylshift=0 because that results in some points
+    # with no interpolation which in turn have less interpolation smoothing and there
+    # for higher variance.
+    offsets = kwargs.get('offsets',[[0.0,0.0]])
+    if(lcen is None): lcen = np.mean(spice_la)
 
-	# Apply the skew correction with the specified x shift and yshift
-	spicedat_skew = skew_correct(spice_dat, spice_hdr, xlshift, ylshift, lambdas=spice_la,
-								 lcen=lcen, skew_bin_facs=skew_bin_facs, offsets=offsets)
-	spiceerr_skew = get_spice_err(spicedat_skew, spice_hdr, verbose=False)
-	spice_skew_fit_mask, spice_skew_fit_err = get_mask_errs(spicedat_skew, 0.2, error_cube=spiceerr_skew)
+    # Apply the skew correction with the specified x shift and yshift
+    spicedat_skew = skew_correct(spice_dat, spice_hdr, xlshift, ylshift, lambdas=spice_la,
+									lcen=lcen, skew_bin_facs=skew_bin_facs, offsets=offsets)
+    av_constant_noise_level, sigma = spice_error(
+				data=spicedat_skew, header=spice_hdr, verbose=False
+			)
+    spiceerr_skew = sigma["Total"].to(spice_hdr["BUNIT"]).value
+    # spiceerr_skew = get_spice_err(spicedat_skew, spice_hdr, verbose=False)
 
-	# Find the main range of the the spice data in y and mask out any missing data:
-	ymin, ymax, band1_ymin, band1_ymax, band2_ymin, band2_ymax, signal_windowed, signal_cube = get_spice_data_yrange(spicedat_skew)
-	spice_skew_fit_mask[:,0:ymin,:] = 1; spice_skew_fit_mask[:,ymax:,:] = 1
-	centers, lines = check_for_waves(spice_la, kwargs.get('linelist',None))
-	nlines = len(centers)
-	ndof = np.sum(np.logical_not(spice_skew_fit_mask),axis=2) - (3*nlines+1)
-	# Make a plot of the good range of the data:
-	if(kwargs.get('do_yrange_check',False)):
-		make_yrange_check_plot(spice_dat, ndof>0, spice_hdr, ymin, ymax, band1_ymin, band1_ymax, band2_ymin,
-							band2_ymax, signal_windowed, signal_cube, plot_dir=kwargs.get('yrange_plot_dir'))
-	
-	# Fit the spectral lines in the data:
-	fit_results = list(fitter(spicedat_skew, spiceerr_skew, spice_la, spice_skew_fit_mask, 
-						 spice_sdev_guess, linelist=kwargs.get('linelist',None), cenbound_fac=0.0, nthreads=kwargs.get('nthreads'), verbose=False))
-	fit_results.append(spice_hdr)
-	window_skewed = linefits([fit_results])
+    # fig = plt.figure()
+    # ax = fig.add_subplot()
+    # im = ax.imshow(np.nansum(spicedat_skew, axis=2), aspect="auto", interpolation="none")
+    # fig.colorbar(im, ax=ax)
+    # fig.savefig("fig1.pdf")
 
-	if(kwargs.get('do_deskew',True)):
-		window_out = linefits()
-		for key in window_skewed: 
-			window_out[key] = deskew_linefit_window(window_skewed[key], xlshift, ylshift,
+    spice_skew_fit_mask, spice_skew_fit_err = get_mask_errs( spicedat_skew, 0.2, error_cube=spiceerr_skew)
+
+    # Find the main range of the the spice data in y and mask out any missing data:
+    ymin, ymax, band1_ymin, band1_ymax, band2_ymin, band2_ymax, signal_windowed, signal_cube = get_spice_data_yrange(spicedat_skew)
+    spice_skew_fit_mask[:,0:ymin,:] = 1; spice_skew_fit_mask[:,ymax:,:] = 1
+    centers, lines = check_for_waves(spice_la, kwargs.get('linelist',None))
+    nlines = len(centers)
+    ndof = np.sum(np.logical_not(spice_skew_fit_mask),axis=2) - (3*nlines+1)
+    # Make a plot of the good range of the data:
+    # if(kwargs.get('do_yrange_check',False)):
+    # 	make_yrange_check_plot(spice_dat, ndof>0, spice_hdr, ymin, ymax, band1_ymin, band1_ymax, band2_ymin,
+    # 						band2_ymax, signal_windowed, signal_cube, plot_dir=kwargs.get('yrange_plot_dir'))
+
+    # Fit the spectral lines in the data:
+    fit_results = list(fitter(spicedat_skew, spiceerr_skew, spice_la, spice_skew_fit_mask, 
+							spice_sdev_guess, linelist=kwargs.get('linelist',None), cenbound_fac=0.0, nthreads=kwargs.get('nthreads'), verbose=False))
+    fit_results.append(spice_hdr)
+    window_skewed = linefits([fit_results])
+
+    if(kwargs.get('do_deskew',True)):
+        window_out = linefits()
+        for key in window_skewed: 
+            window_out[key] = deskew_linefit_window(window_skewed[key], xlshift, ylshift,
 													skew_bin_facs=skew_bin_facs, lcen=np.mean(spice_la))
-	else:
-		window_out = window_skewed
-	return {'dat_skew':spicedat_skew, 'err_skew':spiceerr_skew, 'linefits':window_out, 'xlshift':xlshift,
+    else:
+        window_out = window_skewed
+    return {'dat_skew':spicedat_skew, 'err_skew':spiceerr_skew, 'linefits':window_out, 'xlshift':xlshift,
 			'ylshift':ylshift, 'kwargs':kwargs,	'hdr':spice_hdr, 'centers':centers, 'lines':lines, 
 			'mask':spice_skew_fit_mask, 'waves':spice_la, 'offsets':offsets, 'ymin':ymin, 'ymax':ymax}

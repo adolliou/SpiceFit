@@ -4,6 +4,7 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.visualization import ImageNormalize, LogStretch
 from ..linefit_modules.skew_parameter_search import search_spice_window
+from ..linefit_modules.skew_correction import full_correction
 from .FittingModel import FittingModel
 from .SpiceRasterWindow import SpiceRasterWindowL2
 from ..util.shared_memory import gen_shmm
@@ -158,8 +159,8 @@ class FitResults:
         """
 
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance. This method skew and deskew 
-        the spectra following the Joe plowman method.
-
+        the spectra following the Joe plowman method.  	
+        https://doi.org/10.48550/arXiv.2508.09121
         :param verbose:
         :param fit_template: FittingModel object.
         :param spicewindow: SpiceRasterWindowL2 class
@@ -189,6 +190,25 @@ class FitResults:
         if cpu_count is None:
             cpu_count_j = 8
         shift_vars = search_spice_window(spicewindow.data[0], spicewindow.header, spicewindow.window_name, nthreads=cpu_count_j)
+        best_xshift, best_yshift = shift_vars.best_shifts()
+        # best_xshift = 4.
+        # best_yshift = 5.
+        dat = (spicewindow.data[0].T).to(spicewindow.header["BUNIT"]).value
+        best_correction_results = full_correction(dat, spicewindow.header, best_xshift, best_yshift, nthreads=cpu_count_j)
+
+        data_cube_skew = best_correction_results["dat_skew"]
+        data_cube_skew = data_cube_skew.T
+        data_cube_skew = np.reshape(
+            data_cube_skew, (1, data_cube_skew.shape[0], data_cube_skew.shape[1], data_cube_skew.shape[2])
+        )
+        data_cube_skew = u.Quantity(data_cube_skew, spicewindow.header["BUNIT"])
+
+        uncertainty_cube_skew = best_correction_results["err_skew"]
+        uncertainty_cube_skew = uncertainty_cube_skew.T
+        uncertainty_cube_skew = np.reshape(
+            uncertainty_cube_skew, (uncertainty_cube_skew.shape[0], uncertainty_cube_skew.shape[1], uncertainty_cube_skew.shape[2])
+        )
+        uncertainty_cube_skew = u.Quantity(uncertainty_cube_skew, spicewindow.header["BUNIT"])
 
         self.fit_window_standard_3d(
             data_cube=data_cube,
@@ -201,6 +221,8 @@ class FitResults:
         )
 
         self.spectral_window = spicewindow
+
+        self._deskew_jp(best_xshift, best_yshift)
 
     def fit_window_standard_3d(
             self,
@@ -1264,7 +1286,81 @@ class FitResults:
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
 
+    def _deskew_jp(self, best_xshift, best_yshift):
+        """Deskew the fitted data with the shift parameters. The reprojection is performed independantly for each line, 
+        as it depend on the Doppler shift (in pixel) measured for each line. 
+        """
+
+        keys_comp = list(self.components_results.keys())
+        keys_comp.remove("flagged_pixels")
+        keys_comp.remove("main")
+
+        xx_ini, yy_ini = self.spectral_window.return_point_pixels(type="xy")
+        w_spec = self.spectral_window.w_spec
+        lamb = self.spectral_window.return_wavelength_array()
+
+        for ii, key in enumerate(keys_comp):
+            if self.components_results[key]["info"]["type"] == "gaussian":
+
+                line = self._get_line(key)
+                lambda_ref = u.Quantity(line["wave"], line["unit_wave"])
+                pixel_lambda_ref = w_spec.world_to_pixel(lambda_ref)
+
+                doppler = self.components_results[key]["coeffs"]["x"]["results"]
+                shape_ini = doppler.shape
+
+                pixel_doppler = w_spec.world_to_pixel(doppler.ravel())
+                pixel_doppler = np.reshape(pixel_doppler, xx_ini.shape)
+                dlambda = pixel_doppler - pixel_lambda_ref
+
+                dlambda[np.isnan(dlambda)] = 0.0
+
+                xx_out = xx_ini + best_xshift * dlambda
+                yy_out = yy_ini + best_yshift * dlambda
+
+                for results_type in ["results", "sigma"]:
+
+                    for param in list(["I", "x", "s"]):
+                        
+
+
+                        param_in = np.reshape(
+                            self.components_results[key]["coeffs"][param][results_type],
+                            xx_ini.shape,
+                        )
+                        param_out = np.zeros(param_in.shape, dtype="float")
+                        CommonUtil.interpol2d(image = param_in, x=xx_out, y=yy_out, fill=np.nan, order=2, dst = param_out)
+                        self.components_results[key]["coeffs"][param][results_type] = u.Quantity(np.reshape(param_out, shape_ini))
+
+    def _get_line(self, key):
+        line = None
+        for line_ in self.fit_template.parinfo["info"]:
+            if line_["name"] ==  self.components_results[key]["info"]["name_component"]:
+                line = line_
+        if line is None:
+            raise NotImplementedError
+        return line
+
     def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="results", hdu_wcsdvar=None):
+        """Write a FITS file consistent with the format used in the IDL SPICE fitting procedure.
+        This fits file can be reload by SpiceFits to reconstruct the same FitsResults object
+
+        Args:
+            hdu (_type_): hdu to write into a FITS file
+            header_ref (_type_): header of the L2 FITS file window that has been fitted
+            filename (_type_): path where the fits file will be saved. Must end by .fits
+            ncoeff (_type_): dimension of the hdu.data of origin. typically 4 in SPICE, as it is (t, lambda, y, x)
+            keys_comp (_type_): Name of the different (gaussian) of the fitting. Typically the line names.
+            results_type (str, optional): Type of the L3 FITS file window that is written. Defaults to "results". Can be also "sigma" or "chi2"
+            hdu_wcsdvar (_type_, optional): _description_. Defaults to None.
+
+        Raises:
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+
+        Returns:
+            _type_: _description_
+        """        
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
         hdu.header["ORNAME"] = (header_ref["EXTNAME"], 'Original Extension name')

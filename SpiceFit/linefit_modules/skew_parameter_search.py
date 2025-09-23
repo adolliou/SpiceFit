@@ -270,20 +270,21 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
 	spice_dat, spice_hdr, fitter.__name__, save_dir=shift_save_dir
 	)
     sv_initial = search_shifts(
-	spice_dat,
-	spice_hdr,
-	xs_initial,
-	ys_initial,
-	fitter,
-	linelist=linelist,
-	single_thread=True,
-	nthreads=nthreads,
-	offsets=[[0.5, 0.5]],
-	do_deskew=False,
-	yrange_plot_dir=yrange_plot_dir,
-	shift_vars=shift_vars,
-	do_yrange_check=True,
-	)
+        spice_dat,
+        spice_hdr,
+        xs_initial,
+        ys_initial,
+        fitter,
+        save_dir=shift_save_dir,
+        linelist=linelist,
+        single_thread=True,
+        nthreads=nthreads,
+        offsets=[[0.5, 0.5]],
+        do_deskew=False,
+        yrange_plot_dir=yrange_plot_dir,
+        shift_vars=shift_vars,
+        do_yrange_check=True,
+    )
     shift_vars.set(sv_initial)
     shift_vars.save()
 

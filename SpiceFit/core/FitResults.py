@@ -190,7 +190,6 @@ class FitResults:
         if cpu_count is None:
             cpu_count_j = 8
         save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
-        breakpoint()
         if os.path.isdir(save_dir):
             for fold in ["yrange_plots", "save", "figs"]:
                 files = glob.glob(os.path.join(save_dir, f"{fold}/*"))

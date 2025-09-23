@@ -1336,9 +1336,10 @@ class FitResults:
                             self.components_results[key]["coeffs"][param][results_type],
                             xx_ini.shape,
                         )
+                        unit_ini =  self.components_results[key]["coeffs"][param][results_type].unit
                         param_out = np.zeros(param_in.shape, dtype="float")
                         CommonUtil.interpol2d(image = param_in, x=xx_out, y=yy_out, fill=np.nan, order=2, dst = param_out)
-                        self.components_results[key]["coeffs"][param][results_type] = u.Quantity(np.reshape(param_out, shape_ini))
+                        self.components_results[key]["coeffs"][param][results_type] = u.Quantity(np.reshape(param_out, shape_ini), unit_ini)
 
     def _get_line(self, key):
         line = None

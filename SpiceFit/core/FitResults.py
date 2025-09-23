@@ -32,7 +32,7 @@ import os
 import ast
 from pathlib import Path
 import warnings
-
+import glob
 warnings.filterwarnings("ignore", message="Card is too long, comment will be truncated.")
 warnings.filterwarnings("ignore",
                         message="'UTC' did not parse as fits unit: At col 0, Unit 'UTC'", )
@@ -190,6 +190,13 @@ class FitResults:
         if cpu_count is None:
             cpu_count_j = 8
         save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
+        breakpoint()
+        if os.path.isdir(save_dir):
+            for fold in ["yrange_plots", "save", "figs"]:
+                files = glob.glob(os.path.join(save_dir, f"{fold}/*"))
+                for f in files:
+                    os.remove(f)
+
         shift_vars = search_spice_window(spicewindow.data[0], spicewindow.header, spicewindow.window_name, nthreads=cpu_count_j, save_dir=save_dir)
         best_xshift, best_yshift = shift_vars.best_shifts()
         if verbose > 0:
@@ -1323,8 +1330,6 @@ class FitResults:
                 for results_type in ["results", "sigma"]:
 
                     for param in list(["I", "x", "s"]):
-                        
-
 
                         param_in = np.reshape(
                             self.components_results[key]["coeffs"][param][results_type],

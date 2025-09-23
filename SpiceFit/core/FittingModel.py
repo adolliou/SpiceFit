@@ -68,7 +68,7 @@ class FittingModel:
                 if os.path.isfile(filename):
                     self.filename = filename
                 else:
-                    basis_yaml_templates_file = os.path.join(Path(__file__).parents[1], "TemplatesLines", filename)
+                    basis_yaml_templates_file = os.path.join(Path(__file__).parents[1], f"TemplatesLines/{filename}.yaml")
                     if not os.path.isfile(basis_yaml_templates_file):
                         raise ValueError("Could not find the template yaml for the given line")
                     self.filename = basis_yaml_templates_file

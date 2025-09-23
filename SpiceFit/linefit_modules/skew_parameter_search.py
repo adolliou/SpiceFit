@@ -242,26 +242,21 @@ def refine_points(shift_vars, xgrange, ygrange, ngx, ngy, npts_refine, min_input
 def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5, n0=5, n1=11, n2=31, 
 			n_refine=20, save_dir=None, linelist=None, 
 			fitter=lsq_fitter, nthreads=8):
-    if save_dir is not None:
-        yrange_plot_dir = os.path.join(save_dir, "yrange_plots")
-        shift_save_dir = os.path.join(save_dir, "save")
-        shift_plot_dir = os.path.join(save_dir, "figs")
+    yrange_plot_dir = os.path.join(save_dir, "yrange_plots")
+    shift_save_dir = os.path.join(save_dir, "save")
+    shift_plot_dir = os.path.join(save_dir, "figs")
 
-        Path(yrange_plot_dir).mkdir(parents=False, exist_ok=True)
-        Path(shift_save_dir).mkdir(parents=False, exist_ok=True)
-        Path(shift_plot_dir).mkdir(parents=False, exist_ok=True)
-    else:
-        yrange_plot_dir = None
-        shift_save_dir = None
-        shift_plot_dir = None
+    Path(yrange_plot_dir).mkdir(parents=False, exist_ok=True)
+    Path(shift_save_dir).mkdir(parents=False, exist_ok=True)
+    Path(shift_plot_dir).mkdir(parents=False, exist_ok=True)
     # spice_dat, spice_hdr = hdul[win_name].data[0], hdul[win_name].header
     spice_dat = spice_dat.transpose([2, 1, 0]).astype(np.float32)
 
     spice_dx, spice_dy, spice_dl = (
-        spice_hdr["CDELT1"],
-        spice_hdr["CDELT2"],
-        10 * spice_hdr["CDELT3"],
-    )
+	spice_hdr["CDELT1"],
+	spice_hdr["CDELT2"],
+	10 * spice_hdr["CDELT3"],
+	)
     spice_wl0 = 10 * spice_hdr["CRVAL3"] - spice_dl * spice_hdr["CRPIX3"]
     spice_la = spice_wl0 + spice_dl * np.arange(spice_dat.shape[2], dtype=np.float64)
 
@@ -269,17 +264,37 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
     print("Found the following lines in " + win_name + ": " + str(lines))
 
     xs_initial, ys_initial = np.array(
-        np.meshgrid(np.linspace(xl, xh, 5), np.linspace(yl, yh, 5))
-    ).transpose([0, 2, 1])
+	np.meshgrid(np.linspace(xl, xh, 5), np.linspace(yl, yh, 5))
+	).transpose([0, 2, 1])
     shift_vars = shift_holder(
-        spice_dat, spice_hdr, fitter.__name__, save_dir=shift_save_dir
-    )
+	spice_dat, spice_hdr, fitter.__name__, save_dir=shift_save_dir
+	)
     sv_initial = search_shifts(
+	spice_dat,
+	spice_hdr,
+	xs_initial,
+	ys_initial,
+	fitter,
+	linelist=linelist,
+	single_thread=True,
+	nthreads=nthreads,
+	offsets=[[0.5, 0.5]],
+	do_deskew=False,
+	yrange_plot_dir=yrange_plot_dir,
+	shift_vars=shift_vars,
+	do_yrange_check=True,
+	)
+    shift_vars.set(sv_initial)
+    shift_vars.save()
+
+    x_refine, y_refine = refine_points(shift_vars, [xl, xh], [yl, yh], n1, n1, n_refine)
+    shift_vars = search_shifts(
         spice_dat,
         spice_hdr,
-        xs_initial,
-        ys_initial,
+        x_refine,
+        y_refine,
         fitter,
+        save_dir=shift_save_dir,
         linelist=linelist,
         single_thread=True,
         nthreads=nthreads,
@@ -289,19 +304,25 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
         shift_vars=shift_vars,
         do_yrange_check=True,
     )
-    shift_vars.set(sv_initial)
     shift_vars.save()
 
-    x_refine, y_refine = refine_points(shift_vars,[xl,xh],[yl,yh], n1, n1, n_refine)
-    shift_vars = search_shifts(spice_dat, spice_hdr, x_refine, y_refine, fitter,
-					linelist=linelist, single_thread=True, nthreads=nthreads, offsets=[[0.5,0.5]], do_deskew=False,
-					yrange_plot_dir=yrange_plot_dir, shift_vars=shift_vars, do_yrange_check=True)
-    shift_vars.save()
-
-    x_refine, y_refine = refine_points(shift_vars,[xl,xh],[yl,yh], n2, n2, n_refine)
-    shift_vars = search_shifts(spice_dat, spice_hdr, x_refine, y_refine, fitter,
-					linelist=linelist, single_thread=True, nthreads=nthreads, offsets=[[0.5,0.5]], do_deskew=False,
-					yrange_plot_dir=yrange_plot_dir, shift_vars=shift_vars, do_yrange_check=True)
+    x_refine, y_refine = refine_points(shift_vars, [xl, xh], [yl, yh], n2, n2, n_refine)
+    shift_vars = search_shifts(
+        spice_dat,
+        spice_hdr,
+        x_refine,
+        y_refine,
+        fitter,
+        save_dir=shift_save_dir,
+        linelist=linelist,
+        single_thread=True,
+        nthreads=nthreads,
+        offsets=[[0.5, 0.5]],
+        do_deskew=False,
+        yrange_plot_dir=yrange_plot_dir,
+        shift_vars=shift_vars,
+        do_yrange_check=True,
+    )
     shift_vars.save()
 
     # Reinterpolate the search results to a finer linear grid for ease of plotting:

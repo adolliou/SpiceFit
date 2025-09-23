@@ -150,6 +150,7 @@ class FitResults:
         self,
         spicewindow: SpiceRasterWindowL2,
         fit_template: FittingModel,
+        save_folder_skew,
         parallelism: bool = True,
         cpu_count: int = None,
         min_data_points: int = 5,
@@ -189,16 +190,17 @@ class FitResults:
         cpu_count_j = cpu_count
         if cpu_count is None:
             cpu_count_j = 8
-        save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
-        if os.path.isdir(save_dir):
-            for fold in ["yrange_plots", "save", "figs"]:
-                files = glob.glob(os.path.join(save_dir, f"{fold}/*"))
-                for f in files:
-                    os.remove(f)
-        else:
-            Path(save_dir).mkdir(parents=True, exist_ok=False)
+        # save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
+        if save_folder_skew is not None:
+            Path(save_folder_skew).mkdir(parents=True, exist_ok=False)
 
-        shift_vars = search_spice_window(spicewindow.data[0], spicewindow.header, spicewindow.window_name, nthreads=cpu_count_j, save_dir=save_dir)
+        shift_vars = search_spice_window(
+            spicewindow.data[0],
+            spicewindow.header,
+            spicewindow.window_name,
+            nthreads=cpu_count_j,
+            save_dir=save_folder_skew,
+        )
         best_xshift, best_yshift = shift_vars.best_shifts()
         if verbose > 0:
             print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        

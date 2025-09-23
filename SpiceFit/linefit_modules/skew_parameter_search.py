@@ -246,9 +246,9 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
     shift_save_dir = os.path.join(save_dir, "save")
     shift_plot_dir = os.path.join(save_dir, "figs")
 
-    Path(yrange_plot_dir).mkdir(parents=True, exist_ok=False)
-    Path(shift_save_dir).mkdir( parents=True, exist_ok=False)
-    Path(shift_plot_dir).mkdir( parents=True, exist_ok=False)
+    Path(yrange_plot_dir).mkdir(parents=False, exist_ok=True)
+    Path(shift_save_dir).mkdir( parents=False, exist_ok=True)
+    Path(shift_plot_dir).mkdir( parents=False, exist_ok=True)
     # spice_dat, spice_hdr = hdul[win_name].data[0], hdul[win_name].header
     spice_dat = spice_dat.transpose([2, 1, 0]).astype(np.float32)
 

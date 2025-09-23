@@ -191,8 +191,6 @@ class FitResults:
         if cpu_count is None:
             cpu_count_j = 8
         # save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
-        if save_folder_skew is not None:
-            Path(save_folder_skew).mkdir(parents=True, exist_ok=False)
 
         shift_vars = search_spice_window(
             spicewindow.data[0],

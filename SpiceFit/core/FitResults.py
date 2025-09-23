@@ -201,8 +201,6 @@ class FitResults:
             save_dir=save_folder_skew,
         )
         best_xshift, best_yshift = shift_vars.best_shifts()
-        if verbose > 0:
-            print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        
 
         best_correction_results = full_correction(spice_data, spicewindow.header, best_xshift, best_yshift, nthreads=cpu_count_j)
 
@@ -231,6 +229,8 @@ class FitResults:
         )
 
         self.spectral_window = spicewindow
+        if verbose > 0:
+            print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        
 
         self._deskew_jp(best_xshift, best_yshift)
 

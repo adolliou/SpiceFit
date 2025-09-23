@@ -977,8 +977,8 @@ class FitResults:
             "radiance": PlotFits.get_range(data, stre="log", imin=0, imax=100),
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=None),
-            "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data), 98)),
-            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data), 98)),
+            "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
+            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
             "chi2": PlotFits.get_range(data, stre=None),
         }
 

@@ -30,7 +30,7 @@ from datetime import datetime
 from astropy.time import Time
 import os
 import ast
-
+from pathlib import Path
 import warnings
 
 warnings.filterwarnings("ignore", message="Card is too long, comment will be truncated.")
@@ -189,7 +189,8 @@ class FitResults:
         cpu_count_j = cpu_count
         if cpu_count is None:
             cpu_count_j = 8
-        shift_vars = search_spice_window(spicewindow.data[0], spicewindow.header, spicewindow.window_name, nthreads=cpu_count_j)
+        save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
+        shift_vars = search_spice_window(spicewindow.data[0], spicewindow.header, spicewindow.window_name, nthreads=cpu_count_j, save_dir=save_dir)
         best_xshift, best_yshift = shift_vars.best_shifts()
         if verbose > 0:
             print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        

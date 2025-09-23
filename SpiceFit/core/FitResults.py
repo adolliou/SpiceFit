@@ -191,8 +191,9 @@ class FitResults:
             cpu_count_j = 8
         shift_vars = search_spice_window(spicewindow.data[0], spicewindow.header, spicewindow.window_name, nthreads=cpu_count_j)
         best_xshift, best_yshift = shift_vars.best_shifts()
-        # best_xshift = 4.
-        # best_yshift = 5.
+        if verbose > 0:
+            print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        
+
         dat = (spicewindow.data[0].T).to(spicewindow.header["BUNIT"]).value
         best_correction_results = full_correction(dat, spicewindow.header, best_xshift, best_yshift, nthreads=cpu_count_j)
 

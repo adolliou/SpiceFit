@@ -191,9 +191,10 @@ class FitResults:
         if cpu_count is None:
             cpu_count_j = 8
         # save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
-
+        spice_data = spicewindow.data[0].to(spicewindow.header["BUNIT"]).value
+        spice_data = spice_data.transpose([2,1,0]).astype(np.float32)
         shift_vars = search_spice_window(
-            spicewindow.data[0],
+            spice_data,
             spicewindow.header,
             spicewindow.window_name,
             nthreads=cpu_count_j,
@@ -203,8 +204,7 @@ class FitResults:
         if verbose > 0:
             print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        
 
-        dat = (spicewindow.data[0].T).to(spicewindow.header["BUNIT"]).value
-        best_correction_results = full_correction(dat, spicewindow.header, best_xshift, best_yshift, nthreads=cpu_count_j)
+        best_correction_results = full_correction(spice_data, spicewindow.header, best_xshift, best_yshift, nthreads=cpu_count_j)
 
         data_cube_skew = best_correction_results["dat_skew"]
         data_cube_skew = data_cube_skew.T

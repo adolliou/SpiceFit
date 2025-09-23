@@ -7,13 +7,11 @@
 # after a linear trend has been removed. See example notebook for usage.
 
 import os, copy, numpy as np, matplotlib.pyplot as plt
-from scipy.optimize import least_squares
-from .skew_correction import skew_correct, deskew_linefit_window, full_correction
+from .skew_correction import full_correction
 from .linefit_leastsquares import lsq_fitter, check_for_waves
-from .util import get_mask_errs, get_spice_err, get_spice_data_yrange, make_yrange_check_plot
-from .linefit_storage import linefits
-from astropy.io import fits
 from pathlib import Path
+from scipy.interpolate import LinearNDInterpolator as lndi
+import multiprocessing
 
 
 def simple_lls(dat, err, funcs_in): # Simple LLS fit of funcs with linear coeffs to data
@@ -116,8 +114,6 @@ def shift_runner(package):
 	xshift, yshift, var = package[2], package[3], check_shift(*package[0:-1],**package[-1])[0]
 	return xshift, yshift, var
 
-import subprocess
-import multiprocessing
 
 # This holds a set of line shift variables, and allows loading and saving
 # and looking up the results of a search. The save format is a simple
@@ -250,7 +246,6 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
     Path(shift_save_dir).mkdir( parents=False, exist_ok=True)
     Path(shift_plot_dir).mkdir( parents=False, exist_ok=True)
     # spice_dat, spice_hdr = hdul[win_name].data[0], hdul[win_name].header
-    spice_dat = spice_dat.transpose([2, 1, 0]).astype(np.float32)
 
     spice_dx, spice_dy, spice_dl = (
 	spice_hdr["CDELT1"],
@@ -327,7 +322,6 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
     shift_vars.save()
 
     # Reinterpolate the search results to a finer linear grid for ease of plotting:
-    from scipy.interpolate import RegularGridInterpolator, LinearNDInterpolator as lndi
 
     xa = np.array(list(shift_vars.valdict.values()))[:,0]
     ya = np.array(list(shift_vars.valdict.values()))[:,1]

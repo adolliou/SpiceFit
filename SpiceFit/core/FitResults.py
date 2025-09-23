@@ -942,12 +942,14 @@ class FitResults:
             "radiance": Constants.conventional_radiance_units,
             "fwhm": Constants.conventional_lambda_units,
             "velocity": Constants.conventional_velocity_units,
+            "x": Constants.conventional_lambda_units,
             "chi2": None
         }
         cmaps = {
             "radiance": mpl.colormaps.get_cmap('viridis'),
             "fwhm": mpl.colormaps.get_cmap('viridis'),
             "velocity": mpl.colormaps.get_cmap('bwr'),
+            "x": mpl.colormaps.get_cmap('bwr'),
             "chi2": mpl.colormaps.get_cmap('viridis'),
         }
 
@@ -976,6 +978,7 @@ class FitResults:
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=None),
             "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data), 98)),
+            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data), 98)),
             "chi2": PlotFits.get_range(data, stre=None),
         }
 

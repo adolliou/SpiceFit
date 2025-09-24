@@ -981,7 +981,6 @@ class FitResults:
             if doppler_mediansubtraction:
                 data_ = data_ - np.nanmedian(data)
 
-
         if data.ndim == 3:
             data = data[0, ...]
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
@@ -1401,7 +1400,7 @@ class FitResults:
         x0 = np.ones([nx,ny])
         x1, x2 = np.indices([nx,ny])
         x1 = x1-0.5*nx; x2 = x2-0.5*ny
-        mask = (np.isnan(dopp)==False)*snr_th
+        mask = (np.isnan(dopp) == False) * snr_th * (dopp_err<1.0E-15)
 
         cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
 

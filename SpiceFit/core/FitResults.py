@@ -676,12 +676,7 @@ class FitResults:
                 s = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
                 ds = self.components_results[a["name_component"]]["coeffs"]["s"]["sigma"]
 
-                line = None
-                for line_ in self.fit_template.parinfo["info"]:
-                    if line_["name"] == a["name_component"]:
-                        line = line_
-                if line is None:
-                    raise NotImplementedError
+                line = self._find_line(a)
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 self.components_results[a["name_component"]]["coeffs"]["velocity"] = {
                     "results": (const.c.to("km/s") * (x - lambda_ref) / lambda_ref).to(
@@ -715,6 +710,15 @@ class FitResults:
             if line_ == self.fit_template.parinfo["main_line"]:
                 self.components_results["main"] = self.components_results[line_]
         self.main_line = self.fit_template.parinfo["main_line"]
+
+    def _find_line(self, a):
+        line = None
+        for line_ in self.fit_template.parinfo["info"]:
+            if line_["name"] == a["name_component"]:
+                line = line_
+        if line is None:
+            raise ValueError(f"Could not find line for {a['name_component']}")
+        return line
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
 
@@ -870,8 +874,6 @@ class FitResults:
         if self.spectral_window is None:
             raise ValueError("The data is still not fitted")
 
-        w_xy = self.spectral_window.w_xy
-
         # x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]), np.arange(self.spectral_window.data.shape[2]))
         # coords = w_xy.pixel_to_world(x, y)
         # long, latg, dlon, dlat = PlotFits.build_regular_grid(coords.Tx, coords.Ty)
@@ -965,6 +967,11 @@ class FitResults:
             data = a[param]["results"].to(unit).value
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
+        if param == "x":
+            line = self._find_line(a[param])
+            lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
+            data = a[param]["results"].to(unit).value - lambda_ref.to(unit).value
+
         if data.ndim == 3:
             data = data[0, ...]
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),

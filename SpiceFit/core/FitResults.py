@@ -928,7 +928,8 @@ class FitResults:
                         coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
                         allow_reprojection: bool = False, 
                         doppler_mediansubtraction: bool=False, 
-                        norm = None, cmap = None
+                        norm = None, cmap = None, 
+                        imin = 0, imax = 99, stretch = "default",
                         ):
         """
 
@@ -946,6 +947,16 @@ class FitResults:
         :param lonlat_lims:
         :param allow_reprojection:
         """
+        stretch_dict = {
+            "radiance": "log",
+            "fwhm":     "linear",
+            "velocity": "linear",
+            "x":        "linear",
+            "chi2":     "linear",
+            "I":        "linear",
+        }
+        if  stretch is None:
+            stretch = stretch_dict[param]
         units = {
             "radiance": Constants.conventional_radiance_units,
             "fwhm": Constants.conventional_lambda_units,
@@ -993,13 +1004,13 @@ class FitResults:
         # max_ = np.percentile(data[isnotnan], 100)
         # norm_ = ImageNormalize(stretch=LogStretch(a=30))
         norms = {
-            "radiance": PlotFits.get_range(data, stre="log", imin=0, imax=99),
+            "radiance": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             # "radiance": norm_,
-            "fwhm": PlotFits.get_range(data, stre="linear"),
+            "fwhm": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
             "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075),
-            "chi2": PlotFits.get_range(data, stre="linear"),
-            "I": PlotFits.get_range(data, stre="linear", imin=0, imax=98),
+            "chi2": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
+            "I": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
         }
         if norm is None:
             norm = norms[param]

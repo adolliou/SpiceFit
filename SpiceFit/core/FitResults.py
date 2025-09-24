@@ -155,6 +155,8 @@ class FitResults:
         cpu_count: int = None,
         min_data_points: int = 5,
         chi2_limit: float = 20.0,
+        subtract_doppler_median: bool = True,
+        subtract_doppler_linear_trend: bool = True,
         verbose=0,
     ):
         """
@@ -170,6 +172,8 @@ class FitResults:
         :param min_data_points: minimum data points for each pixel with for the fitting.
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
         :param display_progress_bar: display the progress bar
+        :param subtract_doppler_median: If True, then subtract the Doppler shifts by their median along the datacube.
+        :
         """
         self.verbose = verbose
         self.fit_template = fit_template
@@ -675,7 +679,7 @@ class FitResults:
 
                 s = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
                 ds = self.components_results[a["name_component"]]["coeffs"]["s"]["sigma"]
-            
+
                 line = self._find_line(a["name_component"])
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 self.components_results[a["name_component"]]["coeffs"]["velocity"] = {
@@ -922,7 +926,8 @@ class FitResults:
 
     def plot_fitted_map(self, ax, fig, line, param, regular_grid=False,
                         coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
-                        allow_reprojection: bool = False
+                        allow_reprojection: bool = False, 
+                        doppler_mediansubtraction: bool=False
                         ):
         """
 
@@ -970,7 +975,12 @@ class FitResults:
         if param == "x":
             line = self._find_line(self.components_results[line]["info"]["name_component"])
             lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
-            data = a[param]["results"].to(unit).value - lambda_ref.to(unit).value
+            data_ = copy.deepcopy(a[param]["results"].to(unit).value - lambda_ref.to(unit).value)
+            data_err = copy.deepcopy(a[param]["sigma"].to(unit).value)
+            data_ = self._detrend_dopp(data_, data_err)
+            if doppler_mediansubtraction:
+                data_ = data_ - np.nanmedian(data)
+
 
         if data.ndim == 3:
             data = data[0, ...]
@@ -1366,6 +1376,38 @@ class FitResults:
             raise NotImplementedError
         return line
 
+    def _simple_lls(self, dat, err, funcs_in): # 
+        # JPlowman function
+        nf = len(funcs_in)
+        nd = dat.size
+        rmatp = np.zeros([nf,nd])
+        for i in range(0,nf): rmatp[i] = (funcs_in[i]/err).flatten()
+        amat = rmatp.dot(rmatp.T)
+        bvec = rmatp.dot((dat/err).flatten())
+        return np.linalg.inv(amat).dot(bvec)
+
+    # The SPICE Doppler tend to contain a trend across the image field.
+    # Since this will impact the Doppler variance we use to determine which
+    # shift is optimal we fit linear trends in x and y and remove them:
+    def _detrend_dopp(self, dopp, dopp_err): # Remove linear spatial trend in x and y from Doppler
+        # JPlowman function
+
+        dopp = dopp.squeeze()
+        dopp_err = dopp_err.squeeze()
+
+        snr_th = np.abs(dopp) > 2*np.abs(dopp_err)
+        mask = snr_th*(dopp_err > 0)
+        nx,ny = dopp.shape
+        x0 = np.ones([nx,ny])
+        x1, x2 = np.indices([nx,ny])
+        x1 = x1-0.5*nx; x2 = x2-0.5*ny
+        mask = (np.isnan(dopp)==False)*snr_th
+
+        cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
+
+        dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
+
+        return dopp_detrend
     def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="results", hdu_wcsdvar=None):
         """Write a FITS file consistent with the format used in the IDL SPICE fitting procedure.
         This fits file can be reload by SpiceFits to reconstruct the same FitsResults object

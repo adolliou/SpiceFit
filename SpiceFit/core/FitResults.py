@@ -1086,8 +1086,8 @@ class FitResults:
                 xpos.append(xf[index_r])
                 ypos.append(yf[index_r])
         elif isinstance(position, tuple):
-            xpos = position[0]
-            ypos = position[1]
+            xpos = position[1]
+            ypos = position[2]
             if isinstance(xpos, int):
                 xpos = [xpos]
                 ypos = [ypos]

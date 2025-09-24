@@ -113,7 +113,7 @@ class PlotFits:
         elif stre == 'log':
             norm = ImageNormalize(vmin=vmin, vmax=vmax, stretch=LogStretch())
         else:
-            raise ValueError('Bad stre value: either None or sqrt')
+            raise ValueError('Bad stre value: either linear, log or or sqrt')
         return norm
 
     @staticmethod

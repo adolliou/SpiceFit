@@ -1042,14 +1042,17 @@ class FitResults:
             ax.set_ylabel("Y-axis [px]")
         cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
 
-
         ax.set_title(param)
 
         if (coords is not None) or (lonlat_lims is not None) or (pixels is not None):
-            (lat_subfov, lon_subfov,
-             x_subfov, y_subfov) = self.spectral_window.extract_subfield_coordinates(coords,lonlat_lims,
-                                                                                    pixels,
-                                                                                    allow_reprojection, )
+            (lat_subfov, lon_subfov, x_subfov, y_subfov) = (
+                self.spectral_window.extract_subfield_coordinates(
+                    coords=coords,
+                    lonlat_lims=lonlat_lims,
+                    pixels=pixels,
+                    allow_reprojection=allow_reprojection,
+                )
+            )
             if regular_grid:
                 lon_subfov_arcsec = lon_subfov.to("arcsec").value
                 lat_subfov_arcsec = lat_subfov.to("arcsec").value
@@ -1422,7 +1425,7 @@ class FitResults:
         cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
 
         dopp_detrend = copy.deepcopy(dopp) - x2*cvec[2] 
-# - x1*cvec[1]
+        # - x1*cvec[1]
         return dopp_detrend
     def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="results", hdu_wcsdvar=None):
         """Write a FITS file consistent with the format used in the IDL SPICE fitting procedure.

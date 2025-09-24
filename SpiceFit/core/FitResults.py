@@ -1394,7 +1394,7 @@ class FitResults:
         dopp_err = dopp_err.squeeze()
 
         snr_th = np.abs(dopp) > 2*np.abs(dopp_err)
-        # peak_doop = np.array(np.abs(dopp) >= 6*np.nanstd(dopp), dtype=bool) 
+        peak_doop = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
         mask = snr_th*(dopp_err > 0)
         nx,ny = dopp.shape
         x0 = np.ones([nx,ny])

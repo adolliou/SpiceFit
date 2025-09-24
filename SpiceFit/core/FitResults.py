@@ -979,7 +979,7 @@ class FitResults:
             data_err = copy.deepcopy(a[param]["sigma"].to(unit).value)
             data_ = self._detrend_dopp(data_, data_err)
             if doppler_mediansubtraction:
-                data_ = data_ - np.nanmedian(data_)
+                data = data_ - np.nanmedian(data_)
 
         if data.ndim == 3:
             data = data[0, ...]

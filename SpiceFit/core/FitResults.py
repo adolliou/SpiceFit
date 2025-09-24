@@ -951,7 +951,8 @@ class FitResults:
             "fwhm": Constants.conventional_lambda_units,
             "velocity": Constants.conventional_velocity_units,
             "x": Constants.conventional_lambda_units,
-            "chi2": None
+            "chi2": None,
+            "I": Constants.conventional_spectral_units,
         }
         cmaps = {
             "radiance": mpl.colormaps.get_cmap('viridis'),
@@ -959,6 +960,7 @@ class FitResults:
             "velocity": mpl.colormaps.get_cmap('bwr'),
             "x": mpl.colormaps.get_cmap('bwr'),
             "chi2": mpl.colormaps.get_cmap('viridis'),
+            "I":  mpl.colormaps.get_cmap('viridis'),
         }
 
         unit = units[param]
@@ -991,12 +993,13 @@ class FitResults:
         # max_ = np.percentile(data[isnotnan], 100)
         # norm_ = ImageNormalize(stretch=LogStretch(a=30))
         norms = {
-            "radiance": PlotFits.get_range(data, stre="log", imin=0, imax=100),
+            "radiance": PlotFits.get_range(data, stre="log", imin=0, imax=99),
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=None),
             "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
             "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075),
             "chi2": PlotFits.get_range(data, stre=None),
+            "I": PlotFits.get_range(data, stre="linear", imin=0, imax=98),
         }
         if norm is None:
             norm = norms[param]

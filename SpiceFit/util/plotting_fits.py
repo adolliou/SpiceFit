@@ -87,7 +87,7 @@ class CmapUtil:
 
 class PlotFits:
     @staticmethod
-    def get_range(data, stre='log', imax=99.5, imin=2):
+    def get_range(data, stre="linear", imax=99.5, imin=2):
         """
         :param data:
         :param stretch: 'sqrt', 'log', or 'linear' (default)
@@ -106,7 +106,7 @@ class PlotFits:
             vmin, vmax = AsymmetricPercentileInterval(imin, imax).get_limits(data)
 
         #    print('Vmin:', vmin, 'Vmax', vmax)
-        if stre is None:
+        if stre == "linear":
             norm = ImageNormalize(vmin=vmin, vmax=vmax, stretch=LinearStretch())
         elif stre == 'sqrt':
             norm = ImageNormalize(vmin=vmin, vmax=vmax, stretch=SqrtStretch())
@@ -115,6 +115,7 @@ class PlotFits:
         else:
             raise ValueError('Bad stre value: either None or sqrt')
         return norm
+
     @staticmethod
     def plot_fov_rectangle(data, slc=None, path_save=None, show=True, plot_colorbar=True, norm=None, angle=0):
         fig = plt.figure()
@@ -201,5 +202,3 @@ class PlotFits:
         latitude_grid_ext = latitude_grid_ext * u.deg
 
         return longitude_grid_ext, latitude_grid_ext
-
-

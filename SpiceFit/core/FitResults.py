@@ -675,7 +675,7 @@ class FitResults:
 
                 s = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
                 ds = self.components_results[a["name_component"]]["coeffs"]["s"]["sigma"]
-
+            
                 line = self._find_line(a["name_component"])
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 self.components_results[a["name_component"]]["coeffs"]["velocity"] = {
@@ -711,13 +711,13 @@ class FitResults:
                 self.components_results["main"] = self.components_results[line_]
         self.main_line = self.fit_template.parinfo["main_line"]
 
-    def _find_line(self, a):
+    def _find_line(self, name_line):
         line = None
         for line_ in self.fit_template.parinfo["info"]:
-            if line_["name"] == a["name_component"]:
+            if line_["name"] == name_line:
                 line = line_
         if line is None:
-            raise ValueError(f"Could not find line for {a['name_component']}")
+            raise ValueError(f"Could not find line for {name_line}")
         return line
 
     def _fit_multiple_pixels_parallelism_3d(self, t_list, i_list, j_list, index_list, lock):
@@ -968,7 +968,7 @@ class FitResults:
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
         if param == "x":
-            line = self._find_line(self.components_results[line]["info"])
+            line = self._find_line(self.components_results[line]["info"]["name_component"])
             lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
             data = a[param]["results"].to(unit).value - lambda_ref.to(unit).value
 

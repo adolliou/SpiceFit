@@ -927,7 +927,8 @@ class FitResults:
     def plot_fitted_map(self, ax, fig, line, param, regular_grid=False,
                         coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
                         allow_reprojection: bool = False, 
-                        doppler_mediansubtraction: bool=False
+                        doppler_mediansubtraction: bool=False, 
+                        norm = None, cmap = None
                         ):
         """
 
@@ -961,7 +962,8 @@ class FitResults:
         }
 
         unit = units[param]
-        cmap = cmaps[param]  # viridis is the default colormap for imshow
+        if cmap is None:
+            cmap = cmaps[param]  # viridis is the default colormap for imshow
         cmap.set_bad('white')
         a = self.components_results[line]["coeffs"]
         w_xy = self.spectral_window.w_xy
@@ -996,8 +998,8 @@ class FitResults:
             "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075),
             "chi2": PlotFits.get_range(data, stre=None),
         }
-
-        norm = norms[param]
+        if norm is None:
+            norm = norms[param]
 
         if regular_grid:
             coords = w_xy.pixel_to_world(x, y)

@@ -977,7 +977,7 @@ class FitResults:
             lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
             data_ = copy.deepcopy(data) - lambda_ref.to(unit).value
             data_err = copy.deepcopy(a[param]["sigma"].to(unit).value)
-            data_ = self._detrend_dopp(data_, data_err)
+            # data_ = self._detrend_dopp(data_, data_err)
             if doppler_mediansubtraction:
                 data = data_ - np.nanmedian(data_)
 
@@ -993,7 +993,7 @@ class FitResults:
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=None),
             "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
-            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
+            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.075),
             "chi2": PlotFits.get_range(data, stre=None),
         }
 
@@ -1404,8 +1404,8 @@ class FitResults:
 
         cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
 
-        dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
-
+        dopp_detrend = copy.deepcopy(dopp) - x2*cvec[2] 
+# - x1*cvec[1]
         return dopp_detrend
     def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="results", hdu_wcsdvar=None):
         """Write a FITS file consistent with the format used in the IDL SPICE fitting procedure.

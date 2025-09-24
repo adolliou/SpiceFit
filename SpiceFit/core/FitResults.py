@@ -676,7 +676,7 @@ class FitResults:
                 s = self.components_results[a["name_component"]]["coeffs"]["s"]["results"]
                 ds = self.components_results[a["name_component"]]["coeffs"]["s"]["sigma"]
 
-                line = self._find_line(a)
+                line = self._find_line(a["name_component"])
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 self.components_results[a["name_component"]]["coeffs"]["velocity"] = {
                     "results": (const.c.to("km/s") * (x - lambda_ref) / lambda_ref).to(
@@ -1319,14 +1319,21 @@ class FitResults:
         w_spec = self.spectral_window.w_spec
         lamb = self.spectral_window.return_wavelength_array()
 
-        for ii, key in enumerate(keys_comp):
-            if self.components_results[key]["info"]["type"] == "gaussian":
+        # for ii, key in enumerate(keys_comp):
+        type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
+        for type_, index_, coeff_ in zip(type_list, index_list, coeff_list):
+            a = self.fit_template.params_all[type_][index_][coeff_]
+            wha = np.where(
+                a["unique_index"] == np.array(self.fit_results["unique_index"])
+            )[0][0]
+            name_line = a["name_component"]
+            if type_ == "gaussian":
 
-                line = self._get_line(key)
+                line = self._get_line(name_line)
                 lambda_ref = u.Quantity(line["wave"], line["unit_wave"])
                 pixel_lambda_ref = w_spec.world_to_pixel(lambda_ref)
 
-                doppler = self.components_results[key]["coeffs"]["x"]["results"]
+                doppler = self.components_results[name_line]["coeffs"]["x"]["results"]
                 shape_ini = doppler.shape
 
                 pixel_doppler = w_spec.world_to_pixel(doppler.ravel())
@@ -1338,23 +1345,22 @@ class FitResults:
                 xx_out = xx_ini + best_xshift * dlambda
                 yy_out = yy_ini + best_yshift * dlambda
 
-                for results_type in ["results", "sigma"]:
+                for results_type in ["coeff", "coeffs_error"]:
 
-                    for param in list(["I", "x", "s"]):
+                    param_in = np.reshape(
+                        self.fit_results[results_type][wha, ...],
+                        xx_ini.shape,
+                    )
+                    param_out = np.zeros(param_in.shape, dtype="float")
+                    CommonUtil.interpol2d(image = param_in, x=xx_out, y=yy_out, fill=np.nan, order=2, dst = param_out)
+                    self.fit_results[results_type][wha, ...] =np.reshape(param_out, shape_ini)
 
-                        param_in = np.reshape(
-                            self.components_results[key]["coeffs"][param][results_type],
-                            xx_ini.shape,
-                        )
-                        unit_ini =  self.components_results[key]["coeffs"][param][results_type].unit
-                        param_out = np.zeros(param_in.shape, dtype="float")
-                        CommonUtil.interpol2d(image = param_in, x=xx_out, y=yy_out, fill=np.nan, order=2, dst = param_out)
-                        self.components_results[key]["coeffs"][param][results_type] = u.Quantity(np.reshape(param_out, shape_ini), unit_ini)
+        self.build_components_results()
 
-    def _get_line(self, key):
+    def _get_line(self, line_name):
         line = None
         for line_ in self.fit_template.parinfo["info"]:
-            if line_["name"] ==  self.components_results[key]["info"]["name_component"]:
+            if line_["name"] == line_name:
                 line = line_
         if line is None:
             raise NotImplementedError

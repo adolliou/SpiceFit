@@ -993,7 +993,7 @@ class FitResults:
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=None),
             "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
-            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.075),
+            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075),
             "chi2": PlotFits.get_range(data, stre=None),
         }
 
@@ -1014,6 +1014,8 @@ class FitResults:
                            extent=(long_arc[0, 0] - 0.5 * dlon, long_arc[-1, -1] + 0.5 * dlon,
                                    latg_arc[0, 0] - 0.5 * dlat, latg_arc[-1, -1] + 0.5 * dlat),
                            norm=norm, )
+            ax.set_xlabel("Solar-X [arcsec]")
+            ax.set_ylabel("Solar-Y [arcsec]")
         else:
             cdelt1 = self.spectral_window.header["CDELT1"]
             cdelt2 = self.spectral_window.header["CDELT2"]
@@ -1021,11 +1023,11 @@ class FitResults:
 
             im = ax.imshow(data, origin="lower", interpolation="none", cmap=cmap,
                            norm=norm, aspect=ratio)
-
+            ax.set_xlabel("X-axis [px]")
+            ax.set_ylabel("Y-axis [px]")
         cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
 
-        ax.set_xlabel("Solar-X")
-        ax.set_ylabel("Solar-Y")
+
         ax.set_title(param)
 
         if (coords is not None) or (lonlat_lims is not None) or (pixels is not None):

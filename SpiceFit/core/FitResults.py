@@ -975,11 +975,11 @@ class FitResults:
         if param == "x":
             line = self._find_line(self.components_results[line]["info"]["name_component"])
             lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
-            data_ = copy.deepcopy(a[param]["results"].to(unit).value - lambda_ref.to(unit).value)
+            data_ = copy.deepcopy(data) - lambda_ref.to(unit).value
             data_err = copy.deepcopy(a[param]["sigma"].to(unit).value)
             data_ = self._detrend_dopp(data_, data_err)
             if doppler_mediansubtraction:
-                data_ = data_ - np.nanmedian(data)
+                data_ = data_ - np.nanmedian(data_)
 
         if data.ndim == 3:
             data = data[0, ...]
@@ -1400,7 +1400,7 @@ class FitResults:
         x0 = np.ones([nx,ny])
         x1, x2 = np.indices([nx,ny])
         x1 = x1-0.5*nx; x2 = x2-0.5*ny
-        mask = (np.isnan(dopp) == False) * snr_th * (dopp_err>.0E-15)
+        mask = (np.isnan(dopp) == False) * snr_th * (dopp_err> 1.0E-15)
 
         cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
 

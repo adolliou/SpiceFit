@@ -928,7 +928,7 @@ class FitResults:
                         coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
                         allow_reprojection: bool = False, 
                         doppler_mediansubtraction: bool=False, 
-                        norm = None, cmap = None, 
+                        cmap = None, 
                         imin = 0, imax = 99, stretch = "default",
                         ):
         """
@@ -1012,8 +1012,7 @@ class FitResults:
             "chi2": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "I": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
         }
-        if norm is None:
-            norm = norms[param]
+        norm = norms[param]
 
         if regular_grid:
             coords = w_xy.pixel_to_world(x, y)

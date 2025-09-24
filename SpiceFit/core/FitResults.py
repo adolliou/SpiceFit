@@ -929,7 +929,7 @@ class FitResults:
                         allow_reprojection: bool = False, 
                         doppler_mediansubtraction: bool=False, 
                         cmap = None, 
-                        imin = 0, imax = 99, stretch = "default",
+                        imin = 0, imax = 99, stretch = None,
                         ):
         """
 

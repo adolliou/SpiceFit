@@ -968,7 +968,7 @@ class FitResults:
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
         if param == "x":
-            line = self._find_line(a[param])
+            line = self._find_line(self.components_results[line]["info"])
             lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
             data = a[param]["results"].to(unit).value - lambda_ref.to(unit).value
 

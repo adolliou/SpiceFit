@@ -967,9 +967,9 @@ class FitResults:
         w_xy = self.spectral_window.w_xy
 
         if param == "chi2":
-            data = self.components_results["chi2"]["coeffs"]["chi2"]["results"]
+            data = np.squeeze(self.components_results["chi2"]["coeffs"]["chi2"]["results"])
         else:
-            data = a[param]["results"].to(unit).value
+            data = np.squeeze(a[param]["results"].to(unit).value)
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
         if param == "x":
@@ -982,7 +982,6 @@ class FitResults:
                 data = data_ - np.nanmedian(data_)
 
         if data.ndim == 3:
-            data = data[0, ...]
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
                                np.arange(self.spectral_window.data.shape[2]))
         # isnotnan = np.logical_not(np.isnan(data))

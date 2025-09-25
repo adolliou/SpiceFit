@@ -929,7 +929,7 @@ class FitResults:
                         allow_reprojection: bool = False, 
                         doppler_mediansubtraction: bool=False, 
                         cmap = None, 
-                        imin = 0, imax = 99, stretch = None,
+                        imin = 0, imax = 99.5, stretch = None,
                         ):
         """
 
@@ -955,8 +955,6 @@ class FitResults:
             "chi2":     "linear",
             "I":        "linear",
         }
-        if  stretch is None:
-            stretch = stretch_dict[param]
         units = {
             "radiance": Constants.conventional_radiance_units,
             "fwhm": Constants.conventional_lambda_units,
@@ -974,9 +972,20 @@ class FitResults:
             "I":  mpl.colormaps.get_cmap('viridis'),
         }
 
-        unit = units[param]
+        if  stretch is None:
+            if param in stretch_dict.keys():
+                stretch = stretch_dict[param]
+            else:
+                stretch = "linear"
+        if param in units.keys():
+            unit = units[param]
+        else:
+            unit = None
         if cmap is None:
-            cmap = cmaps[param]  # viridis is the default colormap for imshow
+            if param in cmaps.keys():
+                cmap = cmaps[param]  # viridis is the default colormap for imshow
+            else:
+                cmap = mpl.colormaps.get_cmap("viridis")
         cmap.set_bad('white')
         a = self.components_results[line]["coeffs"]
         w_xy = self.spectral_window.w_xy
@@ -984,17 +993,21 @@ class FitResults:
         if param == "chi2":
             data = np.squeeze(self.components_results["chi2"]["coeffs"]["chi2"]["results"])
         else:
-            data = np.squeeze(a[param]["results"].to(unit).value)
+            if unit is not None:
+                data = np.squeeze(a[param]["results"].to(unit).value)
+            else: 
+                data = np.squeeze(a[param]["results"].value)
+
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
         if param == "x":
             line = self._find_line(self.components_results[line]["info"]["name_component"])
             lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
-            data_ = copy.deepcopy(data) - lambda_ref.to(unit).value
+            data = copy.deepcopy(data) - lambda_ref.to(unit).value
             data_err = copy.deepcopy(a[param]["sigma"].to(unit).value)
             # data_ = self._detrend_dopp(data_, data_err)
             if doppler_mediansubtraction:
-                data = data_ - np.nanmedian(data_)
+                data = data - np.nanmedian(data)
 
         if data.ndim == 3:
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
@@ -1008,11 +1021,14 @@ class FitResults:
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
-            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075),
+            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
             "chi2": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "I": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
         }
-        norm = norms[param]
+        if param in norms.keys():
+            norm = norms[param]
+        else:
+            norm = PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax)
 
         if regular_grid:
             coords = w_xy.pixel_to_world(x, y)
@@ -1040,6 +1056,7 @@ class FitResults:
                            norm=norm, aspect=ratio)
             ax.set_xlabel("X-axis [px]")
             ax.set_ylabel("Y-axis [px]")
+
         cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
 
         ax.set_title(param)
@@ -1061,6 +1078,8 @@ class FitResults:
 
             else:
                 ax.plot(x_subfov, y_subfov, '+', ms=0.7, mew=0.5, c="r")
+                ax.axvline(x=x_subfov, ls="--", lw=0.7) 
+                ax.axhline(y=y_subfov, ls="--", lw=0.7) 
 
     def check_spectra(self, path_to_save_figure: str, position="random"):
         """

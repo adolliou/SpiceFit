@@ -1021,7 +1021,7 @@ class FitResults:
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
-            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
+            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075),
             "chi2": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "I": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
         }

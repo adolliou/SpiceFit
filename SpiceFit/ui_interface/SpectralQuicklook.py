@@ -190,19 +190,9 @@ class GUISpectralQuicklook(QMainWindow):
         self.param_list_widget.addItems(list_params)
         self.button_layout.addWidget(self.param_list_widget)
 
-    # @property
-    # def main_plot_item(self):
-    #     return self.iv.getView()
-
-    # @property
-    # def main_view_box(self):
-    #     return self.ii.getViewBox()
-
     def update_spectra(self):
         sx = int(self.xaxis_edit.text())
         sy = int(self.yaxis_edit.text())
-        # self.xlabel_label.setText(f"Pixel-X: {sx}")
-        # self.ylabel_label.setText(f"Pixel-Y: {sy}")
         print(f"changed pixels to ({sx}, {sy})")
         line_name = str(self.lines_list_widget.currentText())
         param = str(self.param_list_widget.currentText())

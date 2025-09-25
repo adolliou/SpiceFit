@@ -5,8 +5,8 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 import numpy as np
 import sys
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
     QLineEdit,
@@ -18,8 +18,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
 )
-from PyQt6.QtGui import QColor, QPalette, QTransform
-from PyQt6.QtWidgets import QWidget
+from PyQt5.QtGui import QColor, QPalette, QTransform
+from PyQt5.QtWidgets import QWidget
 from functools import partial
 import os
 from pathlib import Path

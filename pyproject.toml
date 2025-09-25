@@ -21,7 +21,6 @@ reproject = ">=0.9.0"
 numba = "^0.61.0"
 tqdm = ">=4.66.2"
 pytest = "^8.3.4"
-pyqt6 = "^6.9.1"
 
 [build-system]
 requires = ["poetry-core"]

@@ -546,13 +546,12 @@ class FitResults:
             dy = uncertainty_cube[t, :, i, j]
 
             try:
-                popt, pcov = fit_spectra(x=x,
+                popt, pcov, chi2 = fit_spectra(x=x,
                                          y=y,
                                          dy=dy,
                                          fit_template=fit_template,
                                          minimum_data_points=minimum_data_points)
 
-                chi2 = np.sum(np.diag(pcov))
                 if chi2 <= chi_limit:
                     self.fit_results["coeff"][:, t, i, j] = popt
                     self.fit_results["coeffs_error"][:, t, i, j] = np.sqrt(np.diag(pcov))

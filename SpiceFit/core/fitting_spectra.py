@@ -26,7 +26,10 @@ def fit_spectra(x, y, dy, fit_template: FittingModel, minimum_data_points: int =
                 full_output=False,
                 absolute_sigma=True,
                 # jac=fit_template.jacobian_function,
-            )
+            )   
+            r = y - fit_template.fitting_function(x, *popt)
+            chi2 = (1/len(x)) * np.sum((r/dy)**2)
+
         # from matplotlib import pyplot as plt
         # y2 = fit_template.fitting_function(x, *fit_template.params_free["guess"])
         # y3 = fit_template.fitting_function(x, *popt)
@@ -38,6 +41,6 @@ def fit_spectra(x, y, dy, fit_template: FittingModel, minimum_data_points: int =
             if verbose == 2:
                 print("Fitting failed")
 
-            return None, None
+            return None, None, None
 
-        return popt, pcov
+        return popt, pcov, chi2

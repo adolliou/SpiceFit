@@ -87,6 +87,7 @@ class TestFitResults:
             cpu_count=16,
             fit_template=fittemplate,
             verbose=False,
+            save_folder_skew=Path(__file__).parents[0],
         )
 
     def test_load_fit_window_standard(self):

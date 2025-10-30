@@ -36,6 +36,28 @@ import glob
 warnings.filterwarnings("ignore", message="Card is too long, comment will be truncated.")
 warnings.filterwarnings("ignore",
                         message="'UTC' did not parse as fits unit: At col 0, Unit 'UTC'", )
+default_bin_fac = [
+    3,
+    3,
+]  
+
+
+def bindown2(d, f):
+    n = np.round(np.array(d.shape) / f).astype(np.int32)
+    inds = np.ravel_multi_index(
+        np.floor((np.indices(d.shape).T * n / np.array(d.shape))).T.astype(np.uint32), n
+    )
+    return np.bincount(
+        inds.flatten(), weights=d.flatten(), dminlength=np.prod(n)
+    ).reshape(n)
+
+
+def binup(d, f):
+    n = np.round(np.array(d.shape) * np.round(f)).astype(np.int32)
+    inds = np.ravel_multi_index(
+        np.floor((np.indices(n).T / np.array(f))).T.astype(np.uint32), d.shape
+    )
+    return np.reshape(d.flatten()[inds], n)
 
 
 def flatten(xss):
@@ -155,8 +177,6 @@ class FitResults:
         cpu_count: int = None,
         min_data_points: int = 5,
         chi2_limit: float = 20.0,
-        subtract_doppler_median: bool = True,
-        subtract_doppler_linear_trend: bool = True,
         verbose=0,
     ):
         """
@@ -1352,7 +1372,7 @@ class FitResults:
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
 
-    def _deskew_jp(self, best_xshift, best_yshift):
+    def _deskew_jp(self, best_xshift, best_yshift, skew_bin_facs=default_bin_fac):
         """Deskew the fitted data with the shift parameters. The reprojection is performed independantly for each line, 
         as it depend on the Doppler shift (in pixel) measured for each line. 
         """

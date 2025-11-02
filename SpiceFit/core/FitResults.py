@@ -32,7 +32,7 @@ import os
 import ast
 from pathlib import Path
 import warnings
-import glob
+from scipy.interpolate import RegularGridInterpolator, LinearNDInterpolator as lndi
 warnings.filterwarnings("ignore", message="Card is too long, comment will be truncated.")
 warnings.filterwarnings("ignore",
                         message="'UTC' did not parse as fits unit: At col 0, Unit 'UTC'", )
@@ -238,13 +238,13 @@ class FitResults:
         uncertainty_cube_skew = best_correction_results["err_skew"]
         uncertainty_cube_skew = uncertainty_cube_skew.T
         uncertainty_cube_skew = np.reshape(
-            uncertainty_cube_skew, (uncertainty_cube_skew.shape[0], uncertainty_cube_skew.shape[1], uncertainty_cube_skew.shape[2])
+            uncertainty_cube_skew, (1, uncertainty_cube_skew.shape[0], uncertainty_cube_skew.shape[1], uncertainty_cube_skew.shape[2])
         )
         uncertainty_cube_skew = u.Quantity(uncertainty_cube_skew, spicewindow.header["BUNIT"])
 
         self.fit_window_standard_3d(
-            data_cube=data_cube,
-            uncertainty_cube=uncertainty_cube,
+            data_cube=data_cube_skew,
+            uncertainty_cube=uncertainty_cube_skew,
             lambda_cube=lambda_cube,
             parallelism=parallelism,
             cpu_count=cpu_count,
@@ -767,13 +767,12 @@ class FitResults:
                 y = data_all[t, :, i, j]
                 dy = uncertainty_all[t, :, i, j]
                 try:
-                    popt, pcov = fit_spectra(x=x,
+                    popt, pcov, chi2 = fit_spectra(x=x,
                                              y=y,
                                              dy=dy,
                                              fit_template=self.fit_template,
                                              minimum_data_points=self.min_data_points)
 
-                    chi2 = np.sum(np.diag(pcov))
                     if chi2 <= self.chi2_limit:
                         lock.acquire()
                         fit_coeffs_all[:, t, i, j] = popt
@@ -798,7 +797,7 @@ class FitResults:
                 y = data_all[t, :, i, j]
                 dy = uncertainty_all[t, :, i, j]
                 try:
-                    popt, pcov = fit_spectra(x=x,
+                    popt, pcov, chi2 = fit_spectra(x=x,
                                              y=y,
                                              dy=dy,
                                              fit_template=self.fit_template,
@@ -1373,15 +1372,32 @@ class FitResults:
         hdul.writeto(path_fits, overwrite=True)
 
     def _deskew_jp(self, best_xshift, best_yshift, skew_bin_facs=default_bin_fac):
-        """Deskew the fitted data with the shift parameters. The reprojection is performed independantly for each line, 
-        as it depend on the Doppler shift (in pixel) measured for each line. 
+        """Deskew the fitted data with the shift parameters. The reprojection is performed independantly for each line,
+        as it depend on the Doppler shift (in pixel) measured for each line.
         """
 
         keys_comp = list(self.components_results.keys())
         keys_comp.remove("flagged_pixels")
         keys_comp.remove("main")
 
+        hdr = self.spectral_window.header
+        dx, dy = hdr["CDELT1"], hdr["CDELT2"]
+        shape = np.array([hdr["NAXIS1"], hdr["NAXIS2"]], dtype=np.int32)
+
+        # spice_x = dx*np.arange(shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
+        # spice_y = dy*np.arange(shape[1]*skew_bin_facs[1])/skew_bin_facs[1]
+        [spice_xa0, spice_ya0] = np.indices((skew_bin_facs * shape).astype(np.int32))
+        spice_xa0 = dx * spice_xa0 / skew_bin_facs[0]
+        spice_ya0 = dy * spice_ya0 / skew_bin_facs[1]
+
+        hdr_wavcen = u.Quantity(
+            hdr["CRVAL3"]
+            + (0.5 * hdr["NAXIS3"] - (hdr["CRPIX3"] - 0.5)) * hdr["CDELT3"],
+            hdr["CUNIT3"],
+        )
+
         xx_ini, yy_ini = self.spectral_window.return_point_pixels(type="xy")
+
         w_spec = self.spectral_window.w_spec
         lamb = self.spectral_window.return_wavelength_array()
 
@@ -1395,31 +1411,47 @@ class FitResults:
             name_line = a["name_component"]
             if type_ == "gaussian":
 
-                line = self._get_line(name_line)
-                lambda_ref = u.Quantity(line["wave"], line["unit_wave"])
-                pixel_lambda_ref = w_spec.world_to_pixel(lambda_ref)
+                # line = self._get_line(name_line)
+                # lambda_ref = u.Quantity(line["wave"], line["unit_wave"])
+                # pixel_lambda_ref = w_spec.world_to_pixel(lambda_ref)
 
                 doppler = self.components_results[name_line]["coeffs"]["x"]["results"]
                 shape_ini = doppler.shape
 
-                pixel_doppler = w_spec.world_to_pixel(doppler.ravel())
-                pixel_doppler = np.reshape(pixel_doppler, xx_ini.shape)
-                dlambda = pixel_doppler - pixel_lambda_ref
+                # pixel_doppler = w_spec.world_to_pixel(doppler.ravel())
 
+                dlambda = binup(doppler.ravel() - hdr_wavcen, skew_bin_facs)
+                dlambda = dlambda.to("angstrom").value
                 dlambda[np.isnan(dlambda)] = 0.0
 
-                xx_out = xx_ini + best_xshift * dlambda
-                yy_out = yy_ini + best_yshift * dlambda
+                xshift = spice_xa0 + best_xshift * dlambda
+                yshift = spice_ya0 + best_yshift * dlambda
 
                 for results_type in ["coeff", "coeffs_error"]:
-
+                    
                     param_in = np.reshape(
                         self.fit_results[results_type][wha, ...],
                         xx_ini.shape,
                     )
-                    param_out = np.zeros(param_in.shape, dtype="float")
-                    CommonUtil.interpol2d(image = param_in, x=xx_out, y=yy_out, fill=np.nan, order=2, dst = param_out)
-                    self.fit_results[results_type][wha, ...] =np.reshape(param_out, shape_ini)
+                    param_in_bin = binup(param_in, skew_bin_facs)
+                    spice_xya = np.array([xshift.flatten(),yshift.flatten()]).T
+                    param_out = bindown2(
+                        lndi(spice_xya, param_in_bin)(spice_xa0, spice_ya0),
+                        skew_bin_facs,
+                    ) / np.prod(skew_bin_facs)
+                    self.fit_results[results_type][wha, ...] = np.reshape(
+                        param_out, shape_ini
+                    )
+
+                    # CommonUtil.interpol2d(
+                    #     image=param_in_bin,
+                    #     x=xx_out,
+                    #     y=yy_out,
+                    #     fill=np.nan,
+                    #     order=2,
+                    #     dst=param_out_bin,
+                    # )
+                    # param_out = bindown2(param_out_bin, skew_bin_facs)
 
         self.build_components_results()
 

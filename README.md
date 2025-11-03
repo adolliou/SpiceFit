@@ -99,7 +99,9 @@ fig.savefig(path_fig, dpi=50)
 
 ### Plotting L3 maps
 
-Alternatively, you can save the image as a PDF file. 
+You can also plot the radiance/Doppler shift or broadening maps of a specific line of the window. Setting regular_grid to True means that the image will be reprojected into a regular grid in the frame described in the SPICE header (Helioprojective frame). Set to false to show the grid in pixels. 
+
+
 ```python
 path_fig = "path/to/plot_radiance_map.pdf"
 

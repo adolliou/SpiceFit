@@ -684,7 +684,7 @@ class FitResults:
             },
             "coeffs": {
                 "flagged_pixels": {
-                    "results": self.fit_results["chi2"],
+                    "results": self.fit_results["flagged_pixels"],
                 }
             },
         }
@@ -775,18 +775,23 @@ class FitResults:
                                              dy=dy,
                                              fit_template=self.fit_template,
                                              minimum_data_points=self.min_data_points)
+                    if popt is not None:
 
-                    if chi2 <= self.chi2_limit:
-                        lock.acquire()
-                        fit_coeffs_all[:, t, i, j] = popt
-                        fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
-                        fit_chit2_all[t, i, j] = chi2
-                        lock.release()
+                        if chi2 <= self.chi2_limit:
+                            lock.acquire()
+                            fit_coeffs_all[:, t, i, j] = popt
+                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                            fit_chit2_all[t, i, j] = chi2
+                            lock.release()
+                        else:
+                            lock.acquire()
+                            fit_coeffs_all[:, t, i, j] = popt
+                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                            fit_chit2_all[t, i, j] = chi2
+                            flagged_pixels[t, i, j] = True
+                            lock.release()
                     else:
                         lock.acquire()
-                        fit_coeffs_all[:, t, i, j] = popt
-                        fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
-                        fit_chit2_all[t, i, j] = chi2
                         flagged_pixels[t, i, j] = True
                         lock.release()
                 except ValueError:
@@ -1417,7 +1422,9 @@ class FitResults:
                 # line = self._get_line(name_line)
                 # lambda_ref = u.Quantity(line["wave"], line["unit_wave"])
                 # pixel_lambda_ref = w_spec.world_to_pixel(lambda_ref)
-
+                flagged_pixels = self.components_results["flagged_pixels"]["coeffs"][
+                    "flagged_pixels"
+                ]["results"][0, ...]
                 doppler = self.components_results[name_line]["coeffs"]["x"]["results"]
                 shape_ini = doppler.shape
                 doppler = doppler[0, ...]
@@ -1425,7 +1432,8 @@ class FitResults:
 
                 dlambda = binup(doppler - hdr_wavcen, skew_bin_facs)
                 dlambda = dlambda.to("angstrom").value
-                dlambda[np.isnan(dlambda)] = 0.0
+                dlambda[np.isnan(dlambda)] = np.nan
+                dlambda[flagged_pixels] = np.nan
 
                 xshift = spice_xa0 + best_xshift * dlambda
                 yshift = spice_ya0 + best_yshift * dlambda

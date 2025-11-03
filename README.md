@@ -112,6 +112,14 @@ f.plot_fitted_map(fig=fig, ax=ax, line="main", param="radiance",
 fig.savefig(path_fig, dpi=50)
 ```
 
+You can plot the doppler Shift subtracted by its median value over the raster as followed :
+```python
+fig = plt.figure()
+ax = fig.add_subplot()
+fitres.plot_fitted_map(fig=fig, ax=ax, line="main", param="x",
+                    regular_grid=False, doppler_mediansubtraction=True, )
+fig.savefig(os.path.join(resfolder, "doppler.pdf"), dpi=50)
+```
 
 ## Saving to and loading from a L3 FITS files
 
@@ -136,6 +144,21 @@ path_fits = "path/to/SPICE_l3_file.fits"
 
 f = FitResults()
 f.from_fits(path_fits)
+```
+
+## Skew correction (J. Plowman)
+The Skew correction of the SPICE PSF [Skew-correction](https://doi.org/10.48550/arXiv.2508.09121) has been added before the fitting, and the deskew is applied after the fitting. The results have been tested for one SPICE raster, and are similar. Please note that the plotting of the Doppler shift is different in my package. 
+
+
+
+```python
+fittemplate  = FittingModel(filename= "c_3_977_96_1c.template")
+fitres.fit_spice_window_skew(spicewindow=spicewindow,
+                                fit_template = fittemplate,
+                                save_folder_skew=datfolder,
+                                cpu_count = 8,
+                                verbose=4,
+                                chi2_limit=100.0, )
 ```
 
 ## Authors 

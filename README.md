@@ -35,7 +35,7 @@ template_file = "ne_8_770_42_1c.template"
 fittemplate FittingModel(filename=template_file)
 ```
 
-## Creating a SpiceWindow object
+### Creating a SpiceWindow object
 
 The next step is to create a SpiceWindow object. This object is built with a HDU object from a FITS HUL list. This object is where all the L2 data and header for the spectral window is. 
 
@@ -55,7 +55,7 @@ spicewindow = SpiceRasterWindowL2(hdu=hdu)
 
 ```
 
-## Fitting the SPICE spectra with a FitResults object
+### Fitting the SPICE spectra with a FitResults object
 
 You can now fit the SPICE data with a FitResults Object with the SPICE L2 data (spicewindow) and the fitting template (FittingModel). 
 ``` python
@@ -65,6 +65,65 @@ f = FitResults()
 f.fit_spice_window_standard(spicewindow=spicewindow, parallelism=True, cpu_count=16,
                             fit_template=fittemplate, verbose=False)
 
+```
+
+## plotting L3 images (e.g. Radiance)
+
+In the following, we plot the main line radiance. Regular grid set to True means that the image will be reprojected into a regular grid (e.g. in Helioprojective frame), taking into account the rotation. 
+
+```python
+fig = plt.figure()
+ax=fig.add_subplot()
+f.plot_fitted_map(fig=fig, ax=ax, line="main", param="radiance",
+                    regular_grid=False, pixels=pixels)
+fig.savefig(path_fig2, dpi=50)
+```
+
+### Quicklook
+The simplest way to plot the fitting results are from the quicklook method. you can show the image as followed
+``` python
+from SpiceFit import FitResults
+
+f = FitResults()
+f.fit_spice_window_standard(spicewindow=spicewindow, parallelism=True, cpu_count=16,
+                            fit_template=fittemplate, verbose=False)
+f.quicklook(show=False)
+```
+
+Alternatively, you can save the image as a PDF file. 
+```python
+path_fig = "path/to/quicklook.pdf"
+fig = f.quicklook(show=False)
+fig.savefig(path_fig, dpi=50)
+```
+
+### Plotting L3 maps
+
+
+
+## Saving to and loading from a L3 FITS files
+
+This package allows to save a L3 FITS file with the same format as the L3 files from the IDL SPICE data analysis. 
+
+```python
+from SpiceFit import FitResults
+path_fits = "path/to/SPICE_l3_file.fits"
+
+f = FitResults()
+f.fit_spice_window_standard(spicewindow=spicewindow, parallelism=True, cpu_count=16,
+                            fit_template=fittemplate, verbose=False)
+
+f.to_fits(path_fits)
+```
+
+You can also load a FitsResults object from a L3 FITS file.
+
+```python
+from SpiceFit import FitResults
+path_fits = "path/to/SPICE_l3_file.fits"
+
+f = FitResults()
+f.from_fits(path_fits)
 ```
 
 ## Authors 

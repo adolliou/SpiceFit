@@ -1425,6 +1425,7 @@ class FitResults:
                 flagged_pixels = self.components_results["flagged_pixels"]["coeffs"][
                     "flagged_pixels"
                 ]["results"][0, ...]
+                flagged_pixels_bin = binup(flagged_pixels, skew_bin_facs)
                 doppler = self.components_results[name_line]["coeffs"]["x"]["results"]
                 shape_ini = doppler.shape
                 doppler = doppler[0, ...]
@@ -1432,8 +1433,11 @@ class FitResults:
 
                 dlambda = binup(doppler - hdr_wavcen, skew_bin_facs)
                 dlambda = dlambda.to("angstrom").value
-                dlambda[np.isnan(dlambda)] = np.nan
-                dlambda[flagged_pixels] = np.nan
+
+                good_pixels = np.logical_not(np.logical_or(np.isnan(dlambda), 
+                                                          flagged_pixels_bin))
+                # dlambda[np.isnan(dlambda)] = np.nan
+                # dlambda[flagged_pixels_bin] = np.nan
 
                 xshift = spice_xa0 + best_xshift * dlambda
                 yshift = spice_ya0 + best_yshift * dlambda
@@ -1445,9 +1449,16 @@ class FitResults:
                         xx_ini.shape,
                     )
                     param_in_bin = binup(param_in, skew_bin_facs)
-                    spice_yxa = np.array([yshift.flatten(),xshift.flatten()]).T
-                    param_out = bindown2(lndi(spice_yxa, param_in_bin.flatten())(spice_ya0, spice_xa0),
-                                          skew_bin_facs,) / np.prod(skew_bin_facs)
+                    spice_yxa = np.array(
+                        [yshift[good_pixels].flatten(),
+                        xshift[good_pixels].flatten()]
+                    ).T
+                    param_out = bindown2(
+                        lndi(spice_yxa, param_in_bin[good_pixels].flatten())(
+                            spice_ya0, spice_xa0
+                        ),
+                        skew_bin_facs,
+                    ) / np.prod(skew_bin_facs)
 
                     self.fit_results[results_type][wha, ...] = np.reshape(
                         param_out, shape_ini

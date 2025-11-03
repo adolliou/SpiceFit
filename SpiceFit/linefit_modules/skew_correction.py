@@ -155,10 +155,13 @@ def full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
     # Apply the skew correction with the specified x shift and yshift
     spicedat_skew = skew_correct(spice_dat, spice_hdr, xlshift, ylshift, lambdas=spice_la,
 									lcen=lcen, skew_bin_facs=skew_bin_facs, offsets=offsets)
+    spice_hdr["NBIN3"] = skew_bin_facs[0]
+    spice_hdr["NBIN2"] = skew_bin_facs[1]
     av_constant_noise_level, sigma = spice_error(
 				data=spicedat_skew, header=spice_hdr, verbose=False
 			)
     spiceerr_skew = sigma["Total"].to(spice_hdr["BUNIT"]).value
+
     # spiceerr_skew = get_spice_err(spicedat_skew, spice_hdr, verbose=False)
 
     # fig = plt.figure()
@@ -181,18 +184,48 @@ def full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
     # 						band2_ymax, signal_windowed, signal_cube, plot_dir=kwargs.get('yrange_plot_dir'))
 
     # Fit the spectral lines in the data:
-    fit_results = list(fitter(spicedat_skew, spiceerr_skew, spice_la, spice_skew_fit_mask, 
-							spice_sdev_guess, linelist=kwargs.get('linelist',None), cenbound_fac=0.0, nthreads=kwargs.get('nthreads'), verbose=False))
+    fit_results = list(
+        fitter(
+            spicedat_skew,
+            spiceerr_skew,
+            spice_la,
+            spice_skew_fit_mask,
+            spice_sdev_guess,
+            linelist=kwargs.get("linelist", None),
+            cenbound_fac=0.0,
+            nthreads=kwargs.get("nthreads"),
+            verbose=False,
+        )
+    )
     fit_results.append(spice_hdr)
     window_skewed = linefits([fit_results])
-
-    if(kwargs.get('do_deskew',True)):
+    if kwargs.get("do_deskew", True):
         window_out = linefits()
-        for key in window_skewed: 
-            window_out[key] = deskew_linefit_window(window_skewed[key], xlshift, ylshift,
-													skew_bin_facs=skew_bin_facs, lcen=np.mean(spice_la))
+        for key in window_skewed:
+            window_out[key] = deskew_linefit_window(
+                window_skewed[key],
+                xlshift,
+                ylshift,
+                skew_bin_facs=skew_bin_facs,
+                lcen=np.mean(spice_la),
+            )
     else:
         window_out = window_skewed
     return {'dat_skew':spicedat_skew, 'err_skew':spiceerr_skew, 'linefits':window_out, 'xlshift':xlshift,
-			'ylshift':ylshift, 'kwargs':kwargs,	'hdr':spice_hdr, 'centers':centers, 'lines':lines, 
+			'ylshift':ylshift, 'kwargs':kwargs,	'hdr':spice_hdr, 'centers':centers, 'lines':lines,
 			'mask':spice_skew_fit_mask, 'waves':spice_la, 'offsets':offsets, 'ymin':ymin, 'ymax':ymax}
+    # return {
+    # 	"dat_skew": spicedat_skew,
+    # 	"err_skew": spiceerr_skew,
+    # 	"xlshift": xlshift,
+    # 	"ylshift": ylshift,
+    # 	"kwargs": kwargs,
+    # 	"hdr": spice_hdr,
+    # 	"centers": centers,
+    # 	"lines": lines,
+    # 	"mask": spice_skew_fit_mask,
+    # 	"waves": spice_la,
+    # 	"offsets": offsets,
+    # 	"ymin": ymin,
+    # 	"ymax": ymax,
+    # }

@@ -48,7 +48,7 @@ def bindown2(d, f):
         np.floor((np.indices(d.shape).T * n / np.array(d.shape))).T.astype(np.uint32), n
     )
     return np.bincount(
-        inds.flatten(), weights=d.flatten(), dminlength=np.prod(n)
+        inds.flatten(), weights=d.flatten(), minlength=np.prod(n)
     ).reshape(n)
 
 
@@ -1382,7 +1382,7 @@ class FitResults:
 
         hdr = self.spectral_window.header
         dx, dy = hdr["CDELT1"], hdr["CDELT2"]
-        shape = np.array([hdr["NAXIS1"], hdr["NAXIS2"]], dtype=np.int32)
+        shape = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
 
         # spice_x = dx*np.arange(shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
         # spice_y = dy*np.arange(shape[1]*skew_bin_facs[1])/skew_bin_facs[1]
@@ -1417,10 +1417,10 @@ class FitResults:
 
                 doppler = self.components_results[name_line]["coeffs"]["x"]["results"]
                 shape_ini = doppler.shape
-
+                doppler = doppler[0, ...]
                 # pixel_doppler = w_spec.world_to_pixel(doppler.ravel())
 
-                dlambda = binup(doppler.ravel() - hdr_wavcen, skew_bin_facs)
+                dlambda = binup(doppler - hdr_wavcen, skew_bin_facs)
                 dlambda = dlambda.to("angstrom").value
                 dlambda[np.isnan(dlambda)] = 0.0
 
@@ -1428,17 +1428,16 @@ class FitResults:
                 yshift = spice_ya0 + best_yshift * dlambda
 
                 for results_type in ["coeff", "coeffs_error"]:
-                    
+
                     param_in = np.reshape(
                         self.fit_results[results_type][wha, ...],
                         xx_ini.shape,
                     )
                     param_in_bin = binup(param_in, skew_bin_facs)
-                    spice_xya = np.array([xshift.flatten(),yshift.flatten()]).T
-                    param_out = bindown2(
-                        lndi(spice_xya, param_in_bin)(spice_xa0, spice_ya0),
-                        skew_bin_facs,
-                    ) / np.prod(skew_bin_facs)
+                    spice_yxa = np.array([yshift.flatten(),xshift.flatten()]).T
+                    param_out = bindown2(lndi(spice_yxa, param_in_bin.flatten())(spice_ya0, spice_xa0),
+                                          skew_bin_facs,) / np.prod(skew_bin_facs)
+
                     self.fit_results[results_type][wha, ...] = np.reshape(
                         param_out, shape_ini
                     )

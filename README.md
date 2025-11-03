@@ -71,5 +71,6 @@ f.fit_spice_window_standard(spicewindow=spicewindow, parallelism=True, cpu_count
 
 Antoine Dolliou (dolliou@mps.mpg.de)
 
-Credit : - [saffron-spice](https://github.com/slimguat/saffron-spice) : Development concepts. 
+Credit : - [saffron-spice](https://github.com/slimguat/saffron-spice) : Line fitting concepts.
+- [eispac](https://github.com/USNavalResearchLaboratory/eispac) : Fitting templates concepts.
 - [spice-line-fits](https://github.com/adolliou/spice-line-fits) :  Skew correction of the SPICE PSF.

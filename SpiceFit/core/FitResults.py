@@ -178,6 +178,8 @@ class FitResults:
         min_data_points: int = 5,
         chi2_limit: float = 20.0,
         verbose=0,
+        best_xshift: float=None,
+        best_yshift: float=None,
     ):
         """
 
@@ -193,7 +195,7 @@ class FitResults:
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
         :param display_progress_bar: display the progress bar
         :param subtract_doppler_median: If True, then subtract the Doppler shifts by their median along the datacube.
-        :
+        :param best_xshift / best_yshift set the values for the JP algorithm if already known.
         """
         self.verbose = verbose
         self.fit_template = fit_template
@@ -217,14 +219,15 @@ class FitResults:
         # save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
         spice_data = spicewindow.data[0].to(spicewindow.header["BUNIT"]).value
         spice_data = spice_data.transpose([2,1,0]).astype(np.float32)
-        shift_vars = search_spice_window(
-            spice_data,
-            spicewindow.header,
-            spicewindow.window_name,
-            nthreads=cpu_count_j,
-            save_dir=save_folder_skew,
-        )
-        best_xshift, best_yshift = shift_vars.best_shifts()
+        if (best_xshift is None) | (best_yshift is None):
+            shift_vars = search_spice_window(
+                spice_data,
+                spicewindow.header,
+                spicewindow.window_name,
+                nthreads=cpu_count_j,
+                save_dir=save_folder_skew,
+            )
+            best_xshift, best_yshift = shift_vars.best_shifts()
 
         best_correction_results = full_correction(spice_data, spicewindow.header, best_xshift, best_yshift, nthreads=cpu_count_j)
 

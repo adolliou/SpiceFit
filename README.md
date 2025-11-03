@@ -146,7 +146,7 @@ f = FitResults()
 f.from_fits(path_fits)
 ```
 
-## Skew correction (J. Plowman)
+## Skew correction
 The Skew correction of the SPICE PSF [Skew-correction](https://doi.org/10.48550/arXiv.2508.09121) has been added before the fitting, and the deskew is applied after the fitting. The results have been tested for one SPICE raster, and are similar. Please note that the plotting of the Doppler shift is different in my package. 
 
 

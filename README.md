@@ -99,6 +99,16 @@ fig.savefig(path_fig, dpi=50)
 
 ### Plotting L3 maps
 
+Alternatively, you can save the image as a PDF file. 
+```python
+path_fig = "path/to/plot_radiance_map.pdf"
+
+fig = plt.figure()
+ax=fig.add_subplot()
+f.plot_fitted_map(fig=fig, ax=ax, line="main", param="radiance",
+                    regular_grid=False, pixels=pixels)
+fig.savefig(path_fig, dpi=50)
+```
 
 
 ## Saving to and loading from a L3 FITS files

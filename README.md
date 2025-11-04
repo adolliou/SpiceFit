@@ -46,7 +46,7 @@ url = (
     "https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/"
     "2022/03/17/solo_L2_spice-n-ras"
     "_20220317T002536_V03_100663832-017.fits"
-)  # noqa: E501
+)  
 hdu_list = fits.open(url)
 window = "Ne VIII 770 - Peak"
 hdu = hdu_list[window]

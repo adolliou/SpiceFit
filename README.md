@@ -160,6 +160,21 @@ fitres.fit_spice_window_skew(spicewindow=spicewindow,
                                 chi2_limit=100.0, )
 ```
 
+## UI interface to see the fitting results
+
+This software also includes a UI interface to check the fitting results and the spectra on all points of a raster. To use it, the following commands are available:
+```python
+from SpiceFit import FitResults, SpiceRaster, FittingModel, SpiceRasterWindowL2
+from SpiceFit.ui_interface.SpectralQuicklook import launch_spectral_quicklook
+
+fittemplate = FittingModel(filename="c_3_977_96_1c.template", use_jit=True)
+
+res = FitResults()
+res.from_fits(os.path.join(resfolder, "savefile_l3.fits"))
+window = launch_spectral_quicklook(res)
+
+```
+
 ## License
 
 This package is under MIT License. Please see the LICENSE file for more details.
@@ -170,8 +185,8 @@ Antoine Dolliou (dolliou@mps.mpg.de)
 
 ## Credit 
 
-- [saffron-spice](https://github.com/slimguat/saffron-spice) : Line fitting concepts.
-- [eispac](https://github.com/USNavalResearchLaboratory/eispac) : Fitting templates concepts.
+- [saffron-spice](https://github.com/slimguat/saffron-spice) : Line fitting concepts (e.g. constrains on the fitting, creation of fitting functions).
+- [eispac](https://github.com/USNavalResearchLaboratory/eispac) : Fitting templates concepts (e.g. structure of the .yaml template files).
 - [spice-line-fits](https://github.com/jeplowman/spice-line-fits) :  Skew correction of the SPICE PSF.
 
 ## Acknowledgement

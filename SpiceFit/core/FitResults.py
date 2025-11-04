@@ -971,7 +971,7 @@ class FitResults:
                         doppler_mediansubtraction: bool=False, 
                         cmap = None, 
                         imin = 0, imax = 98.0, stretch = None,
-                        sigma_error: int=2,
+                        sigma_error: int=1,
                         chi2_limit: float=None
                         ):
         """
@@ -1052,7 +1052,12 @@ class FitResults:
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
 
+            bad_pixels = np.array(
+                np.abs(data) * sigma_error < np.abs(data_err), dtype=bool
+            )
+            data[bad_pixels] = np.nan
 
+            
             if (param == "delta_x") or (param == "velocity") or (param == "x"):
                 if doppler_mediansubtraction:
                     data = data - np.nanmedian(data)
@@ -1080,9 +1085,6 @@ class FitResults:
             #             )
             #         data = data.to(unit).value
             #         data_err = data_err.to(unit).value
-
-            bad_pixels = np.array(data_err * sigma_error > np.abs(data), dtype=bool)
-            data[bad_pixels] = np.nan
 
             if chi2_limit is not None:
                 chi2 = np.squeeze(self.components_results["chi2"]["coeffs"]["chi2"]["results"])

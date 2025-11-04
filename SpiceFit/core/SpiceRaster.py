@@ -16,7 +16,6 @@ class SpiceRaster:
 
     sw_wave_limits = u.Quantity([704.0, 790.0], "angstrom")
 
-
     def __init__(
         self,
         path_l2_fits_file: str = None,
@@ -164,7 +163,7 @@ class SpiceRaster:
             header = win.header.copy()
             header_new = header.copy()
             if ii in list_to_change:
-                header_new["CRVAL3"] = (u.Quantity(header["CRVAL3"], "CUNIT3") + shift_lambda).to(header["CUNIT3"]).value
+                header_new["CRVAL3"] = (u.Quantity(header["CRVAL3"], header["CUNIT3"]) + shift_lambda).to(header["CUNIT3"]).value
             else:
                 pass
             hdu_new = fits.ImageHDU(data=data, header=header_new)
@@ -179,12 +178,6 @@ class SpiceRaster:
         spiceraster_calibrated = SpiceRaster(hdul=hdul_new)
         return spiceraster_calibrated
 
-
-
-
-
-
-
     def _get_windows_sw(self):
         """
         returns a list of the windows within the LW detector
@@ -192,10 +185,11 @@ class SpiceRaster:
         list_indexes_window_sw = []
         for ii, win in enumerate(self.windows):    
             wave_limits = win.return_wavelength_interval()
-            if (wave_limits[0] >= SpiceUtil.get_sw_wave_limits[0]) & (wave_limits[1] <= SpiceUtil.get_sw_wave_limits[1]):
+            if (wave_limits[0] >= SpiceUtil.get_sw_wave_limits()[0]) & (
+                wave_limits[1] <= SpiceUtil.get_sw_wave_limits()[1]
+            ):
                 list_indexes_window_sw.append(ii)
         return list_indexes_window_sw
-
 
     def _get_windows_lw(self):
         """
@@ -204,18 +198,20 @@ class SpiceRaster:
         list_indexes_window_lw = []
         for ii, win in enumerate(self.windows):    
             wave_limits = win.return_wavelength_interval()
-            if (wave_limits[0] >= SpiceUtil.get_lw_wave_limits[0]) & (wave_limits[1] <= SpiceUtil.get_lw_wave_limits[1]):
+            if (wave_limits[0] >= SpiceUtil.get_lw_wave_limits()[0]) & (
+                wave_limits[1] <= SpiceUtil.get_lw_wave_limits()[1]
+            ):
                 list_indexes_window_lw.append(ii)
         return list_indexes_window_lw
-    
+
     def _find_window_index_from_fittingmodel(self, fitting_model: FittingModel, lines_metadata_file:str|None = None, window_name: str = None):
-        
+
         # if lines_metadata_file is None:
         #     lines_metadata_file = os.path.join(Path(__file__).parents[0], "Templates/metadata_lines_default.yaml")
         # else:
         #     lines_metadata_file = Path(lines_metadata_file)
         line_name = fitting_model._parinfo["fit"]["main_line"]
-        
+
         lines_in_raster = self.get_lines_within_wavelength_intervals(lines_metadata_file=lines_metadata_file)
         # find the window where the line exists
         line_in_window = []
@@ -226,6 +222,3 @@ class SpiceRaster:
             raise ValueError(f"The number of windows where the line is detected should be 1, but is {len(line_in_window)}.\n Either select the window or check the line name")
         window_index = line_in_window[0]
         return window_index
-
-
-        

@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from ..FittingModel import FittingModel
 from ..FitResults import FitResults
-from SpiceRasterWindow import SpiceRasterWindowL2
+from ..SpiceRasterWindow import SpiceRasterWindowL2
 import astropy.units as u
 import astropy.constants as const
 
@@ -32,7 +32,7 @@ def fittemplate():
 
 class TestSpiceRaster:
 
-    def test_init(self):
+    def test_constructor(self):
         path_fits_l2_spice = "https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/2022/03/17/solo_L2_spice-n-ras_20220317T002536_V03_100663832-017.fits"
         s1 = SpiceRaster(path_l2_fits_file=path_fits_l2_spice)
         with fits.open(path_fits_l2_spice) as hdulist:
@@ -64,10 +64,14 @@ class TestSpiceRaster:
             parallelism=True,
             cpu_count=8,
         )
-        x_median = np.nanmedian(res.components_results["main"]["x"]["coeffs"]["results"])
+        res.from_fits(os.path.join(Path(__file__).parents[0], "test2.fits"))
+        x_median = np.nanmedian(
+            res.components_results["main"]["coeffs"]["x"]["results"]
+        )
         x_ref = (lambda_ref * velocity_ref / const.c.to("km/s") ) + lambda_ref
 
         shift_wave = x_ref - x_median
 
         raster = SpiceRaster(hdul=hdul)
         raster.return_wave_calibrated_spice_raster(shift_lambda=shift_wave, detector="LW")
+

@@ -120,6 +120,7 @@ class TestFitResults:
             verbose=2,
             detrend_doppler=True,
         )
+        # f.to_fits(os.path.join(Path(__file__).parents[0], "test2.fits"))
 
         fig = plt.figure()
         ax = fig.add_subplot()
@@ -130,36 +131,45 @@ class TestFitResults:
             param="delta_x",
             regular_grid=False,
             doppler_mediansubtraction=True,
-            imax = 90
+            imax = 90, 
+            sigma_error=1.0,
         )
         fig.savefig(path_fig_doppler, dpi=200)
 
-    # def test_save_fit_window_standard_skew(self, spicewindow2, fittemplate2):
-    #     path_fig = os.path.join(Path(__file__).parents[0], "doppler_skew_test.png")
-    #     path_fig_ref = os.path.join(Path(__file__).parents[0], "doppler_skew_ref.png")
+        base_image = Image.open(path_fig_doppler_ref)
+        ref_image = Image.open(path_fig_doppler)
 
-    #     fitres = FitResults()
-    #     fitres.fit_spice_window_skew(
-    #         spicewindow=spicewindow2,
-    #         parallelism=True,
-    #         cpu_count=8,
-    #         fit_template=fittemplate2,
-    #         verbose=False,
-    #         save_folder_skew=Path(__file__).parents[0],
-    #         best_xshift= 2.0,
-    #         best_yshift=-1.667,
-    #         detrend_doppler=True,
-    #     )
-    #     fig = plt.figure()
-    #     ax = fig.add_subplot()
-    #     fitres.plot_fitted_map(
-    #         fig=fig,
-    #         ax=ax,
-    #         line="main",
-    #         param="delta_x",
-    #         regular_grid=False,
-    #     )
-    #     fig.savefig(path_fig, dpi=50)
+        assert image_pixel_differences(base_image, ref_image)
+
+    def test_save_fit_window_standard_skew(self, spicewindow2, fittemplate2):
+        path_fig = os.path.join(Path(__file__).parents[0], "doppler_skew_test.png")
+        path_fig_ref = os.path.join(Path(__file__).parents[0], "doppler_skew_ref.png")
+
+        fitres = FitResults()
+        fitres.fit_spice_window_skew(
+            spicewindow=spicewindow2,
+            parallelism=True,
+            cpu_count=8,
+            fit_template=fittemplate2,
+            verbose=False,
+            save_folder_skew=Path(__file__).parents[0],
+            best_xshift= 2.0,
+            best_yshift=-1.667,
+            detrend_doppler=True,
+        )
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        f.plot_fitted_map(
+            fig=fig,
+            ax=ax,
+            line="main",
+            param="delta_x",
+            regular_grid=False,
+            doppler_mediansubtraction=True,
+            imax=90,
+            sigma_error=2.0,
+        )
+        fig.savefig(path_fig, dpi=50)
 
     def test_load_fit_window_standard(self):
         path_fig = os.path.join(Path(__file__).parents[0], "test_ql_.png")

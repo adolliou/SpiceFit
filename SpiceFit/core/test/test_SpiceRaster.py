@@ -64,7 +64,6 @@ class TestSpiceRaster:
             parallelism=True,
             cpu_count=8,
         )
-        res.from_fits(os.path.join(Path(__file__).parents[0], "test2.fits"))
         x_median = np.nanmedian(
             res.components_results["main"]["coeffs"]["x"]["results"]
         )

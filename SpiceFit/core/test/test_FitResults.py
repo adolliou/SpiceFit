@@ -159,7 +159,7 @@ class TestFitResults:
         )
         fig = plt.figure()
         ax = fig.add_subplot()
-        f.plot_fitted_map(
+        fitres.plot_fitted_map(
             fig=fig,
             ax=ax,
             line="main",
@@ -170,6 +170,9 @@ class TestFitResults:
             sigma_error=2.0,
         )
         fig.savefig(path_fig, dpi=50)
+        base_image = Image.open(path_fig_ref)
+        ref_image = Image.open(path_fig)
+        assert image_pixel_differences(base_image, ref_image)
 
     def test_load_fit_window_standard(self):
         path_fig = os.path.join(Path(__file__).parents[0], "test_ql_.png")

@@ -116,7 +116,7 @@ You can plot the doppler Shift subtracted by its median value over the raster as
 ```python
 fig = plt.figure()
 ax = fig.add_subplot()
-fitres.plot_fitted_map(fig=fig, ax=ax, line="main", param="x",
+fitres.plot_fitted_map(fig=fig, ax=ax, line="main", param="delta_x",
                     regular_grid=False, doppler_mediansubtraction=True, )
 fig.savefig(os.path.join(resfolder, "doppler.pdf"), dpi=50)
 ```

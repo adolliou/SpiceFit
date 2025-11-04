@@ -28,7 +28,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
             remove_dumbbells=True,
     ) -> None:
         """
-
+        Initialize a SpiceRasterWindowL2 object, which stores the data for a SPICE HUList window.
         :param hdu:
         SPICE L2 FITS hdu
         :param data:
@@ -74,19 +74,27 @@ class SpiceRasterWindowL2(RasterWindowL2):
         self.w_spec = copy.deepcopy(self.wcs).sub(["spectral"])
 
     def return_wavelength_array(self) -> list:
+        """
+        Returns the wavelength array of the window
+        """        
         lenlambda = self.data.shape[1]
         z = np.arange(lenlambda)
         lamb = self.w_spec.pixel_to_world(z)
         return lamb
 
     def return_wavelength_interval(self) -> list:
-        lenlambda = self.data.shape[1]
-        z = np.arange(lenlambda)
-        lamb = self.w_spec.world_to_pixel(z)
+        """
+        Returns the limit interval of the wavelength array. Useful to identify the lines within the interval
+        """        
+
+        lamb = self.return_wavelength_array()
         dlamb = lamb[1] - lamb[0]
         return [lamb[0] - 0.5 * dlamb, lamb[-1] + 0.5 * dlamb]
 
     def compute_uncertainty(self, verbose: bool = False) -> None:
+        """
+        Compute the uncertainty with the sospice open source package: https://github.com/solo-spice/sospice
+        """
         if self.uncertainty is not None:
             raise ValueError("uncertainty is already computed")
         av_constant_noise_level, sigma = spice_error(
@@ -96,6 +104,10 @@ class SpiceRasterWindowL2(RasterWindowL2):
         self.uncertainty_average = av_constant_noise_level
 
     def return_point_pixels(self, type="xylt"):
+        """
+        Return the indices of the pixels, depending on the form of the WCS you use (i.e. 4D, 3D etc) 
+
+        """        
         if type == "xylt":
             t, l, y, x = np.meshgrid(
                 np.arange(self.data.shape[0]),

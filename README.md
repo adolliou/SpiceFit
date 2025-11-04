@@ -187,7 +187,8 @@ Antoine Dolliou (dolliou@mps.mpg.de)
 
 - [saffron-spice](https://github.com/slimguat/saffron-spice) : Line fitting concepts.
 - [eispac](https://github.com/USNavalResearchLaboratory/eispac) : Fitting templates concepts.
-- [spice-line-fits](https://github.com/jeplowman/spice-line-fits) :  Skew correction of the SPICE PSF.
+- [spice-line-fits](https://github.com/jeplowman/spice-line-fits) :  Skew correction of the SPICE PSF, Doppler detrending.
+- [sospice](https://github.com/solo-spice/sospice) : Estimation of the uncertainty on the L2 SPICE data.
 
 ## Acknowledgement
 

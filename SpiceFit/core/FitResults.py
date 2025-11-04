@@ -950,10 +950,11 @@ class FitResults:
         else:
             return fig
 
-    def plot_fitted_map(self, ax, fig, line, param, regular_grid=False,
+    def plot_fitted_map(self, ax, fig, line: str, param: str, regular_grid=False,
                         coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
                         allow_reprojection: bool = False, 
                         doppler_mediansubtraction: bool=False, 
+                        doppler_applydetrending: bool=True,
                         cmap = None, 
                         imin = 0, imax = 99.5, stretch = None,
                         ):
@@ -965,6 +966,8 @@ class FitResults:
         :param line: line name. write "main" for the main line of the template.
         :param param: parameter to plot, between radiance,  fwhm, velocity and chi2.
         :param regular_grid:
+        :param doppler_mediansubtraction: in case of Doppler velocity, set to True to substract the median of the Doppler velocities over the raster
+        :param doppler_applydetrending: In case of Doppler velocity, set to True to apply the detrending method to remove the longitudinal gradient. 
 
         The following parameters are used if one want to show a sub fov.
          Please refer to RasterWindow.average_spectra_over_region for a detailed description of the parameters
@@ -1031,7 +1034,8 @@ class FitResults:
             lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
             data = copy.deepcopy(data) - lambda_ref.to(unit).value
             data_err = copy.deepcopy(a[param]["sigma"].to(unit).value)
-            # data_ = self._detrend_dopp(data_, data_err)
+            if doppler_applydetrending:
+                data = self._detrend_dopp(data, data_err)
             if doppler_mediansubtraction:
                 data = data - np.nanmedian(data)
 

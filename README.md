@@ -147,7 +147,7 @@ f.from_fits(path_fits)
 ```
 
 ## Skew correction
-The Skew correction of the SPICE PSF [Skew-correction](https://doi.org/10.48550/arXiv.2508.09121) has been added before the fitting, and the deskew is applied after the fitting.
+It is possible to perform the fitting procedure with the Skew (and deskew) correction for the SPICE PSF [Skew-correction](https://doi.org/10.48550/arXiv.2508.09121). To do so, please use the following command:
 
 
 ```python
@@ -168,3 +168,7 @@ Antoine Dolliou (dolliou@mps.mpg.de)
 - [saffron-spice](https://github.com/slimguat/saffron-spice) : Line fitting concepts.
 - [eispac](https://github.com/USNavalResearchLaboratory/eispac) : Fitting templates concepts.
 - [spice-line-fits](https://github.com/jeplowman/spice-line-fits) :  Skew correction of the SPICE PSF.
+
+## Acknowledgement
+
+If you use this package in your publication, you are welcome to cite it in the acknowledgment as : "This work uses the open-source SpiceFit package, version 0.1, available here : https://github.com/adolliou/SpiceFit"

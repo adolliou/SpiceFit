@@ -160,15 +160,22 @@ fitres.fit_spice_window_skew(spicewindow=spicewindow,
                                 chi2_limit=100.0, )
 ```
 
+## License
+
+This package is under MIT License. Please see the LICENSE file for more details.
+
 ## Authors 
 
 Antoine Dolliou (dolliou@mps.mpg.de)
 
 ## Credit 
+
 - [saffron-spice](https://github.com/slimguat/saffron-spice) : Line fitting concepts.
 - [eispac](https://github.com/USNavalResearchLaboratory/eispac) : Fitting templates concepts.
 - [spice-line-fits](https://github.com/jeplowman/spice-line-fits) :  Skew correction of the SPICE PSF.
 
 ## Acknowledgement
 
-If you use this package in your publication, you are welcome to cite it in the acknowledgment as : "This work uses the open-source SpiceFit package, version 0.1, available here : https://github.com/adolliou/SpiceFit"
+If you use this package in your publication, you are welcome to cite it in the acknowledgment as : "This work uses the open-source SpiceFit package, version 0.2.0, available here : https://github.com/adolliou/SpiceFit"
+
+Id you used the Skew correction, please also cite the [Skew-correction](https://doi.org/10.48550/arXiv.2508.09121) paper, or the published peer reviewed paper if it is available.

@@ -140,7 +140,7 @@ class SpiceRaster:
                 if (ii in windows) or (self.windows_ext[win] in windows):
                     win.compute_uncertainty()
 
-    def return_wave_calibrated_spice_hdul(self, shift_lambda: u.Quantity, detector: int):
+    def return_wave_calibrated_spice_raster(self, shift_lambda: u.Quantity, detector: int):
         """
         Returns a new SpiceRaster object with a constant wavelength calibration applied to one of the detector
 

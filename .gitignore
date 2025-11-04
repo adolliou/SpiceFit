@@ -177,3 +177,7 @@ test_fm_2.png
 test_fm_3.png
 test_fm_4.png
 test.fits
+
+*.pdf
+*.npy
+*.csv

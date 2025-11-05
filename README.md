@@ -183,7 +183,9 @@ This package is under MIT License. Please see the LICENSE file for more details.
 
 Antoine Dolliou (dolliou@mps.mpg.de)
 
-## Credit 
+## Credits
+
+The design and the operation of the code could not be possible without the following packages, which we acknowledged.  
 
 - [saffron-spice](https://github.com/slimguat/saffron-spice) : Line fitting concepts.
 - [eispac](https://github.com/USNavalResearchLaboratory/eispac) : Fitting templates concepts.

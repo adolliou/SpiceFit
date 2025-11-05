@@ -1,3 +1,32 @@
+# CREDIT : J. Plowman (https://github.com/jeplowman/spice-line-fits)
+# BSD 3-Clause License
+# Copyright (c) 2025, jeplowman
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 # These are routines for storing the results of spectral line fitting
 # in fits files and read them back into an organized internal Python
 # representation.
@@ -50,18 +79,18 @@ class linefits(iterdict):
 # included below the data and uncertainty arrays contain line center, amplitude, width,
 # continuum level, and chi squared for a fit of the C III 977 peak SPICE window (omits Lyman
 # Gamma). The arguments in this case would be as follows:
-#	 data: ndarray with dimensions nx, ny, nc; nc is number of fit parameters in the window.
-#	 uncertainties: ndarray with same dimension as data containing uncertainties in data
-#	 data_names: line/data component identifier, of length nc. e.g., 
-#			['C III 977','C III 977','C III 977','BACKGROUND','CHI2']
-#			Note duplication across, for example, parameters of the same line.
-#	 data_types: Data type as in fits BTYPE, of length nc. e.g.,
-#			['WAVELENGTH','RADIANCE','WAVELENGTH','RADIANCE','RESIDUAL']
-#	 data_units: Data units as in fits BUNIT, of length nc. e.g., 
-#			['nm', 'W/m2/sr', 'nm', 'W/m2/sr', '']
-#	 param_names: Names of each parameter returned by line fitting, of length nc, e.g.,
-#			['centers', 'amplitudes', 'sigmas', 'continuum', 'chi2']
-#	 window_header: The header of the spice fits data window in question
+# 	 data: ndarray with dimensions nx, ny, nc; nc is number of fit parameters in the window.
+# 	 uncertainties: ndarray with same dimension as data containing uncertainties in data
+# 	 data_names: line/data component identifier, of length nc. e.g.,
+# 			['C III 977','C III 977','C III 977','BACKGROUND','CHI2']
+# 			Note duplication across, for example, parameters of the same line.
+# 	 data_types: Data type as in fits BTYPE, of length nc. e.g.,
+# 			['WAVELENGTH','RADIANCE','WAVELENGTH','RADIANCE','RESIDUAL']
+# 	 data_units: Data units as in fits BUNIT, of length nc. e.g.,
+# 			['nm', 'W/m2/sr', 'nm', 'W/m2/sr', '']
+# 	 param_names: Names of each parameter returned by line fitting, of length nc, e.g.,
+# 			['centers', 'amplitudes', 'sigmas', 'continuum', 'chi2']
+# 	 window_header: The header of the spice fits data window in question
 def create_linefit_window(data, uncertainties, data_names, data_types, data_units,
 								param_names, window_header, bad_err=None):
 

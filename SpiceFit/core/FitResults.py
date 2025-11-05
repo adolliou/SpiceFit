@@ -972,7 +972,8 @@ class FitResults:
                         cmap = None, 
                         imin = 0, imax = 98.0, stretch = None,
                         sigma_error: int=1,
-                        chi2_limit: float=None
+                        chi2_limit: float=None, 
+                        norm = None,
                         ):
         """
 
@@ -985,6 +986,7 @@ class FitResults:
         :param doppler_mediansubtraction: in case of Doppler velocity, set to True to substract the median of the Doppler velocities over the raster
         :param sigma_error :  factor for which pixels following the condition : sigma_error * noise > value are set as bad pixels are removed from the map. 
         :chi2_limit : pixels with chi2 > chi2_limit will be marked as bad pixels and removed from the map.
+        :param norm : 
 
         The following parameters are used if one want to show a sub fov.
          Please refer to RasterWindow.average_spectra_over_region for a detailed description of the parameters
@@ -1118,10 +1120,11 @@ class FitResults:
             "chi2": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "I": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
         }
-        if param in norms.keys():
-            norm = norms[param]
-        else:
-            norm = PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax)
+        if norm is None:
+            if param in norms.keys():
+                norm = norms[param]
+            else:
+                norm = PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax)
 
         if regular_grid:
             coords = w_xy.pixel_to_world(x, y)

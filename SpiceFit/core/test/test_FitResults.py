@@ -11,6 +11,7 @@ from PIL import Image
 from PIL import ImageChops
 from matplotlib import pyplot as plt
 import astropy.units as u
+import matplotlib as mpl
 
 
 def image_pixel_differences(base_image, compare_image):
@@ -157,6 +158,11 @@ class TestFitResults:
             best_yshift=-1.667,
             detrend_doppler=True,
         )
+
+        norm = mpl.colors.CenteredNorm(
+                        vcenter=0,
+                        halfrange=0.0075
+                    )    
         fig = plt.figure()
         ax = fig.add_subplot()
         fitres.plot_fitted_map(
@@ -168,8 +174,9 @@ class TestFitResults:
             doppler_mediansubtraction=True,
             imax=90,
             sigma_error=2.0,
+            norm=norm,
         )
-        fig.savefig(path_fig, dpi=50)
+        fig.savefig(path_fig, dpi=200)
         base_image = Image.open(path_fig_ref)
         ref_image = Image.open(path_fig)
         assert image_pixel_differences(base_image, ref_image)
@@ -182,7 +189,7 @@ class TestFitResults:
         f2 = FitResults()
         f2.from_fits(path_to_fits=path_fits)
         fig = f2.quicklook(show=False)
-        fig.savefig(path_fig, dpi=50)
+        fig.savefig(path_fig, dpi=200)
 
         base_image = Image.open(path_fig_ref)
         ref_image = Image.open(path_fig)

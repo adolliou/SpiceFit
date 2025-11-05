@@ -1,3 +1,6 @@
+# CREDIT : J. Plowman (https://github.com/jeplowman/spice-line-fits)
+
+
 # Utility modules for SPICE line fitting and skew-based correction to PSF
 # Doppler artifacts.
 import copy, os, numpy as np
@@ -52,7 +55,7 @@ def bindown2(d,f):
     n = np.round(np.array(d.shape)/f).astype(np.int32)
     inds = np.ravel_multi_index(np.floor((np.indices(d.shape).T*n/np.array(d.shape))).T.astype(np.uint32),n)
     return np.bincount(inds.flatten(),weights=d.flatten(),minlength=np.prod(n)).reshape(n)
-    
+
 def binup(d,f):
     n = np.round(np.array(d.shape)*np.round(f)).astype(np.int32)
     inds = np.ravel_multi_index(np.floor((np.indices(n).T/np.array(f))).T.astype(np.uint32),d.shape)
@@ -172,4 +175,3 @@ def get_spice_err(data, header, detector=None, npx=1, verbose=True):
 	else: radcal=1
 	if(verbose): print('Estimating error for '+detector+' detector, index '+str(i))
 	return np.sqrt(radcal*np.abs(data)*G[i]*F[i]**2+npx*RN[i]**2+npx*DC[i]*exptime)/radcal
-

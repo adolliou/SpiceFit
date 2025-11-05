@@ -37,7 +37,7 @@ def hdu2():
 
 @pytest.fixture
 def fittemplate():
-    return FittingModel(filename="ne_8_770_42_1c.template.yaml")
+    return FittingModel(filename="ne_8_770_42_1c.template")
 
 
 class TestSpiceRasterWindowL2:
@@ -70,8 +70,8 @@ class TestSpiceRasterWindowL2:
     def test_average_spectra_over_region(self, hdu2, fittemplate):
         s1 = SpiceRasterWindowL2(hdu=hdu2)
 
-        x = [[0, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]]
-        y = [[450, 450, 450], [451, 451, 451], [453, 453, 453], [452, 452, 452]]
+        x = [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+        y = [450, 450, 450, 451, 451, 451,  452, 452, 452, 453, 453, 453,]  # Here we average over a region of twelve pixels. y is the coordinate along the slit. 
         pixels = (x, y)
 
         # x, y = np.meshgrid(np.arange(s1.data.shape[3]), np.arange(s1.data.shape[2]))

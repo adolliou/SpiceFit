@@ -59,13 +59,13 @@ You can average the spectra over a given region, in helioprojective coordinates,
 ```python
 s0 = SpiceRasterWindowL2(hdu=hdu2)
 
-x = [[0, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]]
-y = [[450, 450, 450], [451, 451, 451], [453, 453, 453], [452, 452, 452]]
+x = [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+y = [450, 450, 450, 451, 451, 451,  452, 452, 452, 453, 453, 453,]  # Here we average over a region of twelve pixels. y is the coordinate along the slit. 
 pixels = (x, y)
 
-s1 = s1.average_spectra_over_region(pixels=pixels)
-pixels_lims = ((0, 2), (450, 453))
-s2 = s1.average_spectra_over_region(pixels_lims=pixels_lims)
+s1 = s0.average_spectra_over_region(pixels=pixels)
+pixels_lims = ((0, 2), (450, 453)) # Here , we average over the same region as for s1, defined by the limits in x and y
+s2 = s0.average_spectra_over_region(pixels_lims=pixels_lims)
 ```
 ## Fitting the SPICE spectra with a FitResults object
 

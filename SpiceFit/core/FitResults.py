@@ -1067,7 +1067,7 @@ class FitResults:
                                np.arange(self.spectral_window.data.shape[1]))
 
             bad_pixels = np.array(
-                np.abs(data) * sigma_error < 0.5*np.abs(data_err), dtype=bool
+                np.abs(data) * sigma_error < np.abs(data_err), dtype=bool
             )
             data[bad_pixels] = np.nan
 

@@ -159,7 +159,7 @@ fitres.fit_spice_window_skew(spicewindow=spicewindow,
                                 verbose=4,
                                 chi2_limit=100.0, )
 ```
-![Example of the application of the Skew correction algorithm to the C III Doppler shift of a raster](skew_comparison.pdf)
+![Example of the application of the Skew correction algorithm to the C III Doppler shift of a raster](skew_comparison.png)
 
 
 

@@ -4,6 +4,8 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from matplotlib import colors
+import matplotlib as mpl
+
 
 class SpiceUtil:
 
@@ -265,7 +267,7 @@ class SpiceUtil:
             }
 
         else:
-            return "gray"
+            return  mpl.colormaps.get_cmap("gray")
         if return_type == "cmap":
             return colors.LinearSegmentedColormap(name=line, segmentdata=cdict, N=256)
         elif return_type == "rgb":

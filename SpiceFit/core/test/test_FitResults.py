@@ -123,6 +123,7 @@ class TestFitResults:
         )
         # f.to_fits(os.path.join(Path(__file__).parents[0], "test2.fits"))
 
+        norm = mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075)
         fig = plt.figure()
         ax = fig.add_subplot()
         f.plot_fitted_map(
@@ -132,8 +133,9 @@ class TestFitResults:
             param="delta_x",
             regular_grid=False,
             doppler_mediansubtraction=True,
-            imax = 90, 
+            imax=90,
             sigma_error=1.0,
+            norm=norm,
         )
         fig.savefig(path_fig_doppler, dpi=200)
 

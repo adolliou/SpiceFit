@@ -216,6 +216,7 @@ class FitResults:
         uncertainty_cube = spicewindow.uncertainty["Total"]
         xx, yy, ll, tt = spicewindow.return_point_pixels()
         coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+        shape_ini = data_cube.shape
 
         cpu_count_j = cpu_count
         if cpu_count is None:
@@ -249,9 +250,17 @@ class FitResults:
         )
         uncertainty_cube_skew = u.Quantity(uncertainty_cube_skew, spicewindow.header["BUNIT"])
 
+        spicewindow.data = u.Quantity(np.reshape(data_cube_skew, shape_ini),spicewindow.header["BUNIT"])
+        spicewindow.compute_uncertainty()
+
+        data_cube = spicewindow.data
+        uncertainty_cube = spicewindow.uncertainty["Total"]
+        xx, yy, ll, tt = spicewindow.return_point_pixels()
+        coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+
         self.fit_window_standard_3d(
-            data_cube=data_cube_skew,
-            uncertainty_cube=uncertainty_cube_skew,
+            data_cube=data_cube,
+            uncertainty_cube=uncertainty_cube,
             lambda_cube=lambda_cube,
             parallelism=parallelism,
             cpu_count=cpu_count,
@@ -1059,7 +1068,6 @@ class FitResults:
             )
             data[bad_pixels] = np.nan
 
-            
             if (param == "delta_x") or (param == "velocity") or (param == "x"):
                 if doppler_mediansubtraction:
                     data = data - np.nanmedian(data)

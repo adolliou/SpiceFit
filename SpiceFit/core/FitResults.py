@@ -126,7 +126,8 @@ class FitResults:
                                   cpu_count: int = None,
                                   min_data_points: int = 5,
                                   chi2_limit: float = 20.0,
-                                  verbose=0, ):
+                                  verbose=0,
+                                  detrend_doppler: bool=False ):
         """
 
         Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance.
@@ -139,6 +140,7 @@ class FitResults:
         :param min_data_points: minimum data points for each pixel with for the fitting.
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
         :param display_progress_bar: display the progress bar
+        :detrend_doppler if set to True, then apply a least square minimization method to remove the longitudinal gradient in the Doppler and velocity shifts
         """
         self.verbose = verbose
         self.fit_template = fit_template
@@ -167,6 +169,8 @@ class FitResults:
         )
 
         self.spectral_window = spicewindow
+        if detrend_doppler:
+            self.detrend_doppler_shift_velocities()
 
     def fit_spice_window_skew(
         self,
@@ -177,24 +181,24 @@ class FitResults:
         cpu_count: int = None,
         min_data_points: int = 5,
         chi2_limit: float = 20.0,
-        verbose=0,
+        verbose: int=0,
+        detrend_doppler: bool=False,
         best_xshift: float=None,
         best_yshift: float=None,
     ):
         """
 
-        Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance. This method skew and deskew 
-        the spectra following the Joe plowman method.  	
+        Fit all pixels of the field of view for a given SpiceRasterWindowL2 class instance. This method skew and deskew
+        the spectra following the Joe plowman method.
         https://doi.org/10.48550/arXiv.2508.09121
-        :param verbose:
+        :param verbose: level of str ouput to the terminal
         :param fit_template: FittingModel object.
         :param spicewindow: SpiceRasterWindowL2 class
         :param parallelism: allow parallelism or not.
         :param cpu_count: cpu counts to use for parallelism.
         :param min_data_points: minimum data points for each pixel with for the fitting.
         :param chi2_limit: limit the chi^2 for a pixel. Above this value, the pixel will be flagged.
-        :param display_progress_bar: display the progress bar
-        :param subtract_doppler_median: If True, then subtract the Doppler shifts by their median along the datacube.
+        :detrend_doppler if set to True, then apply a least square minimization method to remove the longitudinal gradient in the Doppler and velocity shifts
         :param best_xshift / best_yshift set the values for the JP algorithm if already known.
         """
         self.verbose = verbose
@@ -260,6 +264,8 @@ class FitResults:
             print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        
 
         self._deskew_jp(best_xshift, best_yshift)
+        if detrend_doppler:
+            self.detrend_doppler_shift_velocities()
 
     def fit_window_standard_3d(
             self,
@@ -704,6 +710,12 @@ class FitResults:
 
                 line = self._find_line(a["name_component"])
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
+
+                self.components_results[a["name_component"]]["coeffs"]["delta_x"] = {
+                    "results": (x - lambda_ref).to(Constants.conventional_lambda_units), 
+                    "sigma": dx.to(Constants.conventional_lambda_units)
+                }
+
                 self.components_results[a["name_component"]]["coeffs"]["velocity"] = {
                     "results": (const.c.to("km/s") * (x - lambda_ref) / lambda_ref).to(
                         Constants.conventional_velocity_units
@@ -730,6 +742,9 @@ class FitResults:
                 self.components_results[a["name_component"]]["coeffs"]["I"]["results"][flagged_pixels] = np.nan
                 self.components_results[a["name_component"]]["coeffs"]["x"]["results"][flagged_pixels] = np.nan
                 self.components_results[a["name_component"]]["coeffs"]["s"]["results"][flagged_pixels] = np.nan
+                self.components_results[a["name_component"]]["coeffs"]["delta_x"][
+                    "results"
+                ][flagged_pixels] = np.nan
         dic = copy.deepcopy(self.components_results)
 
         for line_ in dic.keys():
@@ -950,12 +965,14 @@ class FitResults:
         else:
             return fig
 
-    def plot_fitted_map(self, ax, fig, line, param, regular_grid=False,
+    def plot_fitted_map(self, ax, fig, line: str, param: str, regular_grid=False,
                         coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
                         allow_reprojection: bool = False, 
                         doppler_mediansubtraction: bool=False, 
                         cmap = None, 
-                        imin = 0, imax = 99.5, stretch = None,
+                        imin = 0, imax = 98.0, stretch = None,
+                        sigma_error: int=1,
+                        chi2_limit: float=None
                         ):
         """
 
@@ -963,8 +980,11 @@ class FitResults:
         :param ax: ax of the image.
         :param fig: figure object
         :param line: line name. write "main" for the main line of the template.
-        :param param: parameter to plot, between radiance,  fwhm, velocity and chi2.
+        :param param: parameter to plot, between radiance,  fwhm, velocity and chi2. write "delta_x" to show the doppler
         :param regular_grid:
+        :param doppler_mediansubtraction: in case of Doppler velocity, set to True to substract the median of the Doppler velocities over the raster
+        :param sigma_error :  factor for which pixels following the condition : sigma_error * noise > value are set as bad pixels are removed from the map. 
+        :chi2_limit : pixels with chi2 > chi2_limit will be marked as bad pixels and removed from the map.
 
         The following parameters are used if one want to show a sub fov.
          Please refer to RasterWindow.average_spectra_over_region for a detailed description of the parameters
@@ -978,6 +998,7 @@ class FitResults:
             "fwhm":     "linear",
             "velocity": "linear",
             "x":        "linear",
+            "delta_x":  "linear",
             "chi2":     "linear",
             "I":        "linear",
         }
@@ -986,6 +1007,7 @@ class FitResults:
             "fwhm": Constants.conventional_lambda_units,
             "velocity": Constants.conventional_velocity_units,
             "x": Constants.conventional_lambda_units,
+            "delta_x":Constants.conventional_lambda_units,
             "chi2": None,
             "I": Constants.conventional_spectral_units,
         }
@@ -993,7 +1015,8 @@ class FitResults:
             "radiance": mpl.colormaps.get_cmap('viridis'),
             "fwhm": mpl.colormaps.get_cmap('viridis'),
             "velocity": mpl.colormaps.get_cmap('bwr'),
-            "x": mpl.colormaps.get_cmap('bwr'),
+            "x": mpl.colormaps.get_cmap('viridis'),
+            "delta_x": mpl.colormaps.get_cmap('bwr'),
             "chi2": mpl.colormaps.get_cmap('viridis'),
             "I":  mpl.colormaps.get_cmap('viridis'),
         }
@@ -1012,7 +1035,7 @@ class FitResults:
                 cmap = cmaps[param]  # viridis is the default colormap for imshow
             else:
                 cmap = mpl.colormaps.get_cmap("viridis")
-        cmap.set_bad('white')
+        cmap.set_bad('black')
         a = self.components_results[line]["coeffs"]
         w_xy = self.spectral_window.w_xy
 
@@ -1021,19 +1044,52 @@ class FitResults:
         else:
             if unit is not None:
                 data = np.squeeze(a[param]["results"].to(unit).value)
+                data_err = np.squeeze(a[param]["sigma"].to(unit).value)
             else: 
                 data = np.squeeze(a[param]["results"].value)
+                data_err = np.squeeze(a[param]["sigma"].value)
 
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
                                np.arange(self.spectral_window.data.shape[1]))
-        if param == "x":
-            line = self._find_line(self.components_results[line]["info"]["name_component"])
-            lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
-            data = copy.deepcopy(data) - lambda_ref.to(unit).value
-            data_err = copy.deepcopy(a[param]["sigma"].to(unit).value)
-            # data_ = self._detrend_dopp(data_, data_err)
-            if doppler_mediansubtraction:
-                data = data - np.nanmedian(data)
+
+            bad_pixels = np.array(
+                np.abs(data) * sigma_error < np.abs(data_err), dtype=bool
+            )
+            data[bad_pixels] = np.nan
+
+            
+            if (param == "delta_x") or (param == "velocity") or (param == "x"):
+                if doppler_mediansubtraction:
+                    data = data - np.nanmedian(data)
+
+            #     line = self._find_line(self.components_results[line]["info"]["name_component"])
+            #     lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
+            #     data_doppler = a["x"]["results"].to(Constants.conventional_lambda_units).value
+            #     data_doppler = copy.deepcopy(data_doppler) - lambda_ref.to(unit).value
+            #     data_doppler_err = copy.deepcopy(a["x"]["sigma"].to(unit).value)
+            #     if doppler_applydetrending:
+            #         data_doppler = self._detrend_dopp(data_doppler, data_doppler_err)
+            #     if doppler_mediansubtraction:
+            #         data_doppler = data_doppler - np.nanmedian(data_doppler)
+            #     data_doppler = u.Quantity(data_doppler, unit)
+            #     data_doppler_err = u.Quantity(data_doppler_err, unit)
+
+            #     if param == "x":
+            #         data = data_doppler
+            #     elif param == "velocity":
+            #         data = (const.c.to(unit) * (data_doppler) / lambda_ref).to(
+            #             Constants.conventional_velocity_units
+            #             )
+            #         data_err = (const.c.to(unit) * (data_doppler_err) / lambda_ref).to(
+            #             Constants.conventional_velocity_units
+            #             )
+            #         data = data.to(unit).value
+            #         data_err = data_err.to(unit).value
+
+            if chi2_limit is not None:
+                chi2 = np.squeeze(self.components_results["chi2"]["coeffs"]["chi2"]["results"])
+                bad_pixels = np.array(chi2 > chi2_limit, ftype="bool")
+                data[bad_pixels] = np.nan
 
         if data.ndim == 3:
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
@@ -1046,8 +1102,19 @@ class FitResults:
             "radiance": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
-            "velocity": mpl.colors.CenteredNorm(vcenter=0, halfrange=np.percentile(np.abs(data[np.logical_not(np.isnan(data))]), 98)),
-            "x": mpl.colors.CenteredNorm(vcenter=0, halfrange=0.0075),
+            "velocity": mpl.colors.CenteredNorm(
+                vcenter=0,
+                halfrange=np.percentile(
+                    np.abs(data[np.logical_not(np.isnan(data))]), imax
+                ),
+            ),
+            "x": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
+            "delta_x": mpl.colors.CenteredNorm(
+                vcenter=0,
+                halfrange=np.percentile(
+                    np.abs(data[np.logical_not(np.isnan(data))]), imax
+                ),
+            ),
             "chi2": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "I": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
         }
@@ -1234,6 +1301,37 @@ class FitResults:
                 return FittingUtil.polynomial(x, *value)
             else:
                 raise NotImplementedError
+
+    def detrend_doppler_shift_velocities(self):
+        for line_name in self.components_results.keys():
+            if line_name.strip() not in ["chi2", "flagged_pixels", "background"]:
+                a = self.components_results[line_name]["coeffs"]
+                line = self._find_line(self.components_results[line_name]["info"]["name_component"])
+                lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
+                data_doppler = copy.deepcopy(a["delta_x"]["results"].to(Constants.conventional_lambda_units).value)
+                data_doppler_err = copy.deepcopy(a["delta_x"]["sigma"].to(Constants.conventional_lambda_units).value)
+                data_doppler = self._detrend_dopp(data_doppler, data_doppler_err)
+
+                data_doppler = u.Quantity(data_doppler, Constants.conventional_lambda_units)
+                data_doppler_err = u.Quantity(data_doppler_err, Constants.conventional_lambda_units)
+
+                self.components_results[line_name]["coeffs"]["delta_x"]["results"] = data_doppler
+                self.components_results[line_name]["coeffs"]["delta_x"]["sigma"] = data_doppler_err
+
+                self.components_results[line_name]["coeffs"]["x"]["results"] = data_doppler + lambda_ref.to(Constants.conventional_lambda_units)
+                self.components_results[line_name]["coeffs"]["x"]["sigma"] = data_doppler_err
+
+                self.components_results[line_name]["coeffs"]["velocity"]["results"] = (
+                    const.c.to(Constants.conventional_velocity_units)
+                    * (data_doppler)
+                    / lambda_ref
+                ).to(Constants.conventional_velocity_units)
+
+                self.components_results[line_name]["coeffs"]["velocity"]["sigma"] = (
+                    const.c.to(Constants.conventional_velocity_units)
+                    * (data_doppler_err)
+                    / lambda_ref
+                ).to(Constants.conventional_velocity_units)
 
     def to_fits(self, path_to_save_fits: str = None, folder_to_save_fits: str = None, hdu_wcsdvar=None):
         """
@@ -1769,7 +1867,8 @@ class FitResults:
         return data
 
     def from_fits(self, path_to_fits: str = None, hdul=None,
-                  verbose=0):
+                  verbose=0, 
+                  detrend_doppler: bool=False):
         """
         Creates a Fits_results object from a fits file, either through a
         path to a FITS object or a HDULIST object directly.
@@ -1777,6 +1876,7 @@ class FitResults:
         :param verbose:
         :param path_to_fits: path to the FITS file.
         :param hdul: hdulist object of the FITS file.
+        :param detrend_doppler: if True, apply the detrending to the Doppler shift and velocities
 
 
         """
@@ -1823,6 +1923,8 @@ class FitResults:
                             "trans_b": self.fit_template.params_free["trans_b"]}
 
         self.build_components_results()
+        if detrend_doppler:
+            self.detrend_doppler_shift_velocities()        
 
         hdu_l2 = hdul[2]
         spectral_window = SpiceRasterWindowL2(hdu=hdu_l2)

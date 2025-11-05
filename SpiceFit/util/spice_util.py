@@ -2,6 +2,8 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
+import astropy.units as u
+
 
 class SpiceUtil:
 
@@ -48,6 +50,14 @@ class SpiceUtil:
         intensity[condition_missing] = np.nan
 
         return hdr, intensity
+
+    @staticmethod
+    def get_sw_wave_limits():
+        return u.Quantity([704.0, 790.0], "angstrom")
+
+    @staticmethod
+    def get_lw_wave_limits():
+        return u.Quantity([973.0, 1049.0], "angstrom")
 
     @staticmethod
     def _data_treatment_spice(self, hdr, data):

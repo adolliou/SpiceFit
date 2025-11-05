@@ -32,7 +32,7 @@ for instance "c_9_977_96_2c.template.yaml" refer to a fitting template for the C
 from SpiceFit import FitResults, FittingModel
 
 template_file = "ne_8_770_42_1c.template" 
-fittemplate FittingModel(filename=template_file)
+fittemplate = FittingModel(filename=template_file)
 ```
 
 ### Creating a SpiceWindow object

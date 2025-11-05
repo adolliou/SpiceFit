@@ -974,7 +974,9 @@ class FitResults:
         else:
             return fig
 
-    def plot_fitted_map(self, ax, fig, line: str, param: str, regular_grid=False,
+    def plot_fitted_map(self, ax, fig, line: str, param: str,
+                        param_type: str="results",
+                        regular_grid=False,
                         coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None,
                         allow_reprojection: bool = False, 
                         doppler_mediansubtraction: bool=False, 
@@ -991,11 +993,12 @@ class FitResults:
         :param fig: figure object
         :param line: line name. write "main" for the main line of the template.
         :param param: parameter to plot, between radiance,  fwhm, velocity and chi2. write "delta_x" to show the doppler
+        :param_type: "results" or "sigma", to plot the coefficient or their uncertainty. 
         :param regular_grid:
         :param doppler_mediansubtraction: in case of Doppler velocity, set to True to substract the median of the Doppler velocities over the raster
-        :param sigma_error :  factor for which pixels following the condition : sigma_error * noise > value are set as bad pixels are removed from the map. 
+        :param sigma_error :  factor for which pixels following the condition : sigma_error * noise > value are set as bad pixels are removed from the map.
         :chi2_limit : pixels with chi2 > chi2_limit will be marked as bad pixels and removed from the map.
-        :param norm : 
+        :param norm :
 
         The following parameters are used if one want to show a sub fov.
          Please refer to RasterWindow.average_spectra_over_region for a detailed description of the parameters
@@ -1054,10 +1057,10 @@ class FitResults:
             data = np.squeeze(self.components_results["chi2"]["coeffs"]["chi2"]["results"])
         else:
             if unit is not None:
-                data = np.squeeze(a[param]["results"].to(unit).value)
+                data = np.squeeze(a[param][param_type].to(unit).value)
                 data_err = np.squeeze(a[param]["sigma"].to(unit).value)
             else: 
-                data = np.squeeze(a[param]["results"].value)
+                data = np.squeeze(a[param][param_type].value)
                 data_err = np.squeeze(a[param]["sigma"].value)
 
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),

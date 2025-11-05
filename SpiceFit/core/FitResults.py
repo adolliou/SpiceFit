@@ -1313,8 +1313,10 @@ class FitResults:
                 lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
                 data_doppler = copy.deepcopy(a["delta_x"]["results"].to(Constants.conventional_lambda_units).value)
                 data_doppler_err = copy.deepcopy(a["delta_x"]["sigma"].to(Constants.conventional_lambda_units).value)
+                shape_ini = data_doppler.shape
                 data_doppler = self._detrend_dopp(data_doppler, data_doppler_err)
-
+                data_doppler = np.reshape(data_doppler, shape_ini)
+                data_doppler_err = np.reshape(data_doppler_err, shape_ini)
                 data_doppler = u.Quantity(data_doppler, Constants.conventional_lambda_units)
                 data_doppler_err = u.Quantity(data_doppler_err, Constants.conventional_lambda_units)
 

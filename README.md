@@ -159,9 +159,10 @@ fitres.fit_spice_window_skew(spicewindow=spicewindow,
                                 verbose=4,
                                 chi2_limit=100.0, )
 ```
-![Example of the application of the Skew correction algorithm to the C III Doppler shift of a raster](skew_comparison.png)
+Example of the application of the Skew correction algorithm to the C III Doppler shift of a raster:
+![image](skew_comparison.png)
 
-
+Be advised that using fit_spice_window_skew applies a spatial shift during the deskewing to the fitted parameters. As such, the position of the spectra and of the fitted parameters can be displaced. Thus, as of now, you should not trust the UI interface results if you used fit_spice_window_skew.
 
 ## UI interface to see the fitting results
 

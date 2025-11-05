@@ -257,7 +257,7 @@ class FitResults:
         uncertainty_cube = spicewindow.uncertainty["Total"]
         xx, yy, ll, tt = spicewindow.return_point_pixels()
         coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
-
+        # s
         self.fit_window_standard_3d(
             data_cube=data_cube,
             uncertainty_cube=uncertainty_cube,

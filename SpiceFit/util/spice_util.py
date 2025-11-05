@@ -3,7 +3,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 import astropy.units as u
-
+from matplotlib import colors
 
 class SpiceUtil:
 
@@ -174,3 +174,100 @@ class SpiceUtil:
             data_l3["radiance"] = data_l3["amplitude"] * data_l3["width"] * np.sqrt(2 * np.pi) * 0.424660900
 
             return data_l3
+
+    @staticmethod
+    def make_SPICE_cmap(line: str, return_type="cmap"):
+        if line == "o_6 1031.93":
+            r = 93
+            g = 187
+            b = 120
+
+            r /= 256
+            g /= 256
+            b /= 256
+            cdict = {
+                "red": [(0.0, 0.0, 0.0), (0.5, r, r), (1.0, 1.0, 1.0)],
+                "green": [(0.0, 0.0, 0.0), (0.5, g, g), (1.0, 1.0, 1.0)],
+                "blue": [(0.0, 0.0, 0.0), (0.5, b, b), (1.0, 1.0, 1.0)],
+            }
+        elif line == "c_3 977.03":
+            cdict = {
+                "red": [(0.0, 0.0, 0.0), (0.5, 0.449, 0.449), (1.0, 1.0, 1.0)],
+                "green": [(0.0, 0.0, 0.0), (0.5, 0.508, 0.508), (1.0, 1.0, 1.0)],
+                "blue": [(0.0, 0.0, 0.0), (0.5, 0.582, 0.582), (1.0, 1.0, 1.0)],
+            }
+        elif line == "ne_8 770.42":
+
+            cdict = {
+                "red": [(0.0, 0.0, 0.0), (0.5, 0.902, 0.902), (1.0, 1.0, 1.0)],
+                "green": [(0.0, 0.0, 0.0), (0.5, 0.727, 0.727), (1.0, 1.0, 1.0)],
+                "blue": [(0.0, 0.0, 0.0), (0.5, 0.512, 0.512), (1.0, 1.0, 1.0)],
+            }
+
+        elif line == "o_4 787.72":
+            r = 46
+            g = 207
+            b = 235
+
+            r /= 256
+            g /= 256
+            b /= 256
+            cdict = {
+                "red": [(0.0, 0.0, 0.0), (0.5, r, r), (1.0, 1.0, 1.0)],
+                "green": [(0.0, 0.0, 0.0), (0.5, g, g), (1.0, 1.0, 1.0)],
+                "blue": [(0.0, 0.0, 0.0), (0.5, b, b), (1.0, 1.0, 1.0)],
+            }
+
+        elif line == "mg_9 706.02":
+            r = 199
+            g = 201
+            b = 104
+
+            r /= 256
+            g /= 256
+            b /= 256
+            cdict = {
+                "red": [(0.0, 0.0, 0.0), (0.5, r, r), (1.0, 1.0, 1.0)],
+                "green": [(0.0, 0.0, 0.0), (0.5, g, g), (1.0, 1.0, 1.0)],
+                "blue": [(0.0, 0.0, 0.0), (0.5, b, b), (1.0, 1.0, 1.0)],
+            }
+
+        elif line == "h_1 1025.72":
+            # r = 224
+            # g = 86
+            # b = 86
+
+            r = 186
+            g = 148
+            b = 189
+
+            r /= 256
+            g /= 256
+            b /= 256
+            cdict = {
+                "red": [(0.0, 0.0, 0.0), (0.5, r, r), (1.0, 1.0, 1.0)],
+                "green": [(0.0, 0.0, 0.0), (0.5, g, g), (1.0, 1.0, 1.0)],
+                "blue": [(0.0, 0.0, 0.0), (0.5, b, b), (1.0, 1.0, 1.0)],
+            }
+
+        elif line == "s_5 786.47":
+            r = 131
+            g = 222
+            b = 235
+
+            r /= 256
+            g /= 256
+            b /= 256
+            cdict = {
+                "red": [(0.0, 0.0, 0.0), (0.5, r, r), (1.0, 1.0, 1.0)],
+                "green": [(0.0, 0.0, 0.0), (0.5, g, g), (1.0, 1.0, 1.0)],
+                "blue": [(0.0, 0.0, 0.0), (0.5, b, b), (1.0, 1.0, 1.0)],
+            }
+
+        else:
+            return "gray"
+        if return_type == "cmap":
+            return colors.LinearSegmentedColormap(name=line, segmentdata=cdict, N=256)
+        elif return_type == "rgb":
+            return colors.LinearSegmentedColormap(name=line, segmentdata=cdict, N=256)(0.43)
+            # return (cdict["red"][1][1],cdict["green"][1][1], cdict["blue"][1][1])

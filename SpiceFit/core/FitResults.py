@@ -250,9 +250,8 @@ class FitResults:
         )
         uncertainty_cube_skew = u.Quantity(uncertainty_cube_skew, spicewindow.header["BUNIT"])
 
-        spicewindow.data = u.Quantity(np.reshape(data_cube_skew, shape_ini),spicewindow.header["BUNIT"])
-        self.uncertainty = None        
-        spicewindow.compute_uncertainty()
+        spicewindow.data = data_cube_skew
+        spicewindow.uncertainty["Total"] = uncertainty_cube_skew
 
         data_cube = spicewindow.data
         uncertainty_cube = spicewindow.uncertainty["Total"]

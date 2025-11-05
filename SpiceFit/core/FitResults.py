@@ -1106,9 +1106,7 @@ class FitResults:
             "fwhm": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "velocity": mpl.colors.CenteredNorm(
                 vcenter=0,
-                halfrange=np.percentile(
-                    np.abs(data[np.logical_not(np.isnan(data))]), imax
-                ),
+                halfrange=50
             ),
             "x": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
             "delta_x": mpl.colors.CenteredNorm(

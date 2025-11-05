@@ -982,7 +982,7 @@ class FitResults:
                         doppler_mediansubtraction: bool=False, 
                         cmap = None, 
                         imin = 0, imax = 98.0, stretch = None,
-                        sigma_error: int=1,
+                        sigma_error: int=2.0,
                         chi2_limit: float=None, 
                         norm = None,
                         ):

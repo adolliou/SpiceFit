@@ -165,7 +165,6 @@ class SpiceRasterWindowL2(RasterWindowL2):
             If false, the the spectrum is directly taken from the given pixels (or their given coordinates)
         """
         count_arguments = 0
-
         for arg in [coords, lonlat_lims, pixels, pixels_lims]:
             if arg is not None:
                 count_arguments += 1
@@ -190,6 +189,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
 
         lon_mid = np.mean(lon.ravel())
         lat_mid = np.mean(lat.ravel())
+
         header_av = self.header.copy()
         header_av["CRPIX1"] = 1
         header_av["CRPIX2"] = 1

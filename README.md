@@ -17,10 +17,7 @@ You can install SpiceFit in your virtual environment as followed:
 pip install git+https://github.com/adolliou/SpiceFit
 ```
 
-
-## Fitting SPICE spectra 
-
-We here present the most usefull scripts to fit SPICE spectra from a FITS files, and display the results in Figures.
+## The fitting template
 ### Creating a template object
 
 The first step is to create the template object you want to use for the fitting. The template object is created using a .yaml file, which describes all the lines and the fitting parameters you want to use for the specific SPICE FITS file window. You can use the templates available by default in core/TemplatesLines folder. 
@@ -35,6 +32,7 @@ template_file = "ne_8_770_42_1c.template"
 fittemplate = FittingModel(filename=template_file)
 ```
 
+## The SPICE L2 object
 ### Creating a SpiceWindow object
 
 The next step is to create a SpiceWindow object. This object is built with a HDU object from a FITS HUL list. This object is where all the L2 data and header for the spectral window is. 
@@ -55,7 +53,21 @@ spicewindow = SpiceRasterWindowL2(hdu=hdu)
 
 ```
 
-### Fitting the SPICE spectra with a FitResults object
+### Averaging the spectra
+You can average the spectra over a given region, in helioprojective coordinates, or over the given pixels. Here, we average the spectrum over first pixels (s1) and over a region delimited with pixels_lim (s2). The results of average_spectra_over_region is another SpiceRasterWindowL2 object, that can be used for the fitting. Note that the uncertainty is computed again to take into account the spatial bin. 
+
+```python
+s0 = SpiceRasterWindowL2(hdu=hdu2)
+
+x = [[0, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]]
+y = [[450, 450, 450], [451, 451, 451], [453, 453, 453], [452, 452, 452]]
+pixels = (x, y)
+
+s1 = s1.average_spectra_over_region(pixels=pixels)
+pixels_lims = ((0, 2), (450, 453))
+s2 = s1.average_spectra_over_region(pixels_lims=pixels_lims)
+```
+## Fitting the SPICE spectra with a FitResults object
 
 You can now fit the SPICE data with a FitResults Object with the SPICE L2 data (spicewindow) and the fitting template (FittingModel). 
 ``` python

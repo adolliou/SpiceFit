@@ -4,6 +4,8 @@ import numpy as np
 
 
 def fit_spectra(x, y, dy, fit_template: FittingModel, minimum_data_points: int = 5, verbose: bool = False):
+    """Fit a spectra y with sigma dy and x-axis x, given a specific Fittinmodel object. 
+    """    
     # check which datapoints are nans
     isnotnan = np.logical_not(np.isnan(y))
 

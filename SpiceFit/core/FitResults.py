@@ -70,7 +70,8 @@ def flatten(xss):
 
 
 class FitResults:
-
+    """the FitsResult class deals with all of the fitting aspect of the SPICE spectra, as well as the plotting of the fitting results. 
+    """
     def __init__(
             self,
 

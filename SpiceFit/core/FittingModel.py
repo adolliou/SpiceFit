@@ -18,6 +18,17 @@ import importlib
 
 
 class FittingModel:
+    """
+        The FittingModel class takes as input the fitting parameters on the .yaml template files, and creates according fitting functions, and parameters.
+        The fitting function is written in python in the .fitting_jacobian_functions in python, as the Fittingmodel object is initialized. Togather with 
+        the free_params, it will be used as fitting parameters (guess, bounds, etc.)
+
+        It can also work with specific commands for the fitting, such as imposing that the intensity of gaussian to be twice of another gaussian.
+        To do so, it uses params_free and params_all inputs. The params_free parameters are the ones that do not directly depend on another parameter. The params_all
+        is a dictionary resuming the commands for all parameters, free or locked.
+
+    """
+
     bound_equation_re = re.compile(
         r'''
     (?P<ref>(guess))
@@ -118,7 +129,7 @@ class FittingModel:
         """
         getter of the free_params dictionary, containing all the informations about the free parameters of the function.
         The free parameters are defined as the ones that do not directly depend on another parameter. The 
-        other parametesr (not free) are called "locked". 
+        other parameters (not free) are called "locked". These parameters are the ones that will
 
         format : self.free_params["gaussian"][0]["I"/"x"/"s"]["notation"/"guess"/"bounds"/"unit/"type_constrain"]
         "notation" (str) : how the coefficient appears in the fitting and jacobian functions, must be unique ("I1")

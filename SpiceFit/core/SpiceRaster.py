@@ -13,7 +13,11 @@ import copy
 
 
 class SpiceRaster:
-
+    """The Spiceraster class contains all the information about a L2 FITS file of a SPICE raster
+    It can detect which lines are present in every window, and fit each window accordingly
+    to generate quicklooks showing all of the fitting results. Uses SpiceRasterWindowL2 objects to
+    represent the data on each window. 
+    """
     sw_wave_limits = u.Quantity([704.0, 790.0], "angstrom")
 
     def __init__(
@@ -177,7 +181,7 @@ class SpiceRaster:
                 hdul_new.append(hdu_new)
         spiceraster_calibrated = SpiceRaster(hdul=hdul_new)
         return spiceraster_calibrated
-    
+
     def _get_windows_sw(self):
         """
         returns a list of the windows within the LW detector
@@ -222,5 +226,3 @@ class SpiceRaster:
             raise ValueError(f"The number of windows where the line is detected should be 1, but is {len(line_in_window)}.\n Either select the window or check the line name")
         window_index = line_in_window[0]
         return window_index
-
-

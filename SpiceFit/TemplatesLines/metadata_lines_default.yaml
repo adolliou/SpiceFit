@@ -51,64 +51,154 @@ list_lines_spice_metadata:
     legend: "H I Ly-gamma 972.54 $\\AA$"
     default_template: "h_1_972_57_1c.template"
 
+  - name: "mg_9 706.02"
+    elem: "mg"
+    ion: 9
+    wave: 706.02
+    unit_wave: "Angstrom"
+    lvl_low: "1$s^2$ 2$s^2$ $^S_{1/2}$"
+    lvl_up: "1$s^2$ 2s 2p $3P_1$"
+    legend: "Mg IX 706.02 $\\AA$"
+    default_template: "mg_9_706_02_1c.template"
 
-spice_windows_name:
-  - window:  'O III 703 / Mg IX 706 (Merged)'
-    window_subfolder: 0
-    template_line: "o_3_703_87_3c.template"
-    line_str: "o_3_703_87_3c"
+  - name: "o_3 703.87"
+    elem: "o"
+    ion: 3
+    wave: 703.86
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^2$ 2$p^2$  $^3P_{2}$"
+    lvl_up: "2$s$ 2$p^3$  $^3P_{2}"
+    legend: "O III 703.86 $\\AA$"
+    default_template: "o_3_703_87_2c.template"
+  
+  - name:  "o_3 702.82"
+    elem: "o"
+    ion: 3
+    wave: 702.82
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^2$ 2$p^2$  $^3P_{1}$"
+    lvl_up: "2$s$ 2$p^3$  $^3P_{2}"
+    legend: "O III 702.82 $\\AA$"
+    default_template: "o_3_703_87_2c.template"
 
-  - window:  'N IV 765 - Peak'
-    window_subfolder: 1
-    template_line: "n_4_765_15_2c.template"
-    line_str: "n_4_765_15_2c"
+  - name: "n_4 765.15"
+    elem: "n"
+    ion: 4
+    wave: 765.15
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^1$ $^1S_{0}$"
+    lvl_up: "2s 2p $^1P_{1}$"
+    legend: "N IV 765.15 $\\AA$"
+    default_template: "n_4_765_15_1c.template"
 
-  - window:  'Ne VIII 770 - Peak'
-    window_subfolder: 2
-    template_line: "ne_8_770_42_1c.template"
-    line_str: "ne_8_770_42_1c"
+  - name: "n_3 764.31"
+    elem: "n"
+    ion: 3
+    wave: 764.31
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^1$ $^1S_{0}$"
+    lvl_up: "2s 2p $^1P_{1}$"
+    legend: "N III 764.31 $\\AA$"
+    default_template: "n_4_765_15_2c.template"
 
-  - window:  'C III 977 - Peak'
-    window_subfolder: 3
-    template_line: "c_3_977_96_1c.template"
-    line_str: "c_3_977_96_1c"
+  - name: "ne_8 770.42"
+    elem: "ne"
+    ion: 8
+    wave: 770.42
+    unit_wave: "Angstrom"
+    lvl_low: "1$s^2$ 2s $^2S_{1/2}$"
+    lvl_up: "1$s^2$ 2p $P_{3/2}$"
+    legend: "Ne VIII 770.42 $\\AA$"
+    default_template: "ne_8_770_42_1c.template"
 
-  - window:  'Ly Beta 1025 (Merged)'
-    window_subfolder: 4
-    template_line: "h_1_1025_72_1c.template"
-    line_str: "h_1_1025_72_1c"
+  - name: "o_4 787.72"
+    elem: "o"
+    ion: 4
+    wave: 787.72
+    unit_wave: "Angstrom"
+    lvl_low: "2$s^2$ 2p $^2P_{1/2}$"
+    lvl_up: "2s 2$p^2$ $^2D_{3/2}$"
+    legend: "O IV 787.72 $\\AA$"
+    default_template: "o_4_787_72_2c.template"
 
-  - window:  'O VI 1032 - Peak'
-    window_subfolder: 4
-    template_line: "o_6_1031_93_1c.template"
-    line_str: "o_6_1031_93_1c"
+  - name: "s_5 786.47"
+    elem: "S"
+    ion: 5
+    wave: 786.47
+    unit_wave: "Angstrom"
+    lvl_low: "3$s^2$ $S_{0}$"
+    lvl_up: "3s 3p $^1P_{1}$"
+    legend: "S V 786.47 $\\AA$"
+    default_template: "o_4_787_72_2c.template"
 
-  - window:  'O III 703 Peak'
-    window_subfolder: 0
-    template_line: "o_3_703_87_2c.template"
-    line_str: "o_3_703_87_2c"
+  - name: "o_6 1031.93"
+    elem: "o"
+    ion: 6
+    wave: 1031.93
+    unit_wave: "Angstrom"
+    lvl_low: "2s $^2$S$_{1/2}"
+    lvl_up: "2p $^2$P$_{3/2}$"
+    legend: "O VI 1031.93 $\\AA$"
+    default_template: "o_6_1031_93_1c.template"
 
-  - window:  'N IV 765 - Peak'
-    window_subfolder: 1
-    template_line: "n_4_765_15_2c.template"
-    line_str: "n_4_765_15_2c"
 
-  - window:  'Ne VIII 770 - Peak'
-    window_subfolder: 2
-    template_line: "ne_8_770_42_1c.template"
-    line_str: "ne_8_770_42_1c"
+# spice_windows_name:
+#   - window:  'O III 703 / Mg IX 706 (Merged)'
+#     window_subfolder: 0
+#     template_line: "o_3_703_87_3c.template"
+#     line_str: "o_3_703_87_3c"
 
-  - window:   'C III 977 (Merged)'
-    window_subfolder: 3
-    template_line:  'c_3_977_96_1c.template'
-    line_str: "c_3_977_96_1c"
+#   - window:  'N IV 765 - Peak'
+#     window_subfolder: 1
+#     template_line: "n_4_765_15_2c.template"
+#     line_str: "n_4_765_15_2c"
 
-  - window: 'Ly Beta 1025 (Merged)'
-    window_subfolder: 4
-    template_line: 'h_1_1025_72_1c.template'
-    line_str: "h_1_1025_72_1c"
+#   - window:  'Ne VIII 770 - Peak'
+#     window_subfolder: 2
+#     template_line: "ne_8_770_42_1c.template"
+#     line_str: "ne_8_770_42_1c"
 
-  - window:  'O VI 1032 - Peak'
-    window_subfolder: 5
-    template_line: 'o_6_1031_93_1c.template'
-    line_str: "o_6_1031_93_1c"
+#   - window:  'C III 977 - Peak'
+#     window_subfolder: 3
+#     template_line: "c_3_977_96_1c.template"
+#     line_str: "c_3_977_96_1c"
+
+#   - window:  'Ly Beta 1025 (Merged)'
+#     window_subfolder: 4
+#     template_line: "h_1_1025_72_1c.template"
+#     line_str: "h_1_1025_72_1c"
+
+#   - window:  'O VI 1032 - Peak'
+#     window_subfolder: 4
+#     template_line: "o_6_1031_93_1c.template"
+#     line_str: "o_6_1031_93_1c"
+
+#   - window:  'O III 703 Peak'
+#     window_subfolder: 0
+#     template_line: "o_3_703_87_2c.template"
+#     line_str: "o_3_703_87_2c"
+
+#   - window:  'N IV 765 - Peak'
+#     window_subfolder: 1
+#     template_line: "n_4_765_15_2c.template"
+#     line_str: "n_4_765_15_2c"
+
+#   - window:  'Ne VIII 770 - Peak'
+#     window_subfolder: 2
+#     template_line: "ne_8_770_42_1c.template"
+#     line_str: "ne_8_770_42_1c"
+
+#   - window:   'C III 977 (Merged)'
+#     window_subfolder: 3
+#     template_line:  'c_3_977_96_1c.template'
+#     line_str: "c_3_977_96_1c"
+
+#   - window: 'Ly Beta 1025 (Merged)'
+#     window_subfolder: 4
+#     template_line: 'h_1_1025_72_1c.template'
+#     line_str: "h_1_1025_72_1c"
+
+#   - window:  'O VI 1032 - Peak'
+#     window_subfolder: 5
+#     template_line: 'o_6_1031_93_1c.template'
+#     line_str: "o_6_1031_93_1c"

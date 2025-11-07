@@ -30,6 +30,28 @@ def fittemplate():
     return FittingModel(filename=path_yaml)
 
 
+@pytest.fixture
+def hdu2():
+    url = (
+        "https://spice.osups.universite-paris-saclay.fr/spice-data/release-5.0/level2/" 
+        "2022/03/07/solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits"
+    )  # noqa: E501
+    hdu_list = fits.open(url)
+    hdu = hdu_list['C III 977 (Merged)']
+    yield hdu
+    hdu_list.close()
+
+
+@pytest.fixture
+def spicewindow2(hdu2):
+    return SpiceRasterWindowL2(hdu=hdu2)
+
+
+@pytest.fixture
+def fittemplate2():
+
+    return FittingModel(filename="c_3_977_96_1c.template")
+
 class TestSpiceRaster:
 
     def test_constructor(self):
@@ -74,3 +96,25 @@ class TestSpiceRaster:
         raster = SpiceRaster(hdul=hdul)
         raster.return_wave_calibrated_spice_raster(shift_lambda=shift_wave, detector="LW")
 
+    def test_find_lines_in_raster(self, hdul2):
+        s = SpiceRaster(hdul=hdul2)
+        s.find_lines_in_raster()
+        print(s)
+        print(f"{s.lines=}")
+
+
+    def test_fit_all_windows(self, hdul2):
+        s = SpiceRaster(hdul=hdul2)
+        s.find_lines_in_raster()
+        s.fit_all_windows()
+        print(f"{s.fit_results=}")
+
+    def test_plot_fitted_maps(self, hdul2):
+        s = SpiceRaster(hdul=hdul2)
+        s.find_lines_in_raster()
+        s.fit_all_windows()
+        s.plot_fittted_map(
+            path_to_output_pdf=os.path.join(Path(__file__).parents[0], "multiple_radiance.pdf"),
+            TODO CONTINUE
+        
+        )        

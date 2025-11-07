@@ -10,13 +10,16 @@ from .FittingModel import FittingModel
 from .FitResults import FitResults
 import os
 import copy
-
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib import pyplot as plt
 
 class SpiceRaster:
     """The Spiceraster class contains all the information about a L2 FITS file of a SPICE raster
     It can detect which lines are present in every window, and fit each window accordingly
     to generate quicklooks showing all of the fitting results. Uses SpiceRasterWindowL2 objects to
     represent the data on each window. 
+
+
     """
     sw_wave_limits = u.Quantity([704.0, 790.0], "angstrom")
 
@@ -48,6 +51,10 @@ class SpiceRaster:
         self.windows_ext = {}
         for win, ext in zip(list_windows_l2, self.spectral_windows_names):
             self.windows_ext[ext] = win
+        
+        self.lines = {}
+        self.fit_templates = {}
+        self.fit_results = {}
 
     def get_wavelength_intervals(self) -> list[list[u.Quantity]]:
         """
@@ -105,7 +112,100 @@ class SpiceRaster:
             list_windows = [None] * len(self.extension_names)
         return list_windows
 
-    def get_lines_within_wavelength_intervals(
+    def find_lines_in_raster(
+            self, 
+            lines_metadata_file: str | None = None,
+    ):
+        """Find all the lines in the raster among those provided with the line_metadata_file. 
+        Stores the line results in self.lines , and the FittingModels objects to use for the fitting
+        in self.fit_templates 
+        If 
+
+        Args:
+            lines_metadata_file (str | None, optional): YAML File describing all the lines informations that
+            you want to search in the raster. A line not present in the raster will be ignored.
+            the lines_metadata_file yaml file can be customized. If set to None, then use the default one in
+            the template lines folder  "metadata_lines_default.yaml"
+        """        
+        
+        self.lines = self._get_lines_within_wavelength_intervals(
+            lines_metadata_file=lines_metadata_file
+            )
+
+        # if the same FittingModel objects are defined, only one remains as it should be to avoir
+        # repetitions in the fitting. Also stores the window associated with the template.
+        # Can only have one window for one template (no window with overlapping wavelength interval)
+        for line in self.lines:
+            if line["default_template"] not in self.fit_templates:
+                self.fit_templates[line["default_template"]] = {
+                    "FittingModel" : FittingModel(filename=line["default_template"]),
+                    "window": line["window"]
+                }
+            elif (self.fit_templates[line["default_template"]]["window"] == line["window"]):
+                pass
+            else:
+                raise ValueError("Two HDUL windows have overlapping wavelength interval")
+
+    def fit_all_windows(self, **kwargs
+                       ):
+        """Fit all the lines in the raster with the lines in self.lines and the FittingModel objects in self.fitting_model
+        store the FitResults objects in a list self.fit_result_list. 
+        :param **kwargs : keyword arguments for the FitResults.fit_spice_window_standard function 
+        """ 
+        if (self.lines == {}) | (self.fit_templates == {}):
+            raise ValueError("self.lines or self.fit_templates are empty. Should run self.find_lines_in_raster first.")
+
+        for key in self.fit_templates.keys():
+            template_dict = self.fit_templates[key]
+            temp = template_dict["FittingModel"]
+            win = template_dict["window"]
+
+
+            res = FitResults()
+            res.fit_spice_window_standard(
+                spicewindow=self.windows[win],
+                fit_template=temp,
+                **kwargs,
+                )
+            self.fit_results[key] = res
+
+
+    def plot_fittted_map(self, path_to_output_pdf: str, lines="all" | list, **kwargs):
+        """Plot results maps with the FitResults.plot_fitted_map function for all the lines
+        given as input. The function self.find_lines_in_raster and self.fit_all_windows
+        must have been called before. 
+
+        Args:
+            path_to_output_pdf: Path to the output multipage PDF figure. Should end with ".pdf".
+            lines (_type_, optional): either "all" or a list of the names of the lines you want to plot.
+            Defaults to "all" | list[str].
+            **kwargs : additional arguments to FitResults.plot_fitted_maps functions
+        """
+        kwargs["show"] = False
+        with PdfPages(filename=path_to_output_pdf) as pdf:
+            keys = None
+            if lines == "all":
+                keys = list(self.lines.keys())
+            else:
+                keys = lines
+            for key in keys:
+                res = self.fit_results[key]
+                cm = 1/2.56
+                fig = plt.figure(figsize=(17 * cm, 17*cm))
+                ax = fig.add_subplot()
+                res.plot_fitted_map(
+                    ax=ax,
+                    fig=fig,
+                    **kwargs
+                )
+                pdf.savefig(figure=fig)
+                plt.close("all")
+                
+
+
+
+
+    def _get_lines_within_wavelength_intervals(
         self, lines_metadata_file: str = None
     ) -> dict:
         """
@@ -226,3 +326,8 @@ class SpiceRaster:
             raise ValueError(f"The number of windows where the line is detected should be 1, but is {len(line_in_window)}.\n Either select the window or check the line name")
         window_index = line_in_window[0]
         return window_index
+
+
+    def __repr__(self):
+        s = f"Spiceraster for {self.hdul.info()}"
+        return s

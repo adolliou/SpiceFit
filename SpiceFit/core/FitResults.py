@@ -1184,8 +1184,8 @@ class FitResults:
 
             else:
                 ax.plot(x_subfov, y_subfov, '+', ms=0.7, mew=0.5, c="r")
-                ax.axvline(x=x_subfov, ls="--", lw=0.7) 
-                ax.axhline(y=y_subfov, ls="--", lw=0.7) 
+                # ax.axvline(x=x_subfov, ls="--", lw=0.7) 
+                # ax.axhline(y=y_subfov, ls="--", lw=0.7) 
 
     def check_spectra(self, path_to_save_figure: str, position="random"):
         """

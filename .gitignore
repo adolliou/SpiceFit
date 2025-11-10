@@ -182,3 +182,4 @@ test.fits
 *.npy
 *.csv
 *.pdf
+*.fits

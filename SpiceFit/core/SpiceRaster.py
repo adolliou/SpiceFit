@@ -25,9 +25,9 @@ class SpiceRaster:
 
     def __init__(
         self,
-        path_l2_fits_file: str = None,
+        path_l2_fits_file: str | None = None,
         hdul: astropy.io.fits.HDUList = None,
-        windows="all",
+        windows: str | list = "all",
     ) -> None:
         """
         Generate a SpiceRaster object containing all information about a L2 SPICE FITS file.
@@ -122,9 +122,11 @@ class SpiceRaster:
         If 
 
         Args:
-            lines_metadata_file (str | None, optional): YAML File describing all the lines informations that
+            lines_metadata_file (str | None, optional): YAML File describing all the lines
+            informations that
             you want to search in the raster. A line not present in the raster will be ignored.
-            the lines_metadata_file yaml file can be customized. If set to None, then use the default one in
+            the lines_metadata_file yaml file can be customized. If set to None, then use
+            the default one in
             the template lines folder  "metadata_lines_default.yaml"
         """        
         
@@ -148,12 +150,14 @@ class SpiceRaster:
 
     def fit_all_windows(self, **kwargs
                        ):
-        """Fit all the lines in the raster with the lines in self.lines and the FittingModel objects in self.fitting_model
+        """Fit all the lines in the raster with the lines in self.lines and the FittingModel 
+        objects in self.fitting_model
         store the FitResults objects in a list self.fit_result_list. 
         :param **kwargs : keyword arguments for the FitResults.fit_spice_window_standard function 
         """ 
         if (self.lines == {}) | (self.fit_templates == {}):
-            raise ValueError("self.lines or self.fit_templates are empty. Should run self.find_lines_in_raster first.")
+            raise ValueError("self.lines or self.fit_templates are empty. Should run " \
+            "self.find_lines_in_raster first.")
 
         for key in self.fit_templates.keys():
             template_dict = self.fit_templates[key]
@@ -170,7 +174,7 @@ class SpiceRaster:
             self.fit_results[key] = res
 
 
-    def plot_fittted_map(self, path_to_output_pdf: str, lines="all" | list, **kwargs):
+    def plot_fittted_map(self, path_to_output_pdf: str, lines: str | list ="all", **kwargs):
         """Plot results maps with the FitResults.plot_fitted_map function for all the lines
         given as input. The function self.find_lines_in_raster and self.fit_all_windows
         must have been called before. 
@@ -209,12 +213,13 @@ class SpiceRaster:
         self, lines_metadata_file: str = None
     ) -> dict:
         """
-        :param lines_metadata_file: str, path to a yaml file with personalised lines metadata. If set to none,
-        then use the default ones from "metadata_lines_default.yaml"
+        :param lines_metadata_file: str, path to a yaml file with personalised lines metadata. 
+        If set to none, then use the default ones from "metadata_lines_default.yaml"
         """
         lines_in_raster = {}
         if lines_metadata_file is None:
-            lines_metadata_file = os.path.join(Path(__file__).parents[0], "Templates/metadata_lines_default.yaml")
+            lines_metadata_file = os.path.join(Path(__file__).parents[0], 
+                                               "Templates/metadata_lines_default.yaml")
         else:
             lines_metadata_file = Path(lines_metadata_file)
         with open(lines_metadata_file, "r") as f:
@@ -233,7 +238,8 @@ class SpiceRaster:
 
     def estimate_noise_windows(self, windows="all") -> None:
         """
-        Estimates the noise for the given window of the SpiceRaster object with the sospice package
+        Estimates the noise for the given window of the SpiceRaster object with the sospice
+        package.
         """        
         if windows == "all":
             for ii, win in enumerate(self.windows):

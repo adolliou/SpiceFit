@@ -30,16 +30,14 @@ def fittemplate():
     return FittingModel(filename=path_yaml)
 
 
-@pytest.fixture
-def hdu2():
-    url = (
-        "https://spice.osups.universite-paris-saclay.fr/spice-data/release-5.0/level2/" 
-        "2022/03/07/solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits"
-    )  # noqa: E501
-    hdu_list = fits.open(url)
-    hdu = hdu_list['C III 977 (Merged)']
-    yield hdu
-    hdu_list.close()
+# @pytest.fixture
+# def hdul2():
+#     url = (
+#         "https://spice.osups.universite-paris-saclay.fr/spice-data/release-5.0/
+# level2/2022/03/07/solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits"
+#     )  # noqa: E501
+#     hdu_list = fits.open(url)
+#     return hdu_list
 
 
 @pytest.fixture
@@ -55,7 +53,8 @@ def fittemplate2():
 class TestSpiceRaster:
 
     def test_constructor(self):
-        path_fits_l2_spice = "https://spice.osups.universite-paris-saclay.fr/spice-data/release-4.0/level2/2022/03/17/solo_L2_spice-n-ras_20220317T002536_V03_100663832-017.fits"
+        path_fits_l2_spice = "https://spice.osups.universite-paris-saclay.fr/spice-data/" \
+        "release-4.0/level2/2022/03/17/solo_L2_spice-n-ras_20220317T002536_V03_100663832-017.fits"
         s1 = SpiceRaster(path_l2_fits_file=path_fits_l2_spice)
         with fits.open(path_fits_l2_spice) as hdulist:
             s2 = SpiceRaster(hdul=hdulist)
@@ -109,12 +108,14 @@ class TestSpiceRaster:
         s.fit_all_windows()
         print(f"{s.fit_results=}")
 
-    def test_plot_fitted_maps(self, hdul2):
-        s = SpiceRaster(hdul=hdul2)
-        s.find_lines_in_raster()
-        s.fit_all_windows()
-        s.plot_fittted_map(
-            path_to_output_pdf=os.path.join(Path(__file__).parents[0], "multiple_radiance.pdf"),
-            TODO CONTINUE
-        
-        )        
+    def test_plot_fitted_maps(self):
+        with fits.open(os.path.join(Path(__file__).parents[0], 
+                        "solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits")) as hdul:
+            s = SpiceRaster(hdul=hdul)
+            s.find_lines_in_raster()
+            s.fit_all_windows()
+            s.plot_fittted_map(
+                path_to_output_pdf=os.path.join(Path(__file__).parents[0], "multiple_radiance.pdf"),
+                lines="all",
+
+            )        

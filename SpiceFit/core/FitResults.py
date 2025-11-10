@@ -815,6 +815,12 @@ class FitResults:
                                 fit_chit2_all[t, i, j] = chi2
                                 flagged_pixels[t, i, j] = True
                                 lock.release()
+                        else:
+                            lock.acquire()
+                            fit_coeffs_all[:, t, i, j] = popt
+                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                            fit_chit2_all[t, i, j] = chi2
+                            lock.release()                                
                     else:
                         lock.acquire()
                         flagged_pixels[t, i, j] = True
@@ -847,8 +853,18 @@ class FitResults:
                                 lock.release()
                             else:
                                 lock.acquire()
+                                fit_coeffs_all[:, t, i, j] = popt
+                                fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                                fit_chit2_all[t, i, j] = chi2
                                 flagged_pixels[t, i, j] = True
                                 lock.release()
+                        else:
+                            lock.acquire()
+                            fit_coeffs_all[:, t, i, j] = popt
+                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                            fit_chit2_all[t, i, j] = chi2
+                            lock.release()   
+
                     else:
                         lock.acquire()
                         flagged_pixels[t, i, j] = True

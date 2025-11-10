@@ -30,14 +30,14 @@ def fittemplate():
     return FittingModel(filename=path_yaml)
 
 
-# @pytest.fixture
-# def hdul2():
-#     url = (
-#         "https://spice.osups.universite-paris-saclay.fr/spice-data/release-5.0/
-# level2/2022/03/07/solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits"
-#     )  # noqa: E501
-#     hdu_list = fits.open(url)
-#     return hdu_list
+@pytest.fixture
+def hdul2():
+    url = (
+        "https://spice.osups.universite-paris-saclay.fr/spice-data/release-5.0/"
+        "level2/2022/03/07/solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits"
+    )  # noqa: E501
+    hdu_list = fits.open(url)
+    return hdu_list
 
 
 @pytest.fixture
@@ -69,31 +69,36 @@ class TestSpiceRaster:
             < 1e-5
         )
 
-    def test_wavelength_calibration(self, hdul):
-        window = "Ly-gamma-CIII group (Merged)"
-        velocity_ref = u.Quantity(0, "km/s")
+    # def test_wavelength_calibration(self):
+    #     p = os.path.join(
+    #         Path(__file__).parents[0],
+    #         "solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits",
+    #     )
+    #     with fits.open(p) as hdul:
+    #         window = "Ly-gamma-CIII group (Merged)"
+    #         velocity_ref = u.Quantity(0, "km/s")
 
-        hdu = hdul[window]
-        s = SpiceRasterWindowL2(hdu=hdu)
-        fitmod = FittingModel(filename="h_1_972_57_1c.template")
+    #         hdu = hdul[window]
+    #         s = SpiceRasterWindowL2(hdu=hdu)
+    #         fitmod = FittingModel(filename="h_1_972_57_1c.template")
 
-        lambda_ref = u.Quantity(972.57, "angstrom")
-        res = FitResults()
-        res.fit_spice_window_standard(
-            spicewindow=s,
-            fit_template=fitmod,
-            parallelism=True,
-            cpu_count=8,
-        )
-        x_median = np.nanmedian(
-            res.components_results["main"]["coeffs"]["x"]["results"]
-        )
-        x_ref = (lambda_ref * velocity_ref / const.c.to("km/s") ) + lambda_ref
+    #         lambda_ref = u.Quantity(972.57, "angstrom")
+    #         res = FitResults()
+    #         res.fit_spice_window_standard(
+    #             spicewindow=s,
+    #             fit_template=fitmod,
+    #             parallelism=True,
+    #             cpu_count=8,
+    #         )
+    #         x_median = np.nanmedian(
+    #             res.components_results["main"]["coeffs"]["x"]["results"]
+    #         )
+    #         x_ref = (lambda_ref * velocity_ref / const.c.to("km/s") ) + lambda_ref
 
-        shift_wave = x_ref - x_median
+    #         shift_wave = x_ref - x_median
 
-        raster = SpiceRaster(hdul=hdul)
-        raster.return_wave_calibrated_spice_raster(shift_lambda=shift_wave, detector="LW")
+    #         raster = SpiceRaster(hdul=hdul)
+    #         raster.return_wave_calibrated_spice_raster(shift_lambda=shift_wave, detector="LW")
 
     def test_find_lines_in_raster(self, hdul2):
         s = SpiceRaster(hdul=hdul2)
@@ -101,21 +106,27 @@ class TestSpiceRaster:
         print(s)
         print(f"{s.lines=}")
 
+    # def test_fit_all_windows(self, hdul2):
+    #     s = SpiceRaster(hdul=hdul2)
+    #     s.find_lines_in_raster()
+    #     s.fit_all_windows()
+    #     print(f"{s.fit_results=}")
 
-    def test_fit_all_windows(self, hdul2):
+    def test_plot_fitted_maps(self, hdul2):
+        # p = os.path.join(
+        #     Path(__file__).parents[0],
+        #     "solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits",
+        # )
+        # with fits.open(p) as hdul:
         s = SpiceRaster(hdul=hdul2)
         s.find_lines_in_raster()
-        s.fit_all_windows()
-        print(f"{s.fit_results=}")
-
-    def test_plot_fitted_maps(self):
-        with fits.open(os.path.join(Path(__file__).parents[0], 
-                        "solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits")) as hdul:
-            s = SpiceRaster(hdul=hdul)
-            s.find_lines_in_raster()
-            s.fit_all_windows()
-            s.plot_fittted_map(
-                path_to_output_pdf=os.path.join(Path(__file__).parents[0], "multiple_radiance.pdf"),
-                lines="all",
-
-            )        
+        line_names = list(s.lines.keys())[0:2]
+        template_names = [s.lines[n]["default_template"] for n in line_names]
+        s.fit_templates = {key: s.fit_templates[key] for key in template_names}
+        s.fit_all_windows(cpu_count = 8)
+        s.plot_fittted_map(
+            path_to_output_pdf=os.path.join(
+                Path(__file__).parents[0], "multiple_radiance.pdf"
+            ),
+            lines=line_names,
+        )

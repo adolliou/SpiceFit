@@ -133,6 +133,7 @@ fitres.plot_fitted_map(fig=fig, ax=ax, line="main", param="delta_x",
 fig.savefig(os.path.join(resfolder, "doppler.pdf"), dpi=50)
 ```
 
+
 ## Saving to and loading from a L3 FITS files
 
 This package allows to save a L3 FITS file with the same format as the L3 files from the IDL SPICE data analysis. 
@@ -189,6 +190,34 @@ res = FitResults()
 res.from_fits(os.path.join(resfolder, "savefile_l3.fits"))
 window = launch_spectral_quicklook(res)
 
+```
+
+## Working with SpiceRaster
+
+A SpiceRaster object handles a HDUList, and stores multiple SpiceWindowRasterL2 objects. It can be used to scan the lines availble on the different windows, and 
+fit all the lines over the different windows. 
+
+```python
+from SpiceFit import SpiceRaster
+from astopy.io import fits
+
+url = (
+    "https://spice.osups.universite-paris-saclay.fr/spice-data/release-5.0/"
+    "level2/2022/03/07/solo_L2_spice-n-ras_20220307T030536_V22_100663723-000.fits"
+) 
+
+with fits.open(url) as hdul:
+    s = SpiceRaster(hdul=hdul)
+    s.find_lines_in_raster()
+    keys = list(s.fit_templates.keys())[0:2]
+    s.fit_templates = {key: s.fit_templates[key] for key in keys}
+    s.fit_all_windows()
+    s.plot_fittted_map(
+        path_to_output_pdf=os.path.join(
+            Path(__file__).parents[0], "multiple_radiance.pdf"
+        ),
+        lines=keys,
+    )
 ```
 
 ## License

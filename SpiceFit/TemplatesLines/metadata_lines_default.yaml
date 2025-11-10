@@ -41,16 +41,6 @@ list_lines_spice_metadata:
     default_template: "h_1_972_57_1c.template"
 
 
-  - name: "h_1 972.54"
-    elem: "h"
-    ion: 1
-    wave: 972.54
-    unit_wave: "Angstrom"
-    lvl_low: "1s$^2S$_{1/2}$"
-    lvl_up: "4p$^2$P$_{3/2}$"    
-    legend: "H I Ly-gamma 972.54 $\\AA$"
-    default_template: "h_1_972_57_1c.template"
-
   - name: "mg_9 706.02"
     elem: "mg"
     ion: 9

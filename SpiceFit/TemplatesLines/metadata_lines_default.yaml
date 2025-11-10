@@ -20,16 +20,6 @@ list_lines_spice_metadata:
     legend: "C III 977.03 $\\AA$"
     default_template: "c_3_977_96_1c.template"
 
-  - name: "fe_18 974.86"
-    elem: "fe"
-    ion: 18
-    wave: 974.86
-    unit_wave: "Angstrom"
-    lvl_low: ""
-    lvl_up: ""
-    legend: "Fe XVIII 974.86 $\\AA$"
-    default_template: "c_3_977_96_2c_p.template"
-
   - name: "h_1 972.54"
     elem: "h"
     ion: 1
@@ -37,17 +27,6 @@ list_lines_spice_metadata:
     unit_wave: "Angstrom"
     lvl_low: ""
     lvl_up: ""
-    legend: "H I Ly-gamma 972.54 $\\AA$"
-    default_template: "h_1_972_57_1c.template"
-
-
-  - name: "h_1 972.54"
-    elem: "h"
-    ion: 1
-    wave: 972.54
-    unit_wave: "Angstrom"
-    lvl_low: "1s$^2S$_{1/2}$"
-    lvl_up: "4p$^2$P$_{3/2}$"    
     legend: "H I Ly-gamma 972.54 $\\AA$"
     default_template: "h_1_972_57_1c.template"
 

@@ -126,7 +126,7 @@ class FitResults:
                                   parallelism: bool = True,
                                   cpu_count: int = None,
                                   min_data_points: int = 5,
-                                  chi2_limit: float = 20.0,
+                                  chi2_limit: float | None = None,
                                   verbose=0,
                                   detrend_doppler: bool=False ):
         """
@@ -181,7 +181,7 @@ class FitResults:
         parallelism: bool = True,
         cpu_count: int = None,
         min_data_points: int = 5,
-        chi2_limit: float = 20.0,
+        chi2_limit: float | None = None,
         verbose: int=0,
         detrend_doppler: bool=False,
         best_xshift: float=None,
@@ -285,7 +285,7 @@ class FitResults:
             parallelism: bool = True,
             cpu_count: int = None,
             min_data_points: int = 5,
-            chi2_limit: float = 20.0,
+            chi2_limit: float | None = None,
             display_progress_bar=True
     ):
         """
@@ -801,20 +801,20 @@ class FitResults:
                                              fit_template=self.fit_template,
                                              minimum_data_points=self.min_data_points)
                     if popt is not None:
-
-                        if chi2 <= self.chi2_limit:
-                            lock.acquire()
-                            fit_coeffs_all[:, t, i, j] = popt
-                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
-                            fit_chit2_all[t, i, j] = chi2
-                            lock.release()
-                        else:
-                            lock.acquire()
-                            fit_coeffs_all[:, t, i, j] = popt
-                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
-                            fit_chit2_all[t, i, j] = chi2
-                            flagged_pixels[t, i, j] = True
-                            lock.release()
+                        if self.chi2_limit is not None:
+                            if chi2 <= self.chi2_limit:
+                                lock.acquire()
+                                fit_coeffs_all[:, t, i, j] = popt
+                                fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                                fit_chit2_all[t, i, j] = chi2
+                                lock.release()
+                            else:
+                                lock.acquire()
+                                fit_coeffs_all[:, t, i, j] = popt
+                                fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                                fit_chit2_all[t, i, j] = chi2
+                                flagged_pixels[t, i, j] = True
+                                lock.release()
                     else:
                         lock.acquire()
                         flagged_pixels[t, i, j] = True
@@ -838,16 +838,17 @@ class FitResults:
                     if popt is not None:
 
                         chi2 = np.sum(np.diag(pcov))
-                        if chi2 <= self.chi2_limit:
-                            lock.acquire()
-                            fit_coeffs_all[:, t, i, j] = popt
-                            fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
-                            fit_chit2_all[t, i, j] = chi2
-                            lock.release()
-                        else:
-                            lock.acquire()
-                            flagged_pixels[t, i, j] = True
-                            lock.release()
+                        if self.chi2_limit is not None:
+                            if chi2 <= self.chi2_limit:
+                                lock.acquire()
+                                fit_coeffs_all[:, t, i, j] = popt
+                                fit_coeffs_all_error[:, t, i, j] = np.sqrt(np.diag(pcov))
+                                fit_chit2_all[t, i, j] = chi2
+                                lock.release()
+                            else:
+                                lock.acquire()
+                                flagged_pixels[t, i, j] = True
+                                lock.release()
                     else:
                         lock.acquire()
                         flagged_pixels[t, i, j] = True

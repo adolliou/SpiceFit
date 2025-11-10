@@ -30,15 +30,15 @@ list_lines_spice_metadata:
     legend: "H I Ly-gamma 972.54 $\\AA$"
     default_template: "h_1_972_57_1c.template"
 
-  - name: "mg_9 706.02"
-    elem: "mg"
-    ion: 9
-    wave: 706.02
-    unit_wave: "Angstrom"
-    lvl_low: "1$s^2$ 2$s^2$ $^S_{1/2}$"
-    lvl_up: "1$s^2$ 2s 2p $3P_1$"
-    legend: "Mg IX 706.02 $\\AA$"
-    default_template: "mg_9_706_02_1c.template"
+  # - name: "mg_9 706.02"
+  #   elem: "mg"
+  #   ion: 9
+  #   wave: 706.02
+  #   unit_wave: "Angstrom"
+  #   lvl_low: "1$s^2$ 2$s^2$ $^S_{1/2}$"
+  #   lvl_up: "1$s^2$ 2s 2p $3P_1$"
+  #   legend: "Mg IX 706.02 $\\AA$"
+  #   default_template: "mg_9_706_02_1c.template"
 
   - name: "o_3 703.87"
     elem: "o"

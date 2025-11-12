@@ -171,7 +171,7 @@ class SpiceRaster:
                 )
             self.fit_results[key] = res
 
-    def plot_fittted_map(self, path_to_output_pdf: str, lines: str | list="all", param: str="radiance", **kwargs):
+    def plot_fitted_map(self, path_to_output_pdf: str, lines: str | list="all", param: str="radiance", **kwargs):
         """Plot results maps with the FitResults.plot_fitted_map function for all the lines
         given as input. The function self.find_lines_in_raster and self.fit_all_windows
         must have been called before. 

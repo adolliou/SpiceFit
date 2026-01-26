@@ -1155,7 +1155,10 @@ class FitResults:
 
         if regular_grid:
             coords_spice = w_xy.pixel_to_world(x, y)
-            long, latg, dlon, dlat = PlotFits.build_regular_grid(coords_spice.Tx, coords_spice.Ty)
+            long, latg, dlon, dlat = PlotFits.build_regular_grid(
+                CommonUtil.ang2pipi(coords_spice.Tx),
+                CommonUtil.ang2pipi(coords_spice.Ty),
+                                    )
             long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
             latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
             dlon = dlon.to("arcsec").value

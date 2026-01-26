@@ -1081,8 +1081,8 @@ class FitResults:
                 data = np.squeeze(a[param][param_type].value)
                 data_err = np.squeeze(a[param]["sigma"].value)
 
-            x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
-                               np.arange(self.spectral_window.data.shape[1]))
+            x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
+                               np.arange(self.spectral_window.data.shape[2]))
 
             bad_pixels = np.array(
                 np.abs(data) * sigma_error < np.abs(data_err), dtype=bool

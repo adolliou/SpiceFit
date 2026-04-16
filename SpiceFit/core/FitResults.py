@@ -1081,8 +1081,8 @@ class FitResults:
                 data = np.squeeze(a[param][param_type].value)
                 data_err = np.squeeze(a[param]["sigma"].value)
 
-            x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[2]),
-                               np.arange(self.spectral_window.data.shape[1]))
+            x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
+                               np.arange(self.spectral_window.data.shape[2]))
 
             bad_pixels = np.array(
                 np.abs(data) * sigma_error < np.abs(data_err), dtype=bool
@@ -1155,7 +1155,10 @@ class FitResults:
 
         if regular_grid:
             coords_spice = w_xy.pixel_to_world(x, y)
-            long, latg, dlon, dlat = PlotFits.build_regular_grid(coords_spice.Tx, coords_spice.Ty)
+            long, latg, dlon, dlat = PlotFits.build_regular_grid(
+                CommonUtil.ang2pipi(coords_spice.Tx),
+                CommonUtil.ang2pipi(coords_spice.Ty),
+                                    )
             long_arc = CommonUtil.ang2pipi(long.to("arcsec")).value
             latg_arc = CommonUtil.ang2pipi(latg.to("arcsec")).value
             dlon = dlon.to("arcsec").value

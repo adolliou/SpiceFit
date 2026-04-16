@@ -89,6 +89,7 @@ class SpiceRaster:
                 (header["EXTNAME"] != "VARIABLE_KEYWORDS")
                 and (header["EXTNAME"] != "WCSDVARR")
                 and ("SATPIXLIST" not in header["EXTNAME"])
+                and ("SPIKPIXLIST" not in header["EXTNAME"])
             ):
                 spectral_windows_names.append(header["EXTNAME"])
         return spectral_windows_names

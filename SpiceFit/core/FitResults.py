@@ -590,8 +590,8 @@ class FitResults:
                                          dy=dy,
                                          fit_template=fit_template,
                                          minimum_data_points=minimum_data_points)
-
-                if chi2 <= chi_limit:
+                
+                if (chi2 <= chi_limit) & (popt is not False):
                     self.fit_results["coeff"][:, t, i, j] = popt
                     self.fit_results["coeffs_error"][:, t, i, j] = np.sqrt(np.diag(pcov))
                     self.fit_results["chi2"][t, i, j] = chi2
@@ -800,7 +800,7 @@ class FitResults:
                                              dy=dy,
                                              fit_template=self.fit_template,
                                              minimum_data_points=self.min_data_points)
-                    if popt is not None:
+                    if popt is not False:
                         if self.chi2_limit is not None:
                             if chi2 <= self.chi2_limit:
                                 lock.acquire()
@@ -841,7 +841,7 @@ class FitResults:
                                              dy=dy,
                                              fit_template=self.fit_template,
                                              minimum_data_points=self.min_data_points)
-                    if popt is not None:
+                    if popt is not False:
 
                         chi2 = np.sum(np.diag(pcov))
                         if self.chi2_limit is not None:

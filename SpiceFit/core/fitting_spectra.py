@@ -43,6 +43,6 @@ def fit_spectra(x, y, dy, fit_template: FittingModel, minimum_data_points: int =
             if verbose == 2:
                 print("Fitting failed")
 
-            return None, None, None
+            return False, False, False
 
         return popt, pcov, chi2

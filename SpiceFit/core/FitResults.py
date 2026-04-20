@@ -1003,6 +1003,7 @@ class FitResults:
                         sigma_error: int=2.0,
                         chi2_limit: float=None, 
                         norm = None,
+                        plot_cbar = True
                         ):
         """
 
@@ -1188,8 +1189,8 @@ class FitResults:
                            norm=norm, aspect=ratio)
             ax.set_xlabel("X-axis [px]")
             ax.set_ylabel("Y-axis [px]")
-
-        cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
+        if plot_cbar:
+            cbar = fig.colorbar(im, ax=ax, label=unit, pad=0)
 
         ax.set_title(param)
 
@@ -1212,6 +1213,7 @@ class FitResults:
                 ax.plot(x_subfov, y_subfov, '+', ms=0.7, mew=0.5, c="r")
                 # ax.axvline(x=x_subfov, ls="--", lw=0.7) 
                 # ax.axhline(y=y_subfov, ls="--", lw=0.7) 
+        return norm
 
     def check_spectra(self, path_to_save_figure: str, position="random"):
         """

@@ -356,7 +356,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
 
 
         results         = SpiceRasterWindowL2(data=data_bin, header=header_binning, 
-                                              remove_dumbbells=self.remove_dumbbells)
+                                              remove_dumbbells=False)
         if self.uncertainty is None:
             self.compute_uncertainty()
         uncertainty_av  = copy.deepcopy(self.uncertainty)
@@ -371,6 +371,17 @@ class SpiceRasterWindowL2(RasterWindowL2):
             uncertainty_av[l] = u.Quantity(data_sigma_av, self.uncertainty[l].unit)
 
         results.uncertainty = uncertainty_av
+        header_binning["NBIN1"] *= factor[3]
+        header_binning["NBIN2"] *= factor[2]
+        header_binning["NBIN3"] *= factor[1]
+        header_binning["NBIN4"] *= factor[0]
+        
+        if self.remove_dumbbells:
+            ymin, ymax = SpiceUtil.vertical_edges_limits(header_binning)
+            results.data[:, :, :ymin + 1, :] = np.nan
+            results.data[:, :, ymax:, :] = np.nan
+
+
         return results
         
 

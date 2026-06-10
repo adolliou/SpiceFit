@@ -312,7 +312,7 @@ class SpiceRasterWindowL2(RasterWindowL2):
         results.uncertainty = uncertainty_av
         return results
 
-    def binning(self, factor: tuple, function: function = np.nanmean, ):
+    def binning(self, factor: tuple, function: callable = np.nanmean, ):
         """
         Bin the SPICE data spatially and/or temporally and/or spectrally with a given function.
         Returns a new SpiceRasterWindowL2 object with updated data and header, along with 

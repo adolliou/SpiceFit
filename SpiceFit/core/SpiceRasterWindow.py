@@ -277,15 +277,16 @@ class SpiceRasterWindowL2(RasterWindowL2):
 
                 header_binning[f"CDELT{ii+1}"] = header_origin[f"CDELT{ii+1}"] * factor[3 - ii]
 
-            s = - np.sign(header_origin["PC1_2"])
-            rho = np.arccos(header_origin["PC1_1"])*s
-
-            lam = header_binning["CDELT2"]/header_binning["CDELT1"]
-            header_binning["PC1_2"] = - lam*np.sin(rho)
-            header_binning["PC2_1"] = (1/lam)*np.sin(rho)
-
         else:
             raise NotImplementedError("Binning not implemented for sit-n-stare yet.")
+
+        s = - np.sign(header_origin["PC1_2"])
+        rho = np.arccos(header_origin["PC1_1"])*s
+
+        lam = header_binning["CDELT2"]/header_binning["CDELT1"]
+        header_binning["PC1_2"] = - lam*np.sin(rho)
+        header_binning["PC2_1"] = (1/lam)*np.sin(rho)
+        header_binning["PC4_1"] = header_origin["PC4_1"]*factor[3]
 
         header_binning["NAXIS1"] = data_bin.shape[3]
         header_binning["NAXIS2"] = data_bin.shape[2]

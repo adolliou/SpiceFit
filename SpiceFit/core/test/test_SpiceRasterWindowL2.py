@@ -109,4 +109,6 @@ class TestSpiceRasterWindowL2:
         s1 = SpiceRasterWindowL2(hdu=hdu2)
         lam = s1.return_wavelength_array()
 
+    # def test_binning
+
     # s3 = s1.average_spectra_over_region(lonlat_lims=[[]], allo)

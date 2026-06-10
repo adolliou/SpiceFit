@@ -294,6 +294,14 @@ class SpiceRasterWindowL2(RasterWindowL2):
         header_binning["NAXIS3"] = data_bin.shape[1]
         header_binning["NAXIS4"] = data_bin.shape[0]
 
+        header_binning["NBINU1"]= (factor[3],
+                                    "Binnig in axis 1 applied by the user post-acquisition" )
+        header_binning["NBINU2"]= (factor[2],
+                                    "Binnig in axis 2 applied by the user post-acquisition" )
+        header_binning["NBINU3"]= (factor[1],
+                                    "Binnig in axis 3 applied by the user post-acquisition" )
+        header_binning["NBINU4"]= (factor[0],
+                                    "Binnig in axis 4 applied by the user post-acquisition" )
 
         results         = SpiceRasterWindowL2(data=data_bin, header=header_binning, 
                                               remove_dumbbells=False)
@@ -311,15 +319,6 @@ class SpiceRasterWindowL2(RasterWindowL2):
             uncertainty_av[l] = u.Quantity(data_sigma_av, self.uncertainty[l].unit)
 
         results.uncertainty = uncertainty_av
-        header_binning["NBIN1"] *= factor[3]
-        header_binning["NBIN2"] *= factor[2]
-        header_binning["NBIN3"] *= factor[1]
-        header_binning["NBIN4"] *= factor[0]
-        
-        if self.remove_dumbbells:
-            ymin, ymax = SpiceUtil.vertical_edges_limits(header_binning)
-            results.data[:, :, :ymin + 1, :] = np.nan
-            results.data[:, :, ymax:, :] = np.nan
 
 
         return results

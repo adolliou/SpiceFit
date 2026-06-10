@@ -1970,7 +1970,7 @@ class FitResults:
             self.detrend_doppler_shift_velocities()        
 
         hdu_l2 = hdul[2]
-        spectral_window = SpiceRasterWindowL2(hdu=hdu_l2)
+        spectral_window = SpiceRasterWindowL2(hdu=hdu_l2, remove_dumbbells=False)
         self.spectral_window = spectral_window
         if self.spectral_window.uncertainty is None:
             self.spectral_window.compute_uncertainty()

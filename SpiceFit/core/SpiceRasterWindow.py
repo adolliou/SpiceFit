@@ -312,6 +312,66 @@ class SpiceRasterWindowL2(RasterWindowL2):
         results.uncertainty = uncertainty_av
         return results
 
+    def binning(self, factor: tuple, function: function = np.nanmean, ):
+        """
+        Bin the SPICE data spatially and/or temporally and/or spectrally with a given function.
+        Returns a new SpiceRasterWindowL2 object with updated data and header, along with 
+        updated noise. 
+
+        Args:
+            factor: 4-tuple binning factor to apply. Has the same format as the hdu.data shape.  
+            For standards rasters, it is (t, lambda, y, x). The data shape must be multiples
+            of the binning factors.
+            function: function to apply for the binning. For instance, np.nanmean or np.nanmedian.
+        """
+
+
+        header_binning      = self.header.copy()
+        header_origin       = self.header.copy()
+        data                = self.data.copy()
+
+        data_bin            = rebin_factor(a=data, factor=factor, function=function)
+        if data.shape[0] == 1:   
+            for ii in range(4):     
+                header_binning[f"CRPIX{ii+1}"] = \
+                ((header_origin[f"CRPIX{ii+1}"] - 1)/factor[3 - ii]) + 1
+
+                header_binning[f"CDELT{ii+1}"] = header_origin[f"CDELT{ii+1}"] * factor[3 - ii]
+
+        else:
+            raise NotImplementedError("Binning not implemented for sit-n-stare yet.")
+
+        s = - np.sign(header_origin["PC1_2"])
+        rho = np.arccos(header_origin["PC1_1"])*s
+
+        lam = header_binning["CDELT2"]/header_binning["CDELT1"]
+        header_binning["PC1_2"] = - lam*np.sin(rho)
+        header_binning["PC2_1"] = (1/lam)*np.sin(rho)
+        header_binning["PC4_1"] = header_origin["PC4_1"]*factor[3]
+
+        header_binning["NAXIS1"] = data_bin.shape[3]
+        header_binning["NAXIS2"] = data_bin.shape[2]
+        header_binning["NAXIS3"] = data_bin.shape[1]
+        header_binning["NAXIS4"] = data_bin.shape[0]
+
+
+        results         = SpiceRasterWindowL2(data=data_bin, header=header_binning, 
+                                              remove_dumbbells=self.remove_dumbbells)
+        if self.uncertainty is None:
+            self.compute_uncertainty()
+        uncertainty_av  = copy.deepcopy(self.uncertainty)
+        N               = factor[0] * factor[1] * factor[2] * factor[3]
+
+        for l in ["Signal", "Total"]:
+            data_sigma_av = copy.deepcopy(self.uncertainty[l])
+
+            data_sigma_av = (1 / N) * rebin_factor(data_sigma_av,
+                                                factor=factor,
+                                                  function=rss)
+            uncertainty_av[l] = u.Quantity(data_sigma_av, self.uncertainty[l].unit)
+
+        results.uncertainty = uncertainty_av
+        return results
         
 
         

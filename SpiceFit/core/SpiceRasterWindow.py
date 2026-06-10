@@ -12,6 +12,9 @@ import sunpy.map
 import math
 from ..util.common_util import CommonUtil
 from astropy.time import Time
+from ..util.binning import rebin_factor
+
+
 
 
 def rss(a: np.array, axis=0):
@@ -148,7 +151,8 @@ class SpiceRasterWindowL2(RasterWindowL2):
         times_list = times[0, 0, 0, :]
         return times_list
 
-    def average_spectra_over_region(self, coords: SkyCoord = None, lonlat_lims: tuple = None, pixels: tuple = None, pixels_lims:tuple = None,
+    def average_spectra_over_region(self, coords: SkyCoord = None, lonlat_lims: tuple = None,
+                                     pixels: tuple = None, pixels_lims:tuple = None,
                                     allow_reprojection=False):
         """Average the spectra and error over a given spatial region.
         Returns a SpiceRasterWindow object.
@@ -172,7 +176,9 @@ class SpiceRasterWindowL2(RasterWindowL2):
             raise ValueError(
                 "average_spectra_over_region only accepts one argument among coords, lonlat_lims or pixels.")
 
-        lat, lon, x, y = self.extract_subfield_coordinates(coords, lonlat_lims, pixels,pixels_lims, allow_reprojection, )
+        lat, lon, x, y = self.extract_subfield_coordinates(coords, lonlat_lims,
+                                                            pixels,pixels_lims,
+                                                              allow_reprojection, )
         if not allow_reprojection:
             decx = np.abs(x - np.array(np.round(x), dtype=int))
             decy = np.abs(y - np.array(np.round(y), dtype=int))
@@ -209,14 +215,16 @@ class SpiceRasterWindowL2(RasterWindowL2):
             assert data_av.shape[0] == 1
             data_av = np.zeros((data_av.shape[0], data_av.shape[1], len(x)), dtype=data_av.dtype)
             for l in range(self.data.shape[1]):
-                data_av[0, l, :] = CommonUtil.interpol2d(self.data[0, l, :, :], x=x, y=y, order=1, fill=np.nan, )
+                data_av[0, l, :] = CommonUtil.interpol2d(self.data[0, l, :, :],
+                                                          x=x, y=y, order=1, fill=np.nan, )
             data_av = np.nanmean(data_av, axis=2)
         else:
             data_av = np.nanmean(data_av[:, :, y, x], axis=2)
 
         data_av = data_av.reshape(data_av.shape[0], data_av.shape[1], 1, 1)
 
-        results = SpiceRasterWindowL2(data=data_av, header=header_av, remove_dumbbells=False)
+        results = SpiceRasterWindowL2(data=data_av, header=header_av,
+                                       remove_dumbbells=self.remove_dumbbells)
 
         if self.uncertainty is None:
             self.compute_uncertainty()
@@ -226,7 +234,8 @@ class SpiceRasterWindowL2(RasterWindowL2):
             data_sigma_av = copy.deepcopy(self.uncertainty[l])
             if allow_reprojection:
                 assert data_sigma_av.shape[0] == 1
-                data_sigma_av = np.zeros((self.uncertainty[l].shape[0], self.uncertainty[l].shape[1], len(x)),
+                data_sigma_av = np.zeros((self.uncertainty[l].shape[0],
+                                           self.uncertainty[l].shape[1], len(x)),
                                          dtype=data_sigma_av.dtype)
                 for pp in range(self.uncertainty[l].shape[1]):
                     data_sigma_av[0, pp, :] = CommonUtil.interpol2d(self.uncertainty[l][0, pp, :, :],
@@ -241,3 +250,67 @@ class SpiceRasterWindowL2(RasterWindowL2):
         results.uncertainty = uncertainty_av
 
         return results
+
+    def binning(self, factor: tuple, function: function = np.nanmean, ):
+        """
+        Bin the SPICE data spatially and/or temporally and/or spectrally with a given function.
+        Returns a new SpiceRasterWindowL2 object with updated data and header, along with 
+        updated noise. 
+
+        Args:
+            factor: 4-tuple binning factor to apply. Has the same format as the hdu.data shape.  
+            For standards rasters, it is (t, lambda, y, x). The data shape must be multiples
+            of the binning factors.
+            function: function to apply for the binning. For instance, np.nanmean or np.nanmedian.
+        """
+
+
+        header_binning      = self.header.copy()
+        header_origin       = self.header.copy()
+        data                = self.data.copy()
+
+        data_bin            = rebin_factor(a=data, factor=factor, function=function)
+        if data.shape[0] == 1:   
+            for ii in range(4):     
+                header_binning[f"CRPIX{ii+1}"] = \
+                ((header_origin[f"CRPIX{ii+1}"] - 1)/factor[3 - ii]) + 1
+
+                header_binning[f"CDELT{ii+1}"] = header_origin[f"CDELT{ii+1}"] * factor[3 - ii]
+
+            s = - np.sign(header_origin["PC1_2"])
+            rho = np.arccos(header_origin["PC1_1"])*s
+
+            lam = header_binning["CDELT2"]/header_binning["CDELT1"]
+            header_binning["PC1_2"] = - lam*np.sin(rho)
+            header_binning["PC2_1"] = (1/lam)*np.sin(rho)
+
+        else:
+            raise NotImplementedError("Binning not implemented for sit-n-stare yet.")
+
+        header_binning["NAXIS1"] = data_bin.shape[3]
+        header_binning["NAXIS2"] = data_bin.shape[2]
+        header_binning["NAXIS3"] = data_bin.shape[1]
+        header_binning["NAXIS4"] = data_bin.shape[0]
+
+
+        results         = SpiceRasterWindowL2(data=data_bin, header=header_binning, 
+                                              remove_dumbbells=self.remove_dumbbells)
+        if self.uncertainty is None:
+            self.compute_uncertainty()
+        uncertainty_av  = copy.deepcopy(self.uncertainty)
+        N               = factor[0] * factor[1] * factor[2] * factor[3]
+
+        for l in ["Signal", "Total"]:
+            data_sigma_av = copy.deepcopy(self.uncertainty[l])
+
+            data_sigma_av = (1 / N) * rebin_factor(data_sigma_av,
+                                                factor=factor,
+                                                  function=rss)
+            uncertainty_av[l] = u.Quantity(data_sigma_av, self.uncertainty[l].unit)
+
+        results.uncertainty = uncertainty_av
+        return results
+
+        
+
+        

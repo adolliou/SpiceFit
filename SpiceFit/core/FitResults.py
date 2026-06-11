@@ -1457,8 +1457,9 @@ class FitResults:
         hdu_data.header['RESEXT'] = (f'{header_ref["EXTNAME"]} results', 'Extension name of results')
         hdu_data.header['UNCEXT'] = (f'{header_ref["EXTNAME"]} sigma', 'Extension name of uncertainties')
         hdu_data.header['DATAEXT'] = (f'{header_ref["EXTNAME"]} data', 'Extension name of data')
-        hdu_data.header['PAREXT'] = (f'{header_ref["EXTNAME"]} parinfo', 'Extension name of data')
-        hdu_data.header['RECEXT'] = (f'{header_ref["EXTNAME"]} reconstruction', 'Extension name of data')
+        hdu_data.header['PAREXT'] = (f'{header_ref["EXTNAME"]} parinfo', 'Extension name of parinfo')
+        hdu_data.header['RECEXT'] = (f'{header_ref["EXTNAME"]} reconstruction', 'Extension name'
+        ' of the part necessary to reconstruct FitsResult object')
 
         if hdu_wcsdvar is not None:
             hdu_data.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')

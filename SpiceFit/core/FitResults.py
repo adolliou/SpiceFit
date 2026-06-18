@@ -1094,30 +1094,6 @@ class FitResults:
                 if doppler_mediansubtraction:
                     data = data - np.nanmedian(data)
 
-            #     line = self._find_line(self.components_results[line]["info"]["name_component"])
-            #     lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
-            #     data_doppler = a["x"]["results"].to(Constants.conventional_lambda_units).value
-            #     data_doppler = copy.deepcopy(data_doppler) - lambda_ref.to(unit).value
-            #     data_doppler_err = copy.deepcopy(a["x"]["sigma"].to(unit).value)
-            #     if doppler_applydetrending:
-            #         data_doppler = self._detrend_dopp(data_doppler, data_doppler_err)
-            #     if doppler_mediansubtraction:
-            #         data_doppler = data_doppler - np.nanmedian(data_doppler)
-            #     data_doppler = u.Quantity(data_doppler, unit)
-            #     data_doppler_err = u.Quantity(data_doppler_err, unit)
-
-            #     if param == "x":
-            #         data = data_doppler
-            #     elif param == "velocity":
-            #         data = (const.c.to(unit) * (data_doppler) / lambda_ref).to(
-            #             Constants.conventional_velocity_units
-            #             )
-            #         data_err = (const.c.to(unit) * (data_doppler_err) / lambda_ref).to(
-            #             Constants.conventional_velocity_units
-            #             )
-            #         data = data.to(unit).value
-            #         data_err = data_err.to(unit).value
-
             if chi2_limit is not None:
                 chi2 = np.squeeze(self.components_results["chi2"]["coeffs"]["chi2"]["results"])
                 bad_pixels = np.array(chi2 > chi2_limit, ftype="bool")
@@ -1126,18 +1102,9 @@ class FitResults:
         if data.ndim == 3:
             x, y = np.meshgrid(np.arange(self.spectral_window.data.shape[3]),
                                np.arange(self.spectral_window.data.shape[2]))
-        # isnotnan = np.logical_not(np.isnan(data))
-        # min_ = np.percentile(data[isnotnan], 1)
-        # max_ = np.percentile(data[isnotnan], 100)
-        # norm_ = ImageNormalize(stretch=LogStretch(a=30))
         norms = {
             "radiance": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
-            # "radiance": norm_,
             "fwhm": PlotFits.get_range(data, stre=stretch, imin=imin, imax=imax),
-            # "velocity": mpl.colors.CenteredNorm(
-            #     vcenter=0,
-            #     halfrange=50
-            # ),
             "velocity": mpl.colors.CenteredNorm(
                 vcenter=0,
                 halfrange=np.percentile(
@@ -1660,7 +1627,8 @@ class FitResults:
         dopp_detrend = copy.deepcopy(dopp) - x2*cvec[2] 
         # - x1*cvec[1]
         return dopp_detrend
-    def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp, results_type="results", hdu_wcsdvar=None):
+    def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp,
+                    results_type="results", hdu_wcsdvar=None):
         """Write a FITS file consistent with the format used in the IDL SPICE fitting procedure.
         This fits file can be reload by SpiceFits to reconstruct the same FitsResults object
 
@@ -1683,7 +1651,8 @@ class FitResults:
         date_now = Time(datetime.now())
         hdu.header["DATE"] = date_now.fits
         hdu.header["ORNAME"] = (header_ref["EXTNAME"], 'Original Extension name')
-        hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} {results_type}', 'Extension name of this window')
+        hdu.header["EXTNAME"] = (f'{header_ref["EXTNAME"]} {results_type}', 
+                                 'Extension name of this window')
         hdu.header["LONGSTRN"] = header_ref["LONGSTRN"]
         hdu.header["FILENAME"] = filename
         hdu.header['ANA_NCMP'] = (len(keys_comp), 'Number of fit components')

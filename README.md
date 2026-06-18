@@ -67,6 +67,19 @@ s1 = s0.average_spectra_over_region(pixels=pixels)
 pixels_lims = ((0, 2), (450, 453)) # Here , we average over the same region as for s1, defined by the limits in x and y
 s2 = s0.average_spectra_over_region(pixels_lims=pixels_lims)
 ```
+### Binning the Spice spectra
+You can bin the spectra with a given factor in 4d dimension, which follows the hdu.shape dimensions (Time, lambda, y, x). The binning function is a method of SpiceRasterWindowL2, which creates a new SpiceRasterWindowL2 object with binned spectra. The object will function as any other SpiceRasterWindowL2 instance, and can be saved as L3 files. For instance, to spatially bin a spectra over 2 by 2 pixels, one should run the following script
+
+```python
+s0          = SpiceRasterWindowL2(hdu=hdu2)
+
+factor      = (1, 1, 2, 2)
+function    = np.nanmean # function to run the 2 by 2 pixels to compute the binned value. 
+s1_binned   = s0.binning(factor=factor, function=function)
+
+```
+
+
 ## Fitting the SPICE spectra with a FitResults object
 
 You can now fit the SPICE data with a FitResults Object with the SPICE L2 data (spicewindow) and the fitting template (FittingModel). 

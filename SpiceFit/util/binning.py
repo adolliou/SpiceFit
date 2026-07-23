@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage import uniform_filter
 import astropy.wcs as wcs
 import astropy.units as u
-from UtilFunctions.common_util import CommonUtil
+from .common_util import CommonUtil
 from scipy.signal import convolve2d
 
 

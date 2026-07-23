@@ -32,8 +32,10 @@ class SpiceUtil:
     @staticmethod
     def vertical_edges_limits(header):
         iymin, iymax = SpiceUtil.slit_pxl(header)
-        iymin += int(20 / header['NBIN2'])
-        iymax -= int(20 / header['NBIN2'])
+        binu2 = header.get("NBINU2", 1)
+        
+        iymin += int(20 / (header['NBIN2']*binu2))
+        iymax -= int(20 / (header['NBIN2']*binu2))
         return iymin, iymax
 
     @staticmethod

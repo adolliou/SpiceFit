@@ -825,7 +825,7 @@ class FitResults:
                         lock.acquire()
                         flagged_pixels[t, i, j] = True
                         lock.release()
-                except ValueError:
+                except (ValueError, TypeError):
                     lock.acquire()
                     flagged_pixels[t, i, j] = True
                     lock.release()
@@ -869,7 +869,7 @@ class FitResults:
                         lock.acquire()
                         flagged_pixels[t, i, j] = True
                         lock.release()
-                except ValueError:
+                except (ValueError, TypeError):
                     lock.acquire()
                     flagged_pixels[t, i, j] = True
                     lock.release()

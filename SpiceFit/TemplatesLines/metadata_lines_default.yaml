@@ -20,15 +20,6 @@ list_lines_spice_metadata:
     legend: "C III 977.03 $\\AA$"
     default_template: "c_3_977_96_1c.template"
 
-  - name: "h_1 972.54"
-    elem: "h"
-    ion: 1
-    wave: 972.54
-    unit_wave: "Angstrom"
-    lvl_low: ""
-    lvl_up: ""
-    legend: "H I Ly-gamma 972.54 $\\AA$"
-    default_template: "h_1_972_57_1c.template"
 
   - name: "mg_9 706.02"
     elem: "mg"
@@ -120,6 +111,27 @@ list_lines_spice_metadata:
     legend: "O VI 1031.93 $\\AA$"
     default_template: "o_6_1031_93_1c.template"
 
+
+
+  - name: "h_1 972.54"
+    elem: "h"
+    ion: 1
+    wave: 972.54
+    unit_wave: "Angstrom"
+    lvl_low: ""
+    lvl_up: ""
+    legend: "H I Ly-gamma 972.54 $\\AA$"
+    default_template: "h_1_972_57_1c.template"
+
+  - name: "h_1 1025.72"
+    elem: "h"
+    ion: 1
+    wave: 1025.72
+    unit_wave: "Angstrom"
+    lvl_low: "1s $^2$S$_{1/2}$"
+    lvl_up: "3p $^2$P$_{3/2}$"
+    legend: "H I Ly-$\\beta$ 1025.72 $\\AA$"
+    default_template: "h_1_1025_72_1c.template"
 
 # spice_windows_name:
 #   - window:  'O III 703 / Mg IX 706 (Merged)'

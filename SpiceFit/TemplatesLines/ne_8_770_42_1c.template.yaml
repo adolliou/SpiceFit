@@ -5,7 +5,7 @@ fit:
          "background"]
   n_components: [ 3,  1 ]
   guess: [
-    [10., 770.42 , 1.5,],
+    [10., 770.42 , 1.0,],
           [0.0]
   ]
   coeff_type: [

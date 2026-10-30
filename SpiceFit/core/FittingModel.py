@@ -927,18 +927,38 @@ class FittingModel:
         name_info = [n["name"] for n in test["info"]]
 
         if len(set(name_fit)) != len(name_fit):
-            raise ValueError(f"duplicated names in the fit list name !")
+            raise ValueError(f"In template {self.filename}: duplicated names in the fit list name !")
 
         if len(set(name_info)) != len(name_info):
-            raise ValueError(f"duplicated names in the info list name !")
+            raise ValueError(f"In template {self.filename}: duplicated names in the info list name !")
 
         for n in name_fit:
             if (n in name_info) and (n != "background"):
-                ValueError(f"a line in the fit list name is not present in the info list !")
+                ValueError(
+                    (f"In template {self.filename}: a line in the fit list name is not"
+                " present in the info list !")
+                )
 
         for n in name_info:
             if n in name_fit:
-                ValueError(f"line in the info list is not present in the fit name list !")
+                ValueError(
+                    (f"In template {self.filename}: line in the info list is not present" 
+                " in the fit name list !")
+                )
+        
+        for ii in range(len(test["fit"]["n_components"])):
+            name =   test["fit"]["name"][ii]
+            for guess, lower, upper,  in zip(
+                test["fit"]["guess"][ii], 
+                test["fit"]["min_arr"][ii], 
+                test["fit"]["max_arr"][ii],
+            ):
+                if (guess < lower) or (guess > upper):
+                    raise ValueError(
+                        (f"In template {self.filename} in line {name}:"
+                    f" guess {guess:.3f} value outside of bounds [{lower:.3f} ; {upper:.3f}]")
+                    )
+
         return True
 
     def _check_format(self, formats, keys, dict_):

@@ -84,47 +84,6 @@ def dopp_var(dopp,vmin,vmax,mask):
 # Try a specified x and y shift to see what its variance is:
 def check_shift(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
 	
-	# skew_bin_facs = kwargs.get('skew_bin_facs',[3,3]); spice_sdev_guess=kwargs.get('spice_sdev_guess',0.1)
-	# fitter = kwargs.get('fitter',lsq_fitter); lcen = kwargs.get('lcen')
-	# spice_dx, spice_dy, spice_dl = spice_hdr['CDELT1'],spice_hdr['CDELT2'],10*spice_hdr['CDELT3']
-	# spice_wl0 = 10*spice_hdr['CRVAL3']-spice_dl*spice_hdr['CRPIX3']
-	# spice_la = spice_wl0+spice_dl*np.arange(spice_dat.shape[2],dtype=np.float64)
-	# # Offseting the interpolated points is important. Otherwise there will be ridges
-	# # in the variance at xlshift=0 and ylshift=0 because that results in some points
-	# # with no interpolation which in turn have less interpolation smoothing and there
-	# # for higher variance. 
-	# offsets = kwargs.get('offsets',[[0.5,0.5]])
-	# if(lcen is None): lcen = np.mean(spice_la)
-
-	# # Apply the skew correction with the specified x shift and yshift
-	# spicedat_skew = skew_correct(spice_dat, spice_hdr, xlshift, ylshift, lambdas=spice_la,
-	#							 lcen=lcen, skew_bin_facs=skew_bin_facs, offsets=offsets)
-	# spiceerr_skew = get_spice_err(spicedat_skew, spice_hdr, verbose=False)
-	# spice_skew_fit_mask, spice_skew_fit_err = get_mask_errs(spicedat_skew, 0.2, error_cube=spiceerr_skew)
-
-	# # Find the main range of the the spice data in y and mask out any missing data:
-	# ymin, ymax, band1_ymin, band1_ymax, band2_ymin, band2_ymax, signal_windowed, signal_cube = get_spice_data_yrange(spicedat_skew)
-	# spice_skew_fit_mask[:,0:ymin,:] = 1; spice_skew_fit_mask[:,ymax:,:] = 1
-	# centers, lines = check_for_waves(line_waves, line_names, spice_la)
-	# nlines = len(centers)
-	# ndof = np.sum(np.logical_not(spice_skew_fit_mask),axis=2) - (3*nlines+1)
-	# # Make a plot of the good range of the data:
-	# make_yrange_check_plot(spice_dat, ndof>0, spice_hdr, ymin, ymax, band1_ymin, band1_ymax, band2_ymin,
-	#						band2_ymax, signal_windowed, signal_cube, plot_dir=kwargs.get('yrange_plot_dir'))
-	
-	# # Fit the spectral lines in the data:
-	# fit_results = list(fitter(spicedat_skew, spiceerr_skew, spice_la, spice_skew_fit_mask, 
-	#					 line_waves, spice_sdev_guess, line_names, cenbound_fac=0.0, nthreads=kwargs.get('nthreads'), verbose=False))
-	# fit_results.append(spice_hdr)
-	# window_skewed = linefits([fit_results])
-
-	# if(kwargs.get('do_deskew',False)):
-	#	window_out = linefits()
-	#	for key in window_out: 
-	#		window_out[key] = deskew_linefit_window(window_skewed[key], xlshift, ylshift, dokeys=['centers'],
-	#												   skew_bin_facs=skew_bin_facs, lcen=np.mean(spice_la))
-	# else:
-	#	window_out = window_skewed
 	correction_results = full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs)
 
 	window_out = correction_results['linefits']	

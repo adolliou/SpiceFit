@@ -54,7 +54,7 @@ def check_for_waves(waves,linelist=None):
 
 
 # Names and wavelengths of the standard lines to search:
-default_linelist = {'Ne VIII 780':780.3,
+default_linelist = { 'Mg IX 706':706.0, 'Ne VIII 770':770.4, 'Ne VIII 780':780.3,
 			'Ly Gamma 972':972.5, 'C III 977':977.0, 'H I (+ O I) 1025':1025.7, 'O VI 1032':1031.9, }
 
 

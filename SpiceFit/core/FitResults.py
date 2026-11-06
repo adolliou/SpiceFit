@@ -41,7 +41,6 @@ default_bin_fac = [
     3,
 ]  
 
-
 def bindown2(d, f):
     n = np.round(np.array(d.shape) / f).astype(np.int32)
     inds = np.ravel_multi_index(
@@ -1610,22 +1609,38 @@ class FitResults:
     def _detrend_dopp(self, dopp, dopp_err): # Remove linear spatial trend in x and y from Doppler
         # JPlowman function
 
-        dopp = dopp.squeeze()
-        dopp_err = dopp_err.squeeze()
+        # dopp = dopp.squeeze()
+        # dopp_err = dopp_err.squeeze()
 
-        snr_th = np.abs(dopp) > 2*np.abs(dopp_err)
-        peak_doop = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
-        mask = snr_th*(dopp_err > 0)
+        # snr_th = np.abs(dopp) > 2*np.abs(dopp_err)
+        # peak_doop = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
+        # mask = snr_th*(dopp_err > 0)
+        # nx,ny = dopp.shape
+        # x0 = np.ones([nx,ny])
+        # x1, x2 = np.indices([nx,ny])
+        # x1 = x1-0.5*nx; x2 = x2-0.5*ny
+        # mask = (np.isnan(dopp) == False) * snr_th * (dopp_err> 1.0E-15) * peak_doop
+
+        # cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
+
+
+        dopp                = dopp.squeeze()
+        dopp_err            = dopp_err.squeeze()
+
+        snr_th              = np.abs(dopp) > 2*np.abs(dopp_err)
         nx,ny = dopp.shape
         x0 = np.ones([nx,ny])
         x1, x2 = np.indices([nx,ny])
         x1 = x1-0.5*nx; x2 = x2-0.5*ny
-        mask = (np.isnan(dopp) == False) * snr_th * (dopp_err> 1.0E-15) * peak_doop
+        mask                = snr_th*(dopp_err > 0)*(np.isnan(dopp)==False)
 
         cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
 
-        dopp_detrend = copy.deepcopy(dopp) - x2*cvec[2] 
-        # - x1*cvec[1]
+
+
+        # dopp_detrend = copy.deepcopy(dopp) - x2*cvec[2] 
+        dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
+        # 
         return dopp_detrend
     def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp,
                     results_type="results", hdu_wcsdvar=None):

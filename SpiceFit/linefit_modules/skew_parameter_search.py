@@ -43,6 +43,7 @@ from .linefit_leastsquares import lsq_fitter, check_for_waves
 from pathlib import Path
 from scipy.interpolate import LinearNDInterpolator as lndi
 import multiprocessing
+from matplotlib.colors import BoundaryNorm
 
 
 def simple_lls(dat, err, funcs_in): # Simple LLS fit of funcs with linear coeffs to data
@@ -239,7 +240,7 @@ def refine_points(shift_vars, xgrange, ygrange, ngx, ngy, npts_refine, min_input
 	xa = np.array(list(shift_vars.valdict.values()))[:,0]
 	ya = np.array(list(shift_vars.valdict.values()))[:,1]
 	dat = np.array(list(shift_vars.valdict.values()))[:,2]
-	
+
 	xya = np.vstack([xa,ya]).T
 	xa0,ya0 = np.array(np.meshgrid(np.linspace(xgrange[0], xgrange[1],ngx),np.linspace(ygrange[0],ygrange[1],ngy))).transpose([0,2,1])
 	dat_interp = lndi(xya, dat)(xa0,ya0)
@@ -250,144 +251,156 @@ def refine_points(shift_vars, xgrange, ygrange, ngx, ngy, npts_refine, min_input
 
 	return xsort_interp[0:npts_refine], ysort_interp[0:npts_refine]
 
-# Searches for the best correction parameters in a specific window of a SPICE file.
-# Results are saved to a figure and a csv file. Does an initial search on a coarse grid
-# then two grid refinement steps where it searches the neighborhood of the best points
-# found at previous steps. Required arguments:
-# file_name: the name of the SPICE fits file to check
-# win_name: the name of the spectral window within the file to check
-# Keywords:
-#   xl, xh, yl, yh: range of x and y shifts to check (def: -5 to 5)
-#   n0, n1, n2: Grid dimensions at each refinement level (def: 5, 11, 31)
-#   n_refine: Number of best-points to check out of the refinement subgrids
-#   nthreads: Number of threads to use (default: 8)
-# Output is placed in the directory specified by the keyword save_dir (default: spice_shift_vars)
-# Save directory needs to have the following subdirectories:
-# save: Contains the CSV files
-# yrange_plots: diagnostic plots to see if the y range of the observation window is correctly selected
-# figs: Contains the final plot showing goodness of fit as function of x and y shift
+	# Searches for the best correction parameters in a specific window of a SPICE file.
+	# Results are saved to a figure and a csv file. Does an initial search on a coarse grid
+	# then two grid refinement steps where it searches the neighborhood of the best points
+	# found at previous steps. Required arguments:
+	# file_name: the name of the SPICE fits file to check
+	# win_name: the name of the spectral window within the file to check
+	# Keywords:
+	#   xl, xh, yl, yh: range of x and y shifts to check (def: -5 to 5)
+	#   n0, n1, n2: Grid dimensions at each refinement level (def: 5, 11, 31)
+	#   n_refine: Number of best-points to check out of the refinement subgrids
+	#   nthreads: Number of threads to use (default: 8)
+	# Output is placed in the directory specified by the keyword save_dir (default: spice_shift_vars)
+	# Save directory needs to have the following subdirectories:
+	# save: Contains the CSV files
+	# yrange_plots: diagnostic plots to see if the y range of the observation window is correctly selected
+	# figs: Contains the final plot showing goodness of fit as function of x and y shift
 def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5, n0=5, n1=11, n2=31, 
 			n_refine=20, save_dir=None, linelist=None, 
 			fitter=lsq_fitter, nthreads=8):
-    yrange_plot_dir = os.path.join(save_dir, "yrange_plots")
-    shift_save_dir = os.path.join(save_dir, "save")
-    shift_plot_dir = os.path.join(save_dir, "figs")
+	yrange_plot_dir = os.path.join(save_dir, "yrange_plots")
+	shift_save_dir = os.path.join(save_dir, "save")
+	shift_plot_dir = os.path.join(save_dir, "figs")
 
-    Path(yrange_plot_dir).mkdir(parents=False, exist_ok=True)
-    Path(shift_save_dir).mkdir( parents=False, exist_ok=True)
-    Path(shift_plot_dir).mkdir( parents=False, exist_ok=True)
-    # spice_dat, spice_hdr = hdul[win_name].data[0], hdul[win_name].header
+	Path(yrange_plot_dir).mkdir(parents=False, exist_ok=True)
+	Path(shift_save_dir).mkdir( parents=False, exist_ok=True)
+	Path(shift_plot_dir).mkdir( parents=False, exist_ok=True)
+	# spice_dat, spice_hdr = hdul[win_name].data[0], hdul[win_name].header
 
-    spice_dx, spice_dy, spice_dl = (
+	spice_dx, spice_dy, spice_dl = (
 	spice_hdr["CDELT1"],
 	spice_hdr["CDELT2"],
 	10 * spice_hdr["CDELT3"],
 	)
-    spice_wl0 = 10 * spice_hdr["CRVAL3"] - spice_dl * spice_hdr["CRPIX3"]
-    spice_la = spice_wl0 + spice_dl * np.arange(spice_dat.shape[2], dtype=np.float64)
+	spice_wl0 = 10 * spice_hdr["CRVAL3"] - spice_dl * spice_hdr["CRPIX3"]
+	spice_la = spice_wl0 + spice_dl * np.arange(spice_dat.shape[2], dtype=np.float64)
 
-    centers, lines = check_for_waves(spice_la, linelist=linelist)
-    print("Found the following lines in " + win_name + ": " + str(lines))
+	centers, lines = check_for_waves(spice_la, linelist=linelist)
+	print("Found the following lines in " + win_name + ": " + str(lines))
 
-    xs_initial, ys_initial = np.array(
+	xs_initial, ys_initial = np.array(
 	np.meshgrid(np.linspace(xl, xh, 5), np.linspace(yl, yh, 5))
 	).transpose([0, 2, 1])
-    shift_vars = shift_holder(
+	shift_vars = shift_holder(
 	spice_dat, spice_hdr, fitter.__name__, save_dir=shift_save_dir
 	)
-    sv_initial = search_shifts(
-        spice_dat,
-        spice_hdr,
-        xs_initial,
-        ys_initial,
-        fitter,
-        save_dir=shift_save_dir,
-        linelist=linelist,
-        single_thread=True,
-        nthreads=nthreads,
-        offsets=[[0.5, 0.5]],
-        do_deskew=False,
-        yrange_plot_dir=yrange_plot_dir,
-        shift_vars=shift_vars,
-        do_yrange_check=True,
-    )
-    shift_vars.set(sv_initial)
-    shift_vars.save()
+	sv_initial = search_shifts(
+		spice_dat,
+		spice_hdr,
+		xs_initial,
+		ys_initial,
+		fitter,
+		save_dir=shift_save_dir,
+		linelist=linelist,
+		single_thread=True,
+		nthreads=nthreads,
+		offsets=[[0.5, 0.5]],
+		do_deskew=False,
+		yrange_plot_dir=yrange_plot_dir,
+		shift_vars=shift_vars,
+		do_yrange_check=True,
+	)
+	shift_vars.set(sv_initial)
+	shift_vars.save()
 
-    x_refine, y_refine = refine_points(shift_vars, [xl, xh], [yl, yh], n1, n1, n_refine)
-    shift_vars = search_shifts(
-        spice_dat,
-        spice_hdr,
-        x_refine,
-        y_refine,
-        fitter,
-        save_dir=shift_save_dir,
-        linelist=linelist,
-        single_thread=True,
-        nthreads=nthreads,
-        offsets=[[0.5, 0.5]],
-        do_deskew=False,
-        yrange_plot_dir=yrange_plot_dir,
-        shift_vars=shift_vars,
-        do_yrange_check=True,
-    )
-    shift_vars.save()
+	x_refine, y_refine = refine_points(shift_vars, [xl, xh], [yl, yh], n1, n1, n_refine)
+	shift_vars = search_shifts(
+		spice_dat,
+		spice_hdr,
+		x_refine,
+		y_refine,
+		fitter,
+		save_dir=shift_save_dir,
+		linelist=linelist,
+		single_thread=True,
+		nthreads=nthreads,
+		offsets=[[0.5, 0.5]],
+		do_deskew=False,
+		yrange_plot_dir=yrange_plot_dir,
+		shift_vars=shift_vars,
+		do_yrange_check=True,
+	)
+	shift_vars.save()
 
-    x_refine, y_refine = refine_points(shift_vars, [xl, xh], [yl, yh], n2, n2, n_refine)
-    shift_vars = search_shifts(
-        spice_dat,
-        spice_hdr,
-        x_refine,
-        y_refine,
-        fitter,
-        save_dir=shift_save_dir,
-        linelist=linelist,
-        single_thread=True,
-        nthreads=nthreads,
-        offsets=[[0.5, 0.5]],
-        do_deskew=False,
-        yrange_plot_dir=yrange_plot_dir,
-        shift_vars=shift_vars,
-        do_yrange_check=True,
-    )
-    shift_vars.save()
+	x_refine, y_refine = refine_points(shift_vars, [xl, xh], [yl, yh], n2, n2, n_refine)
+	shift_vars = search_shifts(
+		spice_dat,
+		spice_hdr,
+		x_refine,
+		y_refine,
+		fitter,
+		save_dir=shift_save_dir,
+		linelist=linelist,
+		single_thread=True,
+		nthreads=nthreads,
+		offsets=[[0.5, 0.5]],
+		do_deskew=False,
+		yrange_plot_dir=yrange_plot_dir,
+		shift_vars=shift_vars,
+		do_yrange_check=True,
+	)
+	shift_vars.save()
 
-    # Reinterpolate the search results to a finer linear grid for ease of plotting:
+	# Reinterpolate the search results to a finer linear grid for ease of plotting:
 
-    xa = np.array(list(shift_vars.valdict.values()))[:,0]
-    ya = np.array(list(shift_vars.valdict.values()))[:,1]
-    dat = np.array(list(shift_vars.valdict.values()))[:,2]
+	xa = np.array(list(shift_vars.valdict.values()))[:,0]
+	ya = np.array(list(shift_vars.valdict.values()))[:,1]
+	dat = np.array(list(shift_vars.valdict.values()))[:,2]
 
-    include = (np.abs(xa) > 1.0e-5)*(np.abs(ya) > 1.0e-5)
 
-    nx_plot, ny_plot = 41, 41
-    xya = np.vstack([xa[include],ya[include]]).T
-    xa0,ya0 = np.array(np.meshgrid(np.linspace(xl,xh,nx_plot),np.linspace(yl,yh,ny_plot))).transpose([0,2,1])
-    dat_interp = lndi(xya, dat[include])(xa0,ya0)
+	xs,ys,vals 						= shift_vars.all_shifts()
+	best_xshift, best_yshift		= shift_vars.best_shifts()
 
-    dat_interp = lndi(xya, dat[include])(xa0,ya0)
+	labelstr = spice_hdr['DATE-OBS']+' '+spice_hdr['EXTNAME']
+	labelstr = labelstr.replace('-','').replace(':','').replace('  ','_').replace(' ','_')
+	labelstr = labelstr.replace('/','_')	
 
-    sort_interp = np.argsort(dat_interp.flatten())
-    xsort_interp = xa0.flatten()[sort_interp]
-    ysort_interp = ya0.flatten()[sort_interp]
 
-    xl2, xh2 = xl-0.5*(xh-xl)/(nx_plot-1), xh+0.5*(xh-xl)/(nx_plot-1)
-    yl2, yh2 = yl-0.5*(yh-yl)/(ny_plot-1), yh+0.5*(yh-yl)/(ny_plot-1)
+	fig 			= plt.figure()
+	ax 				= fig.add_subplot()
+	im 				= ax.pcolormesh(dat, xa, ya, cmap='PiYG')
+	ax.set_xlabel("x-shift [arcsec]")
+	ax.set_xlabel("y-shift [arcsec]")
+	fig.colorbar(im, ax=ax, label='RMS Doppler variance')
+	ax.set_title(spice_hdr['DATE-OBS']+' '+spice_hdr['EXTNAME']+f': xyshift=[{best_xshift}, {best_yshift}]')
+	fig.savefig(os.path.join(shift_plot_dir,'varplot_'+labelstr+'.png'), dpi=300)
 
-    labelstr = spice_hdr['DATE-OBS']+' '+spice_hdr['EXTNAME']
-    labelstr = labelstr.replace('-','').replace(':','').replace('  ','_').replace(' ','_')
-    labelstr = labelstr.replace('/','_')
-    print(labelstr)
 
-    fig,axes = plt.subplots(nrows=1,ncols=2,figsize=[16,9])
-    plt.suptitle(spice_hdr['DATE-OBS']+' '+spice_hdr['EXTNAME']+': xyshift='+str(np.array([xa[np.argmin(dat)], ya[np.argmin(dat)]])))
-    axes[0].imshow(np.clip(np.nansum(spice_dat,axis=2).T,0,None)[150:850,:]**0.5,vmin=0,vmax=(100*np.nanmean(spice_dat))**0.5,aspect=spice_hdr['CDELT2']/spice_hdr['CDELT1'])
-    axes[0].set(title='Spectral sum',xlabel='Raster axis @ ypix equivalent -- '+str(spice_hdr['cdelt2'])+'"')
-    asdfa = axes[1].imshow(dat_interp.T, extent=[xl2, xh2, yl2, yh2],cmap=plt.get_cmap('gray'))
-    axes[1].plot(xa,ya,'P',markersize=10,linewidth=5)
-    axes[1].set(title='RMS Doppler variance', xlabel='x shift (arcsecond/angstrom)', ylabel='y shift (arcsecond/angstrom)')
-    axes[1].legend(['Sampled points'])
-    fig.colorbar(asdfa, ax=axes[1],location='bottom')
-    plt.savefig(os.path.join(shift_plot_dir,'varplot_'+labelstr+'.png'))
-    plt.close()
-    return shift_vars
+
+    # dat_interp = lndi(xya, dat[include])(xa0,ya0)
+
+    # sort_interp = np.argsort(dat_interp.flatten())
+    # xsort_interp = xa0.flatten()[sort_interp]
+    # ysort_interp = ya0.flatten()[sort_interp]
+
+    # xl2, xh2 = xl-0.5*(xh-xl)/(nx_plot-1), xh+0.5*(xh-xl)/(nx_plot-1)
+    # yl2, yh2 = yl-0.5*(yh-yl)/(ny_plot-1), yh+0.5*(yh-yl)/(ny_plot-1)
+
+    # labelstr = spice_hdr['DATE-OBS']+' '+spice_hdr['EXTNAME']
+    # labelstr = labelstr.replace('-','').replace(':','').replace('  ','_').replace(' ','_')
+    # labelstr = labelstr.replace('/','_')
+    # print(labelstr)
+
+    # fig,axes = plt.subplots(nrows=1,ncols=2,figsize=[16,9])
+    # axes[0].imshow(np.clip(np.nansum(spice_dat,axis=2).T,0,None)[150:850,:]**0.5,vmin=0,vmax=(100*np.nanmean(spice_dat))**0.5,aspect=spice_hdr['CDELT2']/spice_hdr['CDELT1'])
+    # axes[0].set(title='Spectral sum',xlabel='Raster axis @ ypix equivalent -- '+str(spice_hdr['cdelt2'])+'"')
+    # asdfa = axes[1].imshow(dat_interp.T, extent=[xl2, xh2, yl2, yh2],cmap=plt.get_cmap('gray'))
+    # axes[1].plot(xa,ya,'P',markersize=10,linewidth=5)
+    # axes[1].set(title='RMS Doppler variance', xlabel='x shift (arcsecond/angstrom)', ylabel='y shift (arcsecond/angstrom)')
+    # axes[1].legend(['Sampled points'])
+    # fig.colorbar(asdfa, ax=axes[1],location='bottom')
+    # plt.savefig(os.path.join(shift_plot_dir,'varplot_'+labelstr+'.png'))
+    # plt.close()
+	return shift_vars

@@ -329,7 +329,7 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
 
 	fig 			= plt.figure()
 	ax 				= fig.add_subplot()
-	im 				= ax.pcolormesh(dat, xa, ya, cmap='PiYG')
+	im 				= ax.scatter(xa, ya, c=dat, cmap='PiYG')
 	ax.set_xlabel("x-shift [arcsec]")
 	ax.set_xlabel("y-shift [arcsec]")
 	fig.colorbar(im, ax=ax, label='RMS Doppler variance')

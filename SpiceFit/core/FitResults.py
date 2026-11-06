@@ -1631,7 +1631,7 @@ class FitResults:
         dopp                = dopp.squeeze()
         dopp_err            = dopp_err.squeeze()
 
-        snr_th              = np.abs(dopp) > 2*np.abs(dopp_err)
+        snr_th              = np.abs(dopp) > 0.5*np.abs(dopp_err)
         nx,ny               = dopp.shape
         x0                  = np.ones([nx,ny])
         x1, x2              = np.indices([nx,ny])
@@ -1639,11 +1639,7 @@ class FitResults:
         x2                  = x2-0.5*ny
         mask                = snr_th*(dopp_err > 0)*(np.isnan(dopp)==False)
 
-        cvec                = self._simple_lls(
-            dopp[mask],
-            dopp_err[mask],
-            [x0[mask],x1[mask],x2[mask]]
-            )
+        cvec                = self._simple_lls(dopp[mask],dopp_err[mask],[x0[mask],x1[mask],x2[mask]])
 
         # dopp_detrend = copy.deepcopy(dopp) - x2*cvec[2] 
         dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 

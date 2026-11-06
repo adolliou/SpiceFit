@@ -1312,23 +1312,27 @@ class FitResults:
     def detrend_doppler_shift_velocities(self):
         for line_name in self.components_results.keys():
             if line_name.strip() not in ["chi2", "flagged_pixels", "background"]:
-                a = self.components_results[line_name]["coeffs"]
-                line = self._find_line(self.components_results[line_name]["info"]["name_component"])
-                lambda_ref = u.Quantity(line["wave"], (line["unit_wave"]))
-                data_doppler = copy.deepcopy(a["delta_x"]["results"].to(Constants.conventional_lambda_units).value)
-                data_doppler_err = copy.deepcopy(a["delta_x"]["sigma"].to(Constants.conventional_lambda_units).value)
-                shape_ini = data_doppler.shape
-                data_doppler = self._detrend_dopp(data_doppler, data_doppler_err)
-                data_doppler = np.reshape(data_doppler, shape_ini)
-                data_doppler_err = np.reshape(data_doppler_err, shape_ini)
-                data_doppler = u.Quantity(data_doppler, Constants.conventional_lambda_units)
-                data_doppler_err = u.Quantity(data_doppler_err, Constants.conventional_lambda_units)
+                a                       = self.components_results[line_name]["coeffs"]
+                line                    = self._find_line(self.components_results[line_name]["info"]["name_component"])
+                lambda_ref              = u.Quantity(line["wave"], (line["unit_wave"]))
+                data_doppler            = copy.deepcopy(a["delta_x"]["results"].to(Constants.conventional_lambda_units).value)
+                data_doppler_err        = copy.deepcopy(a["delta_x"]["sigma"].to(Constants.conventional_lambda_units).value)
+                shape_ini               = data_doppler.shape
 
-                self.components_results[line_name]["coeffs"]["delta_x"]["results"] = data_doppler
-                self.components_results[line_name]["coeffs"]["delta_x"]["sigma"] = data_doppler_err
+                data_doppler            = self._detrend_dopp(data_doppler, data_doppler_err)
+                data_doppler            = np.reshape(data_doppler, shape_ini)
+                data_doppler_err        = np.reshape(data_doppler_err, shape_ini)
+                data_doppler            = u.Quantity(data_doppler, Constants.conventional_lambda_units)
+                data_doppler_err        = u.Quantity(data_doppler_err, Constants.conventional_lambda_units)
 
-                self.components_results[line_name]["coeffs"]["x"]["results"] = data_doppler + lambda_ref.to(Constants.conventional_lambda_units)
-                self.components_results[line_name]["coeffs"]["x"]["sigma"] = data_doppler_err
+                self.components_results[line_name]["coeffs"]["delta_x"]["results"]  = data_doppler
+                self.components_results[line_name]["coeffs"]["delta_x"]["sigma"]    = data_doppler_err
+
+                self.components_results[line_name]["coeffs"]["x"]["results"]        = (
+                    data_doppler + lambda_ref
+                    ).to(Constants.conventional_lambda_units)
+                
+                self.components_results[line_name]["coeffs"]["x"]["sigma"]          = data_doppler_err
 
                 self.components_results[line_name]["coeffs"]["velocity"]["results"] = (
                     const.c.to(Constants.conventional_velocity_units)
@@ -1628,15 +1632,18 @@ class FitResults:
         dopp_err            = dopp_err.squeeze()
 
         snr_th              = np.abs(dopp) > 2*np.abs(dopp_err)
-        nx,ny = dopp.shape
-        x0 = np.ones([nx,ny])
-        x1, x2 = np.indices([nx,ny])
-        x1 = x1-0.5*nx; x2 = x2-0.5*ny
+        nx,ny               = dopp.shape
+        x0                  = np.ones([nx,ny])
+        x1, x2              = np.indices([nx,ny])
+        x1                  = x1-0.5*nx
+        x2                  = x2-0.5*ny
         mask                = snr_th*(dopp_err > 0)*(np.isnan(dopp)==False)
 
-        cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
-
-
+        cvec                = self._simple_lls(
+            dopp[mask],
+            dopp_err[mask],
+            [x0[mask],x1[mask],x2[mask]]
+            )
 
         # dopp_detrend = copy.deepcopy(dopp) - x2*cvec[2] 
         dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 

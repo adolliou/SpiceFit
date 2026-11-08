@@ -44,6 +44,7 @@ from pathlib import Path
 from scipy.interpolate import LinearNDInterpolator as lndi
 import multiprocessing
 from matplotlib.colors import BoundaryNorm
+import astropy.units as u
 
 
 def simple_lls(dat, err, funcs_in): # Simple LLS fit of funcs with linear coeffs to data
@@ -241,12 +242,17 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
 	spice_dx, spice_dy, spice_dl = (
 	spice_hdr["CDELT1"],
 	spice_hdr["CDELT2"],
-	10 * spice_hdr["CDELT3"],
+	spice_hdr["CDELT3"],
 	)
-	spice_wl0 = 10 * spice_hdr["CRVAL3"] - spice_dl * spice_hdr["CRPIX3"]
+	spice_wl0 = spice_hdr["CRVAL3"] - spice_dl * spice_hdr["CRPIX3"]
 	spice_la = spice_wl0 + spice_dl * np.arange(spice_dat.shape[2], dtype=np.float64)
 
-	centers, lines = check_for_waves(spice_la, linelist=linelist)
+	spice_la			= u.Quantity(
+		spice_la, 
+		spice_hdr["CUNIT3"]
+	)
+
+	centers, lines = check_for_waves(spice_la.to("nm").value, linelist=linelist)
 	print("Found the following lines in " + win_name + ": " + str(lines))
 
 	xs_initial, ys_initial = np.array(
@@ -302,15 +308,17 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
 		x_refine,
 		y_refine,
 		fitter,
-		save_dir=shift_save_dir,
-		linelist=linelist,
-		single_thread=True,
-		nthreads=nthreads,
-		offsets=[[0.5, 0.5]],
-		do_deskew=False,
-		yrange_plot_dir=yrange_plot_dir,
-		shift_vars=shift_vars,
-		do_yrange_check=True,
+		save_dir			= shift_save_dir,
+		linelist			= linelist,
+		single_thread		= True,
+		nthreads			= nthreads,
+		offsets				= [[0.5, 0.5]],
+		do_deskew			= False,
+		yrange_plot_dir		= yrange_plot_dir,
+		shift_vars			= shift_vars,
+		do_yrange_check		= True,
+		lcen 				= lcen, 
+
 	)
 	shift_vars.save()
 

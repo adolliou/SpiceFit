@@ -21,7 +21,6 @@ class SpiceRaster:
 
 
     """
-    sw_wave_limits = u.Quantity([704.0, 790.0], "angstrom")
 
     def __init__(
         self,

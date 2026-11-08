@@ -218,7 +218,7 @@ class FitResults:
         xx, yy, ll, tt          = spicewindow.return_point_pixels()
         coords, lambda_cube, t  = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
         shape_ini               = data_cube.shape
-        lcen                    = np.nanmean(lambda_cube.to("nm").value)
+        lcen                    = np.nanmean(lambda_cube.to("nm"))
         cpu_count_j             = cpu_count
         if cpu_count is None:
             cpu_count_j = 8

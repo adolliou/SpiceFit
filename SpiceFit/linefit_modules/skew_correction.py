@@ -75,15 +75,13 @@ def binup(d,f):
 #         Default is average of wavelengths in window.
 #   lambdas: Optional input array of wavelengths
 #   wav_unit: Wavelength units assumed in astropy units -- default: Angstrom
-def skew_correct(dat, hdr, xlshift, ylshift, skew_bin_facs=default_bin_fac, 
-				lcen=None, lambdas=None, offsets=[[0,0]], wav_unit=u.Angstrom):
+def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_bin_fac, 
+                offsets=[[0,0]],):
 
 	nl = dat.shape[2]
-	wav_fac = 1.0/wav_unit.to(hdr['CUNIT3']) # Convert header wavelength unit to units for shift
-	dx, dy, dl = hdr['CDELT1'], hdr['CDELT2'], wav_fac*hdr['CDELT3']
-	l0 = wav_fac*hdr['CRVAL3']-dl*hdr['CRPIX3']
-	if(lambdas is None): lambdas = l0+dl*np.arange(nl)
-	if(lcen is None): lcen = np.mean(lambdas)
+	# wav_fac = 1.0/wav_unit.to(hdr['CUNIT3']) # Convert header wavelength unit to units for shift
+	dx, dy, dl = hdr['CDELT1'], hdr['CDELT2'], 
+	# if(lambdas is None): lambdas = l0+dl*np.arange(nl)
 
 	# Set up the coordinate arrays used by the interpolator:
 	spice_x = dx*np.arange(dat.shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
@@ -113,64 +111,67 @@ def skew_correct(dat, hdr, xlshift, ylshift, skew_bin_facs=default_bin_fac,
 # The skew correction introduces subpixel shifts in x and y depending on the wavelength at each pixel.
 # this algorithm removes them with a non-uniform-gridded interpolator. The line fit results need to be
 # in the containers provided by linefit_storage.py
-def deskew_linefit_window(win_in, xlshift, ylshift, skew_bin_facs=default_bin_fac, lcen=None, lambdas=None, 
-			dopp_key='centers', dokeys=None):
-	window = copy.deepcopy(win_in)
-	for linkey in win_in:
-		line = win_in[linkey]
-		doppler = line.get(dopp_key)
-		if(dokeys is None): keys = line.keys()
-		else: keys = dokeys
-		for parmkey in keys:
-			parm = line[parmkey]; hdr = parm.meta
-			hdr_wavcen = hdr['CRVAL3'] + (0.5*hdr['NAXIS3']-(hdr['CRPIX3']-0.5))*hdr['CDELT3']
-			shape = np.array([hdr['NAXIS1'],hdr['NAXIS2']],dtype=np.int32)
-			if(lcen is None): lcen = 10*hdr_wavcen
-			if(doppler is None): doppler = NDData(10*hdr_wavcen + np.zeros(shape))
-			dx, dy = hdr['CDELT1'],hdr['CDELT2']
+# def deskew_linefit_window(win_in, xlshift, ylshift, lcen, skew_bin_facs=default_bin_fac,
+# 			dopp_key='centers', dokeys=None):
+#     window = copy.deepcopy(win_in)
+#     for linkey in win_in:
+#         line            = win_in[linkey]
+#         doppler         = line.get(dopp_key)
+#         if(dokeys is None): keys = line.keys()
+#         else: keys = dokeys
+#         for parmkey in keys:
+#             parm                    = line[parmkey]
+#             hdr                     = parm.meta
+#             shape                   = np.array([hdr['NAXIS1'],hdr['NAXIS2']],dtype=np.int32)
+#             dx, dy = hdr['CDELT1'], hdr['CDELT2']
 
-			# Set up the coordinate arrays used by the interpolator:
-			spice_x = dx*np.arange(shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
-			spice_y = dy*np.arange(shape[1]*skew_bin_facs[1])/skew_bin_facs[1]
-			[spice_xa0,spice_ya0] = np.indices((skew_bin_facs*shape).astype(np.int32))
-			spice_xa0 = dx*spice_xa0/skew_bin_facs[0]
-			spice_ya0 = dy*spice_ya0/skew_bin_facs[1]
-			
-			# Compute how much each line profile/pixel in the Doppler image was x-y shifted,
-			# with the same the up-sampling as in skew_correct:
-			dlambdas = binup(doppler.data.squeeze()-lcen,skew_bin_facs)
-			xshift = spice_xa0 - xlshift*dlambdas
-			yshift = spice_ya0 - ylshift*dlambdas
+#             # Set up the coordinate arrays used by the interpolator:
 
-			for i in range(0,parm.data.shape[2]):
-				for j in range(0,parm.data.shape[3]):
-					datagood = binup(parm.uncertainty.array[:,:,i,j] > 0,skew_bin_facs)
-					dat = binup(parm.data[:,:,i,j],skew_bin_facs)[datagood].flatten()
-					err = binup(parm.uncertainty.array[:,:,i,j],skew_bin_facs)[datagood].flatten()
-					spice_xya = np.array([xshift[datagood].flatten(),yshift[datagood].flatten()]).T
-					dat_lndi = bindown2(lndi(spice_xya, dat)(spice_xa0,spice_ya0),skew_bin_facs)/np.prod(skew_bin_facs)
-					err_lndi = bindown2(lndi(spice_xya, err)(spice_xa0,spice_ya0),skew_bin_facs)/np.prod(skew_bin_facs)
-					err_lndi[np.isnan(dat_lndi)]=parm.meta['BAD_ERR']; dat_lndi[np.isnan(dat_lndi)]=0
-					window[linkey][parmkey].uncertainty.array[:,:,i,j] = err_lndi
-					window[linkey][parmkey].data[:,:,i,j] = dat_lndi
+#             [spice_xa0,spice_ya0] = np.indices((skew_bin_facs*shape).astype(np.int32))
+#             spice_xa0 = dx*spice_xa0/skew_bin_facs[0]
+#             spice_ya0 = dy*spice_ya0/skew_bin_facs[1]
 
-	return window
+#             # Compute how much each line profile/pixel in the Doppler image was x-y shifted,
+#             # with the same the up-sampling as in skew_correct:
+#             dlambdas = binup(doppler.data.squeeze()-lcen,skew_bin_facs)
+#             xshift = spice_xa0 - xlshift*dlambdas
+#             yshift = spice_ya0 - ylshift*dlambdas
+
+#             for i in range(0,parm.data.shape[2]):
+#                 for j in range(0,parm.data.shape[3]):
+#                     datagood                            = binup(parm.uncertainty.array[:,:,i,j] > 0,skew_bin_facs)
+#                     dat                                 = binup(parm.data[:,:,i,j],skew_bin_facs)[datagood].flatten()
+#                     err                                 = binup(parm.uncertainty.array[:,:,i,j],skew_bin_facs)[datagood].flatten()
+#                     spice_xya                           = np.array([xshift[datagood].flatten(),yshift[datagood].flatten()]).T
+#                     dat_lndi                            = bindown2(lndi(spice_xya, dat)(spice_xa0,spice_ya0),skew_bin_facs)/np.prod(skew_bin_facs)
+#                     err_lndi                            = bindown2(lndi(spice_xya, err)(spice_xa0,spice_ya0),skew_bin_facs)/np.prod(skew_bin_facs)
+#                     err_lndi[np.isnan(dat_lndi)]        = parm.meta['BAD_ERR']; dat_lndi[np.isnan(dat_lndi)]=0
+#                     window[linkey][parmkey].uncertainty.array[:,:,i,j] = err_lndi
+#                     window[linkey][parmkey].data[:,:,i,j] = dat_lndi
+
+#     return window
 
 # Perform the full correction on a set of SPICE data with header
 # do line fits, deskew them, and return both results:
-def full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
+def full_correction(spice_dat, spice_hdr, xlshift, ylshift, skew_bin_facs=default_bin_fac, spice_sdev_guess=0.1,
+                    lcen = None, offsets = [[0.0,0.0]],
+                     **kwargs):
 
-    skew_bin_facs = kwargs.get('skew_bin_facs',[3,3]); spice_sdev_guess=kwargs.get('spice_sdev_guess',0.1)
-    fitter = kwargs.get('fitter',lsq_fitter); lcen = kwargs.get('lcen')
-    spice_dx, spice_dy, spice_dl = spice_hdr['CDELT1'],spice_hdr['CDELT2'],10*spice_hdr['CDELT3']
-    spice_wl0 = 10*spice_hdr['CRVAL3']-spice_dl*spice_hdr['CRPIX3']
-    spice_la = spice_wl0+spice_dl*np.arange(spice_dat.shape[2],dtype=np.float64)
+
+    fitter              = kwargs.get('fitter',lsq_fitter)
+    spice_dl            = spice_hdr['CDELT3']
+    spice_wl0           = spice_hdr['CRVAL3']-spice_dl*spice_hdr['CRPIX3']
+    spice_la            = spice_wl0+spice_dl*np.arange(spice_dat.shape[2],dtype=np.float64)
+    spice_la            = u.Quantity(spice_la, spice_hdr["CUNIT3"]).to("nm")
+	
+    if(lcen is None):
+        lcen = np.mean(spice_la)
+
+    
     # Offseting the interpolated points is important. Otherwise there will be ridges
     # in the variance at xlshift=0 and ylshift=0 because that results in some points
     # with no interpolation which in turn have less interpolation smoothing and there
     # for higher variance.
-    offsets = kwargs.get('offsets',[[0.0,0.0]])
-    if(lcen is None): lcen = np.mean(spice_la)
 
     # Apply the skew correction with the specified x shift and yshift
     spicedat_skew = skew_correct(spice_dat, spice_hdr, xlshift, ylshift, lambdas=spice_la,
@@ -182,33 +183,19 @@ def full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
 			)
     spiceerr_skew = sigma["Total"].to(spice_hdr["BUNIT"]).value
 
-    # spiceerr_skew = get_spice_err(spicedat_skew, spice_hdr, verbose=False)
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot()
-    # im = ax.imshow(np.nansum(spicedat_skew, axis=2), aspect="auto", interpolation="none")
-    # fig.colorbar(im, ax=ax)
-    # fig.savefig("fig1.pdf")
-
     spice_skew_fit_mask, spice_skew_fit_err = get_mask_errs( spicedat_skew, 0.2, error_cube=spiceerr_skew)
 
     # Find the main range of the the spice data in y and mask out any missing data:
     ymin, ymax, band1_ymin, band1_ymax, band2_ymin, band2_ymax, signal_windowed, signal_cube = get_spice_data_yrange(spicedat_skew)
     spice_skew_fit_mask[:,0:ymin,:] = 1; spice_skew_fit_mask[:,ymax:,:] = 1
-    centers, lines = check_for_waves(spice_la, kwargs.get('linelist',None))
-    nlines = len(centers)
-    ndof = np.sum(np.logical_not(spice_skew_fit_mask),axis=2) - (3*nlines+1)
-    # Make a plot of the good range of the data:
-    # if(kwargs.get('do_yrange_check',False)):
-    # 	make_yrange_check_plot(spice_dat, ndof>0, spice_hdr, ymin, ymax, band1_ymin, band1_ymax, band2_ymin,
-    # 						band2_ymax, signal_windowed, signal_cube, plot_dir=kwargs.get('yrange_plot_dir'))
+    centers, lines = check_for_waves(spice_la.to("nm").value, kwargs.get('linelist',None))
 
     # Fit the spectral lines in the data:
     fit_results = list(
         fitter(
             spicedat_skew,
             spiceerr_skew,
-            spice_la,
+            spice_la.to("nm").value,
             spice_skew_fit_mask,
             spice_sdev_guess,
             linelist=kwargs.get("linelist", None),
@@ -219,21 +206,21 @@ def full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
     )
     fit_results.append(spice_hdr)
     window_skewed = linefits([fit_results])
-    if kwargs.get("do_deskew", True):
-        window_out = linefits()
-        for key in window_skewed:
-            window_out[key] = deskew_linefit_window(
-                window_skewed[key],
-                xlshift,
-                ylshift,
-                skew_bin_facs=skew_bin_facs,
-                lcen=lcen,
-            )
-    else:
-        window_out = window_skewed
+    # if kwargs.get("do_deskew", True):
+    #     window_out = linefits()
+    #     for key in window_skewed:
+    #         window_out[key] = deskew_linefit_window(
+    #             window_skewed[key],
+    #             xlshift,
+    #             ylshift,
+    #             skew_bin_facs       = skew_bin_facs,
+    #             lcen                = lcen,
+    #         )
+    # else:
+    window_out = window_skewed
     return {'dat_skew':spicedat_skew, 'err_skew':spiceerr_skew, 'linefits':window_out, 'xlshift':xlshift,
 			'ylshift':ylshift, 'kwargs':kwargs,	'hdr':spice_hdr, 'centers':centers, 'lines':lines,
-			'mask':spice_skew_fit_mask, 'waves':spice_la, 'offsets':offsets, 'ymin':ymin, 'ymax':ymax}
+			'mask':spice_skew_fit_mask, 'waves':spice_la.to("nm").value, 'offsets':offsets, 'ymin':ymin, 'ymax':ymax}
     # return {
     # 	"dat_skew": spicedat_skew,
     # 	"err_skew": spiceerr_skew,

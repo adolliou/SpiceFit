@@ -213,13 +213,13 @@ class FitResults:
         if spicewindow.uncertainty is None:
             spicewindow.compute_uncertainty()
 
-        data_cube = spicewindow.data
-        uncertainty_cube = spicewindow.uncertainty["Total"]
-        xx, yy, ll, tt = spicewindow.return_point_pixels()
-        coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
-        shape_ini = data_cube.shape
-
-        cpu_count_j = cpu_count
+        data_cube               = spicewindow.data
+        uncertainty_cube        = spicewindow.uncertainty["Total"]
+        xx, yy, ll, tt          = spicewindow.return_point_pixels()
+        coords, lambda_cube, t  = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+        shape_ini               = data_cube.shape
+        lcen                    = np.nanmean*lcen
+        cpu_count_j             = cpu_count
         if cpu_count is None:
             cpu_count_j = 8
         # save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
@@ -1500,7 +1500,7 @@ class FitResults:
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
 
-    def _deskew_jp(self, best_xshift, best_yshift, skew_bin_facs=default_bin_fac):
+    def _deskew_jp(self, best_xshift, best_yshift, skew_bin_facs=default_bin_fac, lcen=None):
         """Deskew the fitted data with the shift parameters. The reprojection is performed independantly for each line,
         as it depend on the Doppler shift (in pixel) measured for each line.
         """
@@ -1513,6 +1513,9 @@ class FitResults:
         dx, dy                      = hdr["CDELT1"], hdr["CDELT2"]
         shape                       = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
 
+        # hdr_wavcen = hdr['CRVAL3'] + (0.5*hdr['NAXIS3']-(hdr['CRPIX3']-0.5))*hdr['CDELT3']
+
+
         # spice_x = dx*np.arange(shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
         # spice_y = dy*np.arange(shape[1]*skew_bin_facs[1])/skew_bin_facs[1]
         [spice_xa0, spice_ya0]      = np.indices((skew_bin_facs * shape).astype(np.int32))
@@ -1523,7 +1526,9 @@ class FitResults:
                                         hdr["CRVAL3"]
                                         + (0.5 * hdr["NAXIS3"] - (hdr["CRPIX3"] - 0.5)) * hdr["CDELT3"],
                                         hdr["CUNIT3"],
-                                        )
+                                        ).value
+        if(lcen is None): lcen      = hdr_wavcen
+
 
         xx_ini, yy_ini              = self.spectral_window.return_point_pixels(type="xy")
         # w_spec                      = self.spectral_window.w_spec
@@ -1547,7 +1552,7 @@ class FitResults:
                 shape_ini                       = doppler.shape
                 doppler                         = doppler[0, ...]
 
-                dlambda                         = binup(doppler - hdr_wavcen, skew_bin_facs)
+                dlambda                         = binup(doppler - lcen, skew_bin_facs)
                 dlambda                         = dlambda.to(hdr["CUNIT3"]).value
 
                 good_pixels                     = np.logical_not(
@@ -1555,8 +1560,8 @@ class FitResults:
                                 flagged_pixels_bin)
                                                         )
 
-                xshift                          = spice_xa0 + best_xshift * dlambda
-                yshift                          = spice_ya0 + best_yshift * dlambda
+                xshift                          = spice_xa0 + best_xshift * (dlambda - lcen)
+                yshift                          = spice_ya0 + best_yshift * (dlambda - lcen)
 
                 for results_type in ["coeff", "coeffs_error"]:
 

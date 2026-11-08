@@ -227,7 +227,7 @@ def full_correction(spice_dat, spice_hdr, xlshift, ylshift, **kwargs):
                 xlshift,
                 ylshift,
                 skew_bin_facs=skew_bin_facs,
-                lcen=np.mean(spice_la),
+                lcen=lcen,
             )
     else:
         window_out = window_skewed

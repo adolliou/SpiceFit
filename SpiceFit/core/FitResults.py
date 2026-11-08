@@ -33,6 +33,7 @@ import ast
 from pathlib import Path
 import warnings
 from scipy.interpolate import RegularGridInterpolator, LinearNDInterpolator as lndi
+from scipy.optimize import curve_fit
 warnings.filterwarnings("ignore", message="Card is too long, comment will be truncated.")
 warnings.filterwarnings("ignore",
                         message="'UTC' did not parse as fits unit: At col 0, Unit 'UTC'", )
@@ -1637,20 +1638,40 @@ class FitResults:
         # cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
 
 
+
         dopp                = dopp.squeeze()
         dopp_err            = dopp_err.squeeze()
         peak_doop           = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
-        snr_th              = np.abs(dopp) > np.abs(dopp_err)
+        snr_th              = np.abs(dopp) > 0.5*np.abs(dopp_err)
         nx,ny               = dopp.shape
         x0                  = np.ones([nx,ny])
         x1, x2              = np.indices([nx,ny])
         x1                  = x1-0.5*nx
         x2                  = x2-0.5*ny
-        mask                = snr_th*(dopp_err > 1.0E-15)*(np.isnan(dopp)==False)*peak_doop
+        mask                = snr_th * (dopp_err > 1.0E-15)*(np.isnan(dopp)==False)*peak_doop
 
         cvec                = self._simple_lls(dopp[mask],dopp_err[mask],[x0[mask],x1[mask],x2[mask]])
+        dopp_nan            = copy.deepcopy(dopp)
+        dopp_nan[~mask]     = np.nan
+        median_along_1      = np.nanmedian(dopp_nan, axis=0)
+        x_axis              = np.arange(dopp_nan.shape[1])
 
-        dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
+
+
+        popt, pcov          = curve_fit(
+            f                   = FittingUtil.polynomial,
+            xdata               = x_axis, 
+            yaxis               = median_along_1, 
+            p0                  = [0, 0]
+
+        )
+
+        dopp_detrend        = copy.deepcopy(dopp)
+        for pp in range(dopp_nan.shape[0]):
+            dopp_detrend[pp, :]         = dopp_detrend[pp, :] - FittingUtil.polynomial(x_axis, *popt)
+
+
+        # dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
         # 
         return dopp_detrend
     def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp,

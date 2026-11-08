@@ -1661,8 +1661,8 @@ class FitResults:
         popt, pcov          = curve_fit(
             f                   = FittingUtil.polynomial,
             xdata               = x_axis, 
-            yaxis               = median_along_1, 
-            p0                  = [0, 0]
+            ydata               = median_along_1, 
+            p0                  = [1.2E-02, -9E-05],
 
         )
 

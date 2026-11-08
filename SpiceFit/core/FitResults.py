@@ -218,7 +218,7 @@ class FitResults:
         xx, yy, ll, tt          = spicewindow.return_point_pixels()
         coords, lambda_cube, t  = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
         shape_ini               = data_cube.shape
-        lcen                    = np.nanmean*lcen
+        lcen                    = np.nanmean(lambda_cube.to("nm").value)
         cpu_count_j             = cpu_count
         if cpu_count is None:
             cpu_count_j = 8
@@ -233,6 +233,7 @@ class FitResults:
                 nthreads            = cpu_count_j,
                 save_dir            = save_folder_skew,
                 linelist            = linelist,
+                lcen                = lcen,
             )
             best_xshift, best_yshift = shift_vars.best_shifts()
 
@@ -242,7 +243,8 @@ class FitResults:
             best_xshift,
             best_yshift,
             nthreads            = cpu_count_j,
-            linelist            = linelist,            
+            linelist            = linelist,     
+            lcen                = lcen,       
             )
 
         data_cube_skew = best_correction_results["dat_skew"]
@@ -268,20 +270,20 @@ class FitResults:
         coords, lambda_cube, t      = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
         # s
         self.fit_window_standard_3d(
-            data_cube=data_cube,
-            uncertainty_cube=uncertainty_cube,
-            lambda_cube=lambda_cube,
-            parallelism=parallelism,
-            cpu_count=cpu_count,
-            min_data_points=min_data_points,
-            chi2_limit=chi2_limit,
+            data_cube               = data_cube,
+            uncertainty_cube        = uncertainty_cube,
+            lambda_cube             = lambda_cube,
+            parallelism             = parallelism,
+            cpu_count               = cpu_count,
+            min_data_points         = min_data_points,
+            chi2_limit              = chi2_limit,
         )
 
         self.spectral_window = spicewindow
         if verbose > 0:
             print('SpiceFit jplowman skew correction \n Best correction parameters in ', self.spectral_window.window_name,' window:', best_xshift, best_yshift)        
 
-        self._deskew_jp(best_xshift, best_yshift)
+        self._deskew_jp(best_xshift, best_yshift, lcen=lcen)
         if detrend_doppler:
             self.detrend_doppler_shift_velocities()
 
@@ -1526,7 +1528,7 @@ class FitResults:
                                         hdr["CRVAL3"]
                                         + (0.5 * hdr["NAXIS3"] - (hdr["CRPIX3"] - 0.5)) * hdr["CDELT3"],
                                         hdr["CUNIT3"],
-                                        ).value
+                                        ).to("nm")
         if(lcen is None): lcen      = hdr_wavcen
 
 
@@ -1560,8 +1562,8 @@ class FitResults:
                                 flagged_pixels_bin)
                                                         )
 
-                xshift                          = spice_xa0 + best_xshift * (dlambda - lcen)
-                yshift                          = spice_ya0 + best_yshift * (dlambda - lcen)
+                xshift                          = spice_xa0 + best_xshift * dlambda
+                yshift                          = spice_ya0 + best_yshift * dlambda
 
                 for results_type in ["coeff", "coeffs_error"]:
 

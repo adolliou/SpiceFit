@@ -228,7 +228,7 @@ def refine_points(shift_vars, xgrange, ygrange, ngx, ngy, npts_refine, min_input
 	# figs: Contains the final plot showing goodness of fit as function of x and y shift
 def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5, n0=5, n1=11, n2=31, 
 			n_refine=20, save_dir=None, linelist=None, 
-			fitter=lsq_fitter, nthreads=8):
+			fitter=lsq_fitter, nthreads=8, lcen=None):
 	yrange_plot_dir = os.path.join(save_dir, "yrange_plots")
 	shift_save_dir = os.path.join(save_dir, "save")
 	shift_plot_dir = os.path.join(save_dir, "figs")
@@ -261,15 +261,16 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
 		xs_initial,
 		ys_initial,
 		fitter,
-		save_dir=shift_save_dir,
-		linelist=linelist,
-		single_thread=True,
-		nthreads=nthreads,
-		offsets=[[0.5, 0.5]],
-		do_deskew=False,
-		yrange_plot_dir=yrange_plot_dir,
-		shift_vars=shift_vars,
-		do_yrange_check=True,
+		save_dir			= shift_save_dir,
+		linelist			= linelist,
+		single_thread		= True,
+		nthreads			= nthreads,
+		offsets				= [[0.5, 0.5]],
+		do_deskew			= False,
+		yrange_plot_dir		= yrange_plot_dir,
+		shift_vars			= shift_vars,
+		do_yrange_check		= True,
+		lcen 				= lcen, 
 	)
 	shift_vars.set(sv_initial)
 	shift_vars.save()
@@ -281,15 +282,16 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
 		x_refine,
 		y_refine,
 		fitter,
-		save_dir=shift_save_dir,
-		linelist=linelist,
-		single_thread=True,
-		nthreads=nthreads,
-		offsets=[[0.5, 0.5]],
-		do_deskew=False,
-		yrange_plot_dir=yrange_plot_dir,
-		shift_vars=shift_vars,
-		do_yrange_check=True,
+		save_dir			= shift_save_dir,
+		linelist			= linelist,
+		single_thread		= True,
+		nthreads			= nthreads,
+		offsets				= [[0.5, 0.5]],
+		do_deskew			= False,
+		yrange_plot_dir		= yrange_plot_dir,
+		shift_vars			= shift_vars,
+		do_yrange_check		= True,
+		lcen 				= lcen, 
 	)
 	shift_vars.save()
 

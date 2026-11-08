@@ -1650,7 +1650,7 @@ class FitResults:
         x2                  = x2-0.5*ny
         mask                = snr_th * (dopp_err > 1.0E-15)*(np.isnan(dopp)==False)*peak_doop
 
-        cvec                = self._simple_lls(dopp[mask],dopp_err[mask],[x0[mask],x1[mask],x2[mask]])
+        # cvec                = self._simple_lls(dopp[mask],dopp_err[mask],[x0[mask],x1[mask],x2[mask]])
         dopp_nan            = copy.deepcopy(dopp)
         dopp_nan[~mask]     = np.nan
         median_along_1      = np.nanmedian(dopp_nan, axis=0)

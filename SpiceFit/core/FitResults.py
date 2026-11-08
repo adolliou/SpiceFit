@@ -1509,9 +1509,9 @@ class FitResults:
         keys_comp.remove("flagged_pixels")
         keys_comp.remove("main")
 
-        hdr             = self.spectral_window.header
-        dx, dy          = hdr["CDELT1"], hdr["CDELT2"]
-        shape           = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
+        hdr                         = self.spectral_window.header
+        dx, dy                      = hdr["CDELT1"], hdr["CDELT2"]
+        shape                       = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
 
         # spice_x = dx*np.arange(shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
         # spice_y = dy*np.arange(shape[1]*skew_bin_facs[1])/skew_bin_facs[1]
@@ -1548,7 +1548,7 @@ class FitResults:
                 doppler                         = doppler[0, ...]
 
                 dlambda                         = binup(doppler - hdr_wavcen, skew_bin_facs)
-                dlambda                         = dlambda.to(hdr["CUNIT1"]).value
+                dlambda                         = dlambda.to(hdr["CUNIT3"]).value
 
                 good_pixels                     = np.logical_not(
                                 np.logical_or(np.isnan(dlambda), 

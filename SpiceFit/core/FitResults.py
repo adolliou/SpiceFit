@@ -1563,7 +1563,7 @@ class FitResults:
                 doppler                         = doppler[0, ...]
 
                 dlambda                         = binup(doppler - lcen, skew_bin_facs)
-                dlambda                         = dlambda.to(hdr["CUNIT3"]).value
+                dlambda                         = dlambda.to("nm").value
 
                 good_pixels                     = np.logical_not(
                                 np.logical_or(np.isnan(dlambda), 

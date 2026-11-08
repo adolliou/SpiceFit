@@ -96,8 +96,8 @@ def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_
 		rgi = RegularGridInterpolator((spice_x,spice_y),binup(dat[:,:,i],skew_bin_facs),bounds_error=False,fill_value=None)
 
 		for offset in offsets:
-			xshift = spice_xa0 - xlshift*(lambdas[i]-lcen) - offset[0] # How much to shift in x for this wavelength
-			yshift = spice_ya0 - ylshift*(lambdas[i]-lcen) - offset[1] # How much to shift in y for this wavelength
+			xshift = spice_xa0 - xlshift*(lambdas[i]-lcen).to("nm").value - offset[0] # How much to shift in x for this wavelength
+			yshift = spice_ya0 - ylshift*(lambdas[i]-lcen).to("nm").value - offset[1] # How much to shift in y for this wavelength
 			spice_xya = np.array([xshift,yshift]).transpose([1,2,0])
 			
 			# Interpolate and bin data back down for this wavelength:

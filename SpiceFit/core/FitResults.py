@@ -1656,12 +1656,12 @@ class FitResults:
         median_along_1      = np.nanmedian(dopp_nan, axis=0)
         x_axis              = np.arange(dopp_nan.shape[1])
 
-
+        isnan               = np.isnan(median_along_1)
 
         popt, pcov          = curve_fit(
             f                   = FittingUtil.polynomial,
-            xdata               = x_axis, 
-            ydata               = median_along_1, 
+            xdata               = x_axis[~isnan], 
+            ydata               = median_along_1[~isnan], 
             p0                  = [1.2E-02, -9E-05],
 
         )

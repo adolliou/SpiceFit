@@ -78,10 +78,8 @@ def binup(d,f):
 def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_bin_fac, 
                 offsets=[[0,0]],):
 
-	nl = dat.shape[2]
-	# wav_fac = 1.0/wav_unit.to(hdr['CUNIT3']) # Convert header wavelength unit to units for shift
-	dx, dy, dl = hdr['CDELT1'], hdr['CDELT2'], 
-	# if(lambdas is None): lambdas = l0+dl*np.arange(nl)
+	nl              = dat.shape[2]
+	dx, dy          = hdr['CDELT1'], hdr['CDELT2'], 
 
 	# Set up the coordinate arrays used by the interpolator:
 	spice_x = dx*np.arange(dat.shape[0]*skew_bin_facs[0])/skew_bin_facs[0]

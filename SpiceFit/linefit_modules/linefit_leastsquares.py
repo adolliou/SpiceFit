@@ -43,19 +43,19 @@ def check_for_waves(waves,linelist=None):
 	return centers, line_names
 
 # # Names and wavelengths of the standard lines to search:
-# default_linelist = {'Ar VIII+S III 700':700.3, 'O III 703':702.9, 'O III 704':703.9, 'Mg IX 706':706.0,
-# 			'O II 718':718.5, 'S IV 745':744.9, 'S IV 748':748.4, 'S IV 750':750.2,
-# 			'O V 759':758.7, 'S IV+O V 759':759.4, 'O V 760':760.3, 'O V 762':762.0,
-# 			'N IV 765':765.1, 'Ne VIII 770':770.4, 'Mg VIII 772':772.3, 'Ne VIII 780':780.3,
-# 			'S V 786':786.5, 'O IV 787':787.7, 'O IV 790':790.1, 'Ly Gamma 972':972.5,
-# 			'C III 977':977.0, 'O I +- Na VI 989':988.7, 'N III 990':989.8, 'N III 992':991.6,
-# 			'H I (+ O I) 1025':1025.7, 'O I 1027':1027.4, 'O VI 1032':1031.9, 'C II 1036':1036.5,
-# 			'O VI 1037':1037.6}
+default_linelist = {'Ar VIII+S III 700':700.3, 'O III 703':702.9, 'O III 704':703.9, 'Mg IX 706':706.0,
+			'O II 718':718.5, 'S IV 745':744.9, 'S IV 748':748.4, 'S IV 750':750.2,
+			'O V 759':758.7, 'S IV+O V 759':759.4, 'O V 760':760.3, 'O V 762':762.0,
+			'N IV 765':765.1, 'Ne VIII 770':770.4, 'Mg VIII 772':772.3, 'Ne VIII 780':780.3,
+			'S V 786':786.5, 'O IV 787':787.7, 'O IV 790':790.1, 'Ly Gamma 972':972.5,
+			'C III 977':977.0, 'O I +- Na VI 989':988.7, 'N III 990':989.8, 'N III 992':991.6,
+			'H I (+ O I) 1025':1025.7, 'O I 1027':1027.4, 'O VI 1032':1031.9, 'C II 1036':1036.5,
+			'O VI 1037':1037.6}
 
 
 # Names and wavelengths of the standard lines to search:
-default_linelist = { 'Mg IX 706':706.0, 'Ne VIII 770':770.4, 'Ne VIII 780':780.3,
-			'Ly Gamma 972':972.5, 'C III 977':977.0, 'H I (+ O I) 1025':1025.7, 'O VI 1032':1031.9, }
+# default_linelist = { 'Mg IX 706':706.0, 'Ne VIII 770':770.4, 'Ne VIII 780':780.3,
+# 			'Ly Gamma 972':972.5, 'C III 977':977.0, 'H I (+ O I) 1025':1025.7, 'O VI 1032':1031.9, }
 
 
 # Main algorithm to run to fit lines. Identifies lines present, sets up the bounds

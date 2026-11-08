@@ -183,6 +183,7 @@ class FitResults:
         chi2_limit: float | None = None,
         verbose: int=0,
         detrend_doppler: bool=False,
+        linelist: str = None,
         best_xshift: float=None,
         best_yshift: float=None,
     ):
@@ -229,12 +230,20 @@ class FitResults:
                 spice_data,
                 spicewindow.header,
                 spicewindow.window_name,
-                nthreads=cpu_count_j,
-                save_dir=save_folder_skew,
+                nthreads            = cpu_count_j,
+                save_dir            = save_folder_skew,
+                linelist            = linelist,
             )
             best_xshift, best_yshift = shift_vars.best_shifts()
 
-        best_correction_results = full_correction(spice_data, spicewindow.header, best_xshift, best_yshift, nthreads=cpu_count_j)
+        best_correction_results = full_correction(
+            spice_data,
+            spicewindow.header,
+            best_xshift,
+            best_yshift,
+            nthreads            = cpu_count_j,
+            linelist            = linelist,            
+            )
 
         data_cube_skew = best_correction_results["dat_skew"]
         data_cube_skew = data_cube_skew.T
@@ -253,10 +262,10 @@ class FitResults:
         spicewindow.data = data_cube_skew
         spicewindow.uncertainty["Total"] = uncertainty_cube_skew
 
-        data_cube = spicewindow.data
-        uncertainty_cube = spicewindow.uncertainty["Total"]
-        xx, yy, ll, tt = spicewindow.return_point_pixels()
-        coords, lambda_cube, t = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
+        data_cube                   = spicewindow.data
+        uncertainty_cube            = spicewindow.uncertainty["Total"]
+        xx, yy, ll, tt              = spicewindow.return_point_pixels()
+        coords, lambda_cube, t      = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
         # s
         self.fit_window_standard_3d(
             data_cube=data_cube,
@@ -1500,26 +1509,25 @@ class FitResults:
         keys_comp.remove("flagged_pixels")
         keys_comp.remove("main")
 
-        hdr = self.spectral_window.header
-        dx, dy = hdr["CDELT1"], hdr["CDELT2"]
-        shape = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
+        hdr             = self.spectral_window.header
+        dx, dy          = hdr["CDELT1"], hdr["CDELT2"]
+        shape           = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
 
         # spice_x = dx*np.arange(shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
         # spice_y = dy*np.arange(shape[1]*skew_bin_facs[1])/skew_bin_facs[1]
-        [spice_xa0, spice_ya0] = np.indices((skew_bin_facs * shape).astype(np.int32))
-        spice_xa0 = dx * spice_xa0 / skew_bin_facs[0]
-        spice_ya0 = dy * spice_ya0 / skew_bin_facs[1]
+        [spice_xa0, spice_ya0]      = np.indices((skew_bin_facs * shape).astype(np.int32))
+        spice_xa0                   = dx * spice_xa0 / skew_bin_facs[0]
+        spice_ya0                   = dy * spice_ya0 / skew_bin_facs[1]
 
-        hdr_wavcen = u.Quantity(
-            hdr["CRVAL3"]
-            + (0.5 * hdr["NAXIS3"] - (hdr["CRPIX3"] - 0.5)) * hdr["CDELT3"],
-            hdr["CUNIT3"],
-        )
+        hdr_wavcen                  = u.Quantity(
+                                        hdr["CRVAL3"]
+                                        + (0.5 * hdr["NAXIS3"] - (hdr["CRPIX3"] - 0.5)) * hdr["CDELT3"],
+                                        hdr["CUNIT3"],
+                                        )
 
-        xx_ini, yy_ini = self.spectral_window.return_point_pixels(type="xy")
-
-        w_spec = self.spectral_window.w_spec
-        lamb = self.spectral_window.return_wavelength_array()
+        xx_ini, yy_ini              = self.spectral_window.return_point_pixels(type="xy")
+        # w_spec                      = self.spectral_window.w_spec
+        # lamb                        = self.spectral_window.return_wavelength_array()
 
         # for ii, key in enumerate(keys_comp):
         type_list, index_list, coeff_list = self.fit_template.gen_mapping_params()
@@ -1531,28 +1539,24 @@ class FitResults:
             name_line = a["name_component"]
             if type_ == "gaussian":
 
-                # line = self._get_line(name_line)
-                # lambda_ref = u.Quantity(line["wave"], line["unit_wave"])
-                # pixel_lambda_ref = w_spec.world_to_pixel(lambda_ref)
                 flagged_pixels = self.components_results["flagged_pixels"]["coeffs"][
                     "flagged_pixels"
                 ]["results"][0, ...]
-                flagged_pixels_bin = binup(flagged_pixels, skew_bin_facs)
-                doppler = self.components_results[name_line]["coeffs"]["x"]["results"]
-                shape_ini = doppler.shape
-                doppler = doppler[0, ...]
-                # pixel_doppler = w_spec.world_to_pixel(doppler.ravel())
+                flagged_pixels_bin              = binup(flagged_pixels, skew_bin_facs)
+                doppler                         = self.components_results[name_line]["coeffs"]["x"]["results"]
+                shape_ini                       = doppler.shape
+                doppler                         = doppler[0, ...]
 
-                dlambda = binup(doppler - hdr_wavcen, skew_bin_facs)
-                dlambda = dlambda.to("angstrom").value
+                dlambda                         = binup(doppler - hdr_wavcen, skew_bin_facs)
+                dlambda                         = dlambda.to(hdr["CUNIT1"]).value
 
-                good_pixels = np.logical_not(np.logical_or(np.isnan(dlambda), 
-                                                          flagged_pixels_bin))
-                # dlambda[np.isnan(dlambda)] = np.nan
-                # dlambda[flagged_pixels_bin] = np.nan
+                good_pixels                     = np.logical_not(
+                                np.logical_or(np.isnan(dlambda), 
+                                flagged_pixels_bin)
+                                                        )
 
-                xshift = spice_xa0 + best_xshift * dlambda
-                yshift = spice_ya0 + best_yshift * dlambda
+                xshift                          = spice_xa0 + best_xshift * dlambda
+                yshift                          = spice_ya0 + best_yshift * dlambda
 
                 for results_type in ["coeff", "coeffs_error"]:
 
@@ -1575,16 +1579,6 @@ class FitResults:
                     self.fit_results[results_type][wha, ...] = np.reshape(
                         param_out, shape_ini
                     )
-
-                    # CommonUtil.interpol2d(
-                    #     image=param_in_bin,
-                    #     x=xx_out,
-                    #     y=yy_out,
-                    #     fill=np.nan,
-                    #     order=2,
-                    #     dst=param_out_bin,
-                    # )
-                    # param_out = bindown2(param_out_bin, skew_bin_facs)
 
         self.build_components_results()
 

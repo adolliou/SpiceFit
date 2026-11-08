@@ -218,13 +218,21 @@ class FitResults:
         xx, yy, ll, tt          = spicewindow.return_point_pixels()
         coords, lambda_cube, t  = spicewindow.wcs.pixel_to_world(xx, yy, ll, tt)
         shape_ini               = data_cube.shape
-        lcen                    = np.nanmean(lambda_cube.to("nm"))
         cpu_count_j             = cpu_count
         if cpu_count is None:
             cpu_count_j = 8
         # save_dir = os.path.join(Path(__file__).parents[1], "linefit_modules/tmp")
         spice_data = spicewindow.data[0].to(spicewindow.header["BUNIT"]).value
         spice_data = spice_data.transpose([2,1,0]).astype(np.float32)
+
+        spice_dl            = spicewindow.header['CDELT3']
+        spice_wl0           = spicewindow.header['CRVAL3']-spice_dl*spicewindow.header['CRPIX3']
+        spice_la            = spice_wl0+spice_dl*np.arange(data_cube.shape[2],dtype=np.float64)
+        spice_la            = u.Quantity(spice_la, spicewindow.header["CUNIT3"]).to("nm")
+        
+        lcen = np.mean(spice_la)
+
+
         if (best_xshift is None) | (best_yshift is None):
             shift_vars = search_spice_window(
                 spice_data,

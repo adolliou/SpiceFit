@@ -159,7 +159,7 @@ def full_correction(spice_dat, spice_hdr, xlshift, ylshift, skew_bin_facs=defaul
     fitter              = kwargs.get('fitter',lsq_fitter)
     spice_dl            = spice_hdr['CDELT3']
     spice_wl0           = spice_hdr['CRVAL3']-spice_dl*spice_hdr['CRPIX3']
-    spice_la            = spice_wl0+spice_dl*np.arange(spice_dat.shape[1],dtype=np.float64)
+    spice_la            = spice_wl0+spice_dl*np.arange(spice_dat.shape[2],dtype=np.float64)
     spice_la            = u.Quantity(spice_la, spice_hdr["CUNIT3"]).to("nm")
 	
     if(lcen is None):

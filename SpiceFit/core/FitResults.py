@@ -1568,8 +1568,8 @@ class FitResults:
                                 flagged_pixels_bin)
                                                         )
 
-                xshift                          = spice_xa0 + best_xshift * dlambda
-                yshift                          = spice_ya0 + best_yshift * dlambda
+                xshift                          = spice_xa0 + best_yshift * dlambda
+                yshift                          = spice_ya0 + best_xshift * dlambda
 
                 for results_type in ["coeff", "coeffs_error"]:
 

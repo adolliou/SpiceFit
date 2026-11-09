@@ -1524,7 +1524,6 @@ class FitResults:
 
         # hdr_wavcen = hdr['CRVAL3'] + (0.5*hdr['NAXIS3']-(hdr['CRPIX3']-0.5))*hdr['CDELT3']
 
-
         # spice_x = dx*np.arange(shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
         # spice_y = dy*np.arange(shape[1]*skew_bin_facs[1])/skew_bin_facs[1]
         [spice_xa0, spice_ya0]      = np.indices((skew_bin_facs * shape).astype(np.int32))
@@ -1567,9 +1566,9 @@ class FitResults:
                                 np.logical_or(np.isnan(dlambda), 
                                 flagged_pixels_bin)
                                                         )
-
-                xshift                          = spice_xa0 + best_yshift * dlambda
-                yshift                          = spice_ya0 + best_xshift * dlambda
+                dlambda[~good_pixels]           = np.nan
+                xshift                          = spice_xa0 - best_yshift * dlambda
+                yshift                          = spice_ya0 - best_xshift * dlambda
 
                 for results_type in ["coeff", "coeffs_error"]:
 

@@ -1562,7 +1562,6 @@ class FitResults:
                 doppler                         = doppler[0, ...].to("angstrom").value
 
                 dlambda                         = binup(doppler - lcen, skew_bin_facs)
-                dlambda                         = dlambda.to("angstrom").value
 
                 good_pixels                     = np.logical_not(
                                 np.logical_or(np.isnan(dlambda), 

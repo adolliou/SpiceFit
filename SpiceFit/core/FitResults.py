@@ -1559,7 +1559,7 @@ class FitResults:
                 flagged_pixels_bin              = binup(flagged_pixels, skew_bin_facs)
                 doppler                         = self.components_results[name_line]["coeffs"]["x"]["results"]
                 shape_ini                       = doppler.shape
-                doppler                         = doppler[0, ...]
+                doppler                         = doppler[0, ...].to("angstrom").value
 
                 dlambda                         = binup(doppler - lcen, skew_bin_facs)
                 dlambda                         = dlambda.to("angstrom").value

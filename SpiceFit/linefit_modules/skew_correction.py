@@ -87,7 +87,6 @@ def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_
 	[spice_xa0,spice_ya0] = np.indices(np.array(skew_bin_facs,dtype=np.int32)*dat.shape[0:2])
 	spice_xa0 = dx*spice_xa0/skew_bin_facs[0]
 	spice_ya0 = dy*spice_ya0/skew_bin_facs[1]
-	spice_xya0 = np.array([spice_xa0.flatten(),spice_ya0.flatten()]).transpose()
 	
 	# Loop over wavelengths:
 	spicedat_skew = np.zeros(dat.shape)

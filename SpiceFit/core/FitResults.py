@@ -226,13 +226,12 @@ class FitResults:
         spice_data = spicewindow.data[0].to(spicewindow.header["BUNIT"]).value
         spice_data = spice_data.transpose([2,1,0]).astype(np.float32)
 
+
         spice_dl            = spicewindow.header['CDELT3']
         spice_wl0           = spicewindow.header['CRVAL3']-spice_dl*spicewindow.header['CRPIX3']
-        spice_la            = spice_wl0+spice_dl*np.arange(data_cube.shape[2],dtype=np.float64)
+        spice_la            = spice_wl0+spice_dl*np.arange(data_cube.shape[1],dtype=np.float64)
         spice_la            = u.Quantity(spice_la, spicewindow.header["CUNIT3"]).to("nm")
-        
-        lcen = np.mean(spice_la)
-
+        lcen                = np.mean(lambda_cube[0, :, 0, 0])
 
         if (best_xshift is None) | (best_yshift is None):
             shift_vars = search_spice_window(

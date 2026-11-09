@@ -227,7 +227,7 @@ def refine_points(shift_vars, xgrange, ygrange, ngx, ngy, npts_refine, min_input
 	# save: Contains the CSV files
 	# yrange_plots: diagnostic plots to see if the y range of the observation window is correctly selected
 	# figs: Contains the final plot showing goodness of fit as function of x and y shift
-def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5, n0=5, n1=11, n2=31, 
+def search_spice_window(spice_dat, spice_hdr, spice_la, win_name, xl=-5, yl=-5, xh=5, yh=5, n0=5, n1=11, n2=31, 
 			n_refine=20, save_dir=None, linelist=None, 
 			fitter=lsq_fitter, nthreads=8, lcen=None):
 	yrange_plot_dir = os.path.join(save_dir, "yrange_plots")
@@ -244,15 +244,9 @@ def search_spice_window(spice_dat, spice_hdr, win_name, xl=-5, yl=-5, xh=5, yh=5
 	spice_hdr["CDELT2"],
 	spice_hdr["CDELT3"],
 	)
-	spice_wl0 = spice_hdr["CRVAL3"] - spice_dl * spice_hdr["CRPIX3"]
-	spice_la = spice_wl0 + spice_dl * np.arange(spice_dat.shape[2], dtype=np.float64)
 
-	spice_la			= u.Quantity(
-		spice_la, 
-		spice_hdr["CUNIT3"]
-	)
 
-	centers, lines = check_for_waves(spice_la.to("nm").value, linelist=linelist)
+	centers, lines = check_for_waves(spice_la, linelist=linelist)
 	print("Found the following lines in " + win_name + ": " + str(lines))
 
 	xs_initial, ys_initial = np.array(

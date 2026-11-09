@@ -227,17 +227,15 @@ class FitResults:
         spice_data = spice_data.transpose([2,1,0]).astype(np.float32)
 
 
-        spice_dl            = spicewindow.header['CDELT3']
-        spice_wl0           = spicewindow.header['CRVAL3']-spice_dl*spicewindow.header['CRPIX3']
-        spice_la            = spice_wl0+spice_dl*np.arange(data_cube.shape[1],dtype=np.float64)
-        spice_la            = u.Quantity(spice_la, spicewindow.header["CUNIT3"]).to("nm")
-        lcen                = np.mean(lambda_cube[0, :, 0, 0])
+        spice_la                = lambda_cube[0, :, 0, 0].to("angstrom").value
+        lcen                    = np.mean(spice_la)
 
         if (best_xshift is None) | (best_yshift is None):
             shift_vars = search_spice_window(
                 spice_data,
                 spicewindow.header,
-                spicewindow.window_name,
+                spice_la            = spice_la,
+                win_name            = spicewindow.window_name,
                 nthreads            = cpu_count_j,
                 save_dir            = save_folder_skew,
                 linelist            = linelist,
@@ -248,11 +246,12 @@ class FitResults:
         best_correction_results = full_correction(
             spice_data,
             spicewindow.header,
-            best_xshift,
-            best_yshift,
-            nthreads            = cpu_count_j,
-            linelist            = linelist,     
-            lcen                = lcen,       
+            spice_la                = spice_la,
+            xlshift                 = best_xshift,
+            ylshift                 = best_yshift,
+            nthreads                = cpu_count_j,
+            linelist                = linelist,     
+            lcen                    = lcen,       
             )
 
         data_cube_skew = best_correction_results["dat_skew"]

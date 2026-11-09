@@ -151,19 +151,14 @@ def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_
 
 # Perform the full correction on a set of SPICE data with header
 # do line fits, deskew them, and return both results:
-def full_correction(spice_dat, spice_hdr, xlshift, ylshift, skew_bin_facs=default_bin_fac, spice_sdev_guess=0.1,
+def full_correction(spice_dat, spice_hdr, spice_la, xlshift, ylshift, skew_bin_facs=default_bin_fac, spice_sdev_guess=0.1,
                     lcen = None, offsets = [[0.0,0.0]],
                      **kwargs):
 
 
     fitter              = kwargs.get('fitter',lsq_fitter)
-    spice_dl            = spice_hdr['CDELT3']
-    spice_wl0           = spice_hdr['CRVAL3']-spice_dl*spice_hdr['CRPIX3']
-    spice_la            = spice_wl0+spice_dl*np.arange(spice_dat.shape[2],dtype=np.float64)
-    spice_la            = u.Quantity(spice_la, spice_hdr["CUNIT3"]).to("nm")
-	
-    if(lcen is None):
-        lcen = np.mean(spice_la)
+
+
 
     
     # Offseting the interpolated points is important. Otherwise there will be ridges

@@ -1519,7 +1519,7 @@ class FitResults:
         keys_comp.remove("main")
 
         hdr                         = self.spectral_window.header
-        dx, dy                      = hdr["CDELT1"] * 10, hdr["CDELT2"] * 10
+        dx, dy                      = hdr["CDELT1"], hdr["CDELT2"]
         shape                       = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
 
         # hdr_wavcen = hdr['CRVAL3'] + (0.5*hdr['NAXIS3']-(hdr['CRPIX3']-0.5))*hdr['CDELT3']
@@ -1671,6 +1671,9 @@ class FitResults:
         # dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
         # 
         return dopp_detrend
+
+
+
     def _write_hdu(self, hdu, header_ref, filename, ncoeff, keys_comp,
                     results_type="results", hdu_wcsdvar=None):
         """Write a FITS file consistent with the format used in the IDL SPICE fitting procedure.

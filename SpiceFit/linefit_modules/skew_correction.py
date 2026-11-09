@@ -79,7 +79,7 @@ def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_
                 offsets=[[0,0]],):
 
 	nl              = dat.shape[2]
-	dx, dy          = hdr['CDELT1']*10, hdr['CDELT2']*10, 
+	dx, dy          = hdr['CDELT1'], hdr['CDELT2'], 
 
 	# Set up the coordinate arrays used by the interpolator:
 	spice_x = dx*np.arange(dat.shape[0]*skew_bin_facs[0])/skew_bin_facs[0]

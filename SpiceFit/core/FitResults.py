@@ -1519,7 +1519,7 @@ class FitResults:
         keys_comp.remove("main")
 
         hdr                         = self.spectral_window.header
-        dx, dy                      = hdr["CDELT1"], hdr["CDELT2"]
+        dx, dy                      = hdr["CDELT2"], hdr["CDELT1"]
         shape                       = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
 
         # hdr_wavcen = hdr['CRVAL3'] + (0.5*hdr['NAXIS3']-(hdr['CRPIX3']-0.5))*hdr['CDELT3']

@@ -1519,7 +1519,7 @@ class FitResults:
         keys_comp.remove("main")
 
         hdr                         = self.spectral_window.header
-        dx, dy                      = hdr["CDELT1"], hdr["CDELT2"]
+        dx, dy                      = hdr["CDELT1"] * 10, hdr["CDELT2"] * 10
         shape                       = np.array([hdr["NAXIS2"], hdr["NAXIS1"]], dtype=np.int32)
 
         # hdr_wavcen = hdr['CRVAL3'] + (0.5*hdr['NAXIS3']-(hdr['CRPIX3']-0.5))*hdr['CDELT3']
@@ -1531,12 +1531,12 @@ class FitResults:
         spice_xa0                   = dx * spice_xa0 / skew_bin_facs[0]
         spice_ya0                   = dy * spice_ya0 / skew_bin_facs[1]
 
-        hdr_wavcen                  = u.Quantity(
-                                        hdr["CRVAL3"]
-                                        + (0.5 * hdr["NAXIS3"] - (hdr["CRPIX3"] - 0.5)) * hdr["CDELT3"],
-                                        hdr["CUNIT3"],
-                                        ).to("nm")
-        if(lcen is None): lcen      = hdr_wavcen
+        # hdr_wavcen                  = u.Quantity(
+        #                                 hdr["CRVAL3"]
+        #                                 + (0.5 * hdr["NAXIS3"] - (hdr["CRPIX3"] - 0.5)) * hdr["CDELT3"],
+        #                                 hdr["CUNIT3"],
+        #                                 ).to("angstrom")
+        # if(lcen is None): lcen      = hdr_wavcen.value
 
 
         xx_ini, yy_ini              = self.spectral_window.return_point_pixels(type="xy")
@@ -1562,7 +1562,7 @@ class FitResults:
                 doppler                         = doppler[0, ...]
 
                 dlambda                         = binup(doppler - lcen, skew_bin_facs)
-                dlambda                         = dlambda.to("nm").value
+                dlambda                         = dlambda.to("angstrom").value
 
                 good_pixels                     = np.logical_not(
                                 np.logical_or(np.isnan(dlambda), 

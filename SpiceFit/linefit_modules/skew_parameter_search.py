@@ -239,13 +239,6 @@ def search_spice_window(spice_dat, spice_hdr, spice_la, win_name, xl=-5, yl=-5, 
 	Path(shift_plot_dir).mkdir( parents=False, exist_ok=True)
 	# spice_dat, spice_hdr = hdul[win_name].data[0], hdul[win_name].header
 
-	spice_dx, spice_dy, spice_dl = (
-	spice_hdr["CDELT1"],
-	spice_hdr["CDELT2"],
-	spice_hdr["CDELT3"],
-	)
-
-
 	centers, lines = check_for_waves(spice_la, linelist=linelist)
 	print("Found the following lines in " + win_name + ": " + str(lines))
 

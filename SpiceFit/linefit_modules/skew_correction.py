@@ -79,7 +79,7 @@ def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_
                 offsets=[[0,0]],):
 
 	nl              = dat.shape[2]
-	dx, dy          = hdr['CDELT1'], hdr['CDELT2'], 
+	dx, dy          = hdr['CDELT1']*10, hdr['CDELT2']*10, 
 
 	# Set up the coordinate arrays used by the interpolator:
 	spice_x = dx*np.arange(dat.shape[0]*skew_bin_facs[0])/skew_bin_facs[0]
@@ -96,8 +96,8 @@ def skew_correct(dat, hdr, xlshift, ylshift,lcen, lambdas,skew_bin_facs=default_
 		rgi = RegularGridInterpolator((spice_x,spice_y),binup(dat[:,:,i],skew_bin_facs),bounds_error=False,fill_value=None)
 
 		for offset in offsets:
-			xshift = spice_xa0 - xlshift*(lambdas[i]-lcen).to("nm").value - offset[0] # How much to shift in x for this wavelength
-			yshift = spice_ya0 - ylshift*(lambdas[i]-lcen).to("nm").value - offset[1] # How much to shift in y for this wavelength
+			xshift = spice_xa0 - xlshift*(lambdas[i]-lcen) - offset[0] # How much to shift in x for this wavelength
+			yshift = spice_ya0 - ylshift*(lambdas[i]-lcen) - offset[1] # How much to shift in y for this wavelength
 			spice_xya = np.array([xshift,yshift]).transpose([1,2,0])
 			
 			# Interpolate and bin data back down for this wavelength:
@@ -181,14 +181,14 @@ def full_correction(spice_dat, spice_hdr, spice_la, xlshift, ylshift, skew_bin_f
     # Find the main range of the the spice data in y and mask out any missing data:
     ymin, ymax, band1_ymin, band1_ymax, band2_ymin, band2_ymax, signal_windowed, signal_cube = get_spice_data_yrange(spicedat_skew)
     spice_skew_fit_mask[:,0:ymin,:] = 1; spice_skew_fit_mask[:,ymax:,:] = 1
-    centers, lines = check_for_waves(spice_la.to("nm").value, kwargs.get('linelist',None))
+    centers, lines = check_for_waves(spice_la, kwargs.get('linelist',None))
 
     # Fit the spectral lines in the data:
     fit_results = list(
         fitter(
             spicedat_skew,
             spiceerr_skew,
-            spice_la.to("nm").value,
+            spice_la,
             spice_skew_fit_mask,
             spice_sdev_guess,
             linelist=kwargs.get("linelist", None),
@@ -213,7 +213,7 @@ def full_correction(spice_dat, spice_hdr, spice_la, xlshift, ylshift, skew_bin_f
     window_out = window_skewed
     return {'dat_skew':spicedat_skew, 'err_skew':spiceerr_skew, 'linefits':window_out, 'xlshift':xlshift,
 			'ylshift':ylshift, 'kwargs':kwargs,	'hdr':spice_hdr, 'centers':centers, 'lines':lines,
-			'mask':spice_skew_fit_mask, 'waves':spice_la.to("nm").value, 'offsets':offsets, 'ymin':ymin, 'ymax':ymax}
+			'mask':spice_skew_fit_mask, 'waves':spice_la, 'offsets':offsets, 'ymin':ymin, 'ymax':ymax}
     # return {
     # 	"dat_skew": spicedat_skew,
     # 	"err_skew": spiceerr_skew,

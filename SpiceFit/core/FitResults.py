@@ -1313,11 +1313,11 @@ class FitResults:
         else:
             comp = self.components_results[component]
             if comp["info"]["type"] == "gaussian":
-                I = comp["coeffs"]["I"]["results"].value[position]
-                x = comp["coeffs"]["x"]["results"].value[position]
-                s = comp["coeffs"]["s"]["results"].value[position]
+                I       = comp["coeffs"]["I"]["results"].value[position]
+                pp      = comp["coeffs"]["x"]["results"].value[position]
+                s       = comp["coeffs"]["s"]["results"].value[position]
 
-                return FittingUtil.gaussian(x, I, x, s, 0)
+                return FittingUtil.gaussian(x, I, pp, s, 0)
             elif comp["info"]["type"] == "polynomial":
                 value = []
                 for letter in string.ascii_lowercase:

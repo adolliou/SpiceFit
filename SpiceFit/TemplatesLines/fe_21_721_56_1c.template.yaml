@@ -1,0 +1,47 @@
+
+fit:
+  type: ["gaussian",
+         "polynomial"]
+  name: ["fe_20 721.56",
+         "background"]
+  n_components: [ 3,  1 ]
+  guess: [
+    [0.1, 721.56, 0.43],
+    [0.0]
+  ]
+  coeff_type: [
+    [ "I", "lambda" , "fwhm", ],
+    [ "I" ]
+  ]
+  units: [
+    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
+    [ "Angstrom" ]
+  ]
+  max_arr: [
+   [3.0,   721.96, 0.45],
+    [100.0]
+  ]
+  min_arr: [
+      [0.0, 721.16, 0.4],
+     [-0.5]
+  ]
+  trans_a: [
+    [ 1.0, 1.0, 0.424661, ],
+    [ 1.0 ]
+  ]
+  trans_b: [
+    [ 0.0, 0.0, 0.0, ],
+    [ 0.0 ]
+  ]
+
+main_line: "fe_21 721.56"
+
+info:
+  - name: "fe_21 721.56"
+    elem: "fe"
+    ion: 21
+    wave: 721.56
+    unit_wave: "Angstrom"
+    lvl_low: ""
+    lvl_up: ""
+    legend: "Fe XXI 721.56 $\\AA$"

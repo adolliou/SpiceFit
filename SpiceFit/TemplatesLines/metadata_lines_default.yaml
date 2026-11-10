@@ -10,16 +10,6 @@ list_lines_spice_metadata:
     legend: "Ne VIII 770.42 $\\AA$"
     default_template: "ne_8_770_42_1c.template"
 
-  - name: "c_3 977.03"
-    elem: "c"
-    ion: 3
-    wave: 977.03
-    unit_wave: "Angstrom"
-    lvl_low: "2s$^2$ $^1$S$_{0}$"
-    lvl_up: "2s 2p $^1$P$_{1}$"
-    legend: "C III 977.03 $\\AA$"
-    default_template: "c_3_977_96_1c.template"
-
 
   - name: "mg_9 706.02"
     elem: "mg"
@@ -101,6 +91,39 @@ list_lines_spice_metadata:
     legend: "S V 786.47 $\\AA$"
     default_template: "o_4_787_72_2c.template"
 
+
+  - name: "h_1 972.54"
+    elem: "h"
+    ion: 1
+    wave: 972.54
+    unit_wave: "Angstrom"
+    lvl_low: ""
+    lvl_up: ""
+    legend: "H I Ly-gamma 972.54 $\\AA$"
+    default_template: "h_1_972_57_1c.template"
+
+
+  - name: "fe_18 974.86"
+    elem: "fe"
+    ion: 18
+    wave: 974.86
+    unit_wave: "Angstrom"
+    lvl_low: ""
+    lvl_up: ""
+    legend: "Fe XVIII 974.86 $\\AA$"
+    default_template: "fe_18_974_86_2c_p.template"
+
+  - name: "c_3 977.03"
+    elem: "c"
+    ion: 3
+    wave: 977.03
+    unit_wave: "Angstrom"
+    lvl_low: "2s$^2$ $^1$S$_{0}$"
+    lvl_up: "2s 2p $^1$P$_{1}$"
+    legend: "C III 977.03 $\\AA$"
+    default_template: "c_3_977_96_1c.template"
+
+
   - name: "o_6 1031.93"
     elem: "o"
     ion: 6
@@ -112,16 +135,6 @@ list_lines_spice_metadata:
     default_template: "o_6_1031_93_1c.template"
 
 
-
-  - name: "h_1 972.54"
-    elem: "h"
-    ion: 1
-    wave: 972.54
-    unit_wave: "Angstrom"
-    lvl_low: ""
-    lvl_up: ""
-    legend: "H I Ly-gamma 972.54 $\\AA$"
-    default_template: "h_1_972_57_1c.template"
 
   - name: "h_1 1025.72"
     elem: "h"

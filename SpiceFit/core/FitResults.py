@@ -1328,10 +1328,10 @@ class FitResults:
                 raise NotImplementedError
 
     def detrend_doppler_shift_velocities(self, cvec_list=None):
-        fitoutput           = None
+
         cvec_out_list       = []
         for jj, line_name in enumerate(self.components_results.keys()):
-            if line_name.strip() not in ["chi2", "flagged_pixels", "background"]:
+            if line_name.strip() not in ["chi2", "flagged_pixels", "background", "main"]:
                 if cvec_list is None:
                     cvec        = None
                 else:
@@ -1370,6 +1370,7 @@ class FitResults:
                     * (data_doppler_err)
                     / lambda_ref
                 ).to(Constants.conventional_velocity_units)
+        self.components_results["main"]             = self.components_results[self.fit_template.parinfo["main_line"]]
         return cvec_out_list
 
 

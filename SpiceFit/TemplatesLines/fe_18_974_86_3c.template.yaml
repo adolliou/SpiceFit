@@ -1,85 +1,47 @@
 
 fit:
   type: ["gaussian",
-         "gaussian",
-         "gaussian",
          "polynomial"]
-  name: ["fe_18 974.86",
-         "c_3 977.03",
-         "h_1 972.54",
+  name: ["fe_20 721.56",
          "background"]
   n_components: [ 3, 3, 3,  1 ]
   guess: [
-    [0.1, 974.86, 0.41],
-    [5.0, 977.03, 0.41],
-    [2.0, 972.33, 2.6],
+    [0.1, 721.56, 0.43],
     [0.0]
   ]
   coeff_type: [
-    [ "I", "lambda" , "fwhm", ],
-    [ "I", "lambda" , "fwhm", ],
     [ "I", "lambda" , "fwhm", ],
     [ "I" ]
   ]
   units: [
     [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
-    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
-    [ "W/(m2 sr nm)", "Angstrom" , "Angstrom", ],
     [ "Angstrom" ]
   ]
   max_arr: [
-   [3.0,   975.5, 0.41],
-   [1000.0,977.5, 2.0],
-   [232421,972.601,10.0],
+   [3.0,   721.96, 0.45],
     [100.0]
   ]
   min_arr: [
-      [0.0, 974.1, 0.4],
-    [0.0001, 976.13, 0.4],
-    [0.0001,972.067,0.4],
+      [0.0, 721.16, 0.4],
      [-0.5]
   ]
   trans_a: [
-    [ 1.0, 1.0, 0.424661, ],
-    [ 1.0, 1.0, 0.424661, ],
     [ 1.0, 1.0, 0.424661, ],
     [ 1.0 ]
   ]
   trans_b: [
     [ 0.0, 0.0, 0.0, ],
-    [ 0.0, 0.0, 0.0, ],
-    [ 0.0, 0.0, 0.0, ],
     [ 0.0 ]
   ]
 
-main_line: "fe_18 974.86"
+main_line: "fe_21 721.56"
 
 info:
-  - name: "fe_18 974.86"
+  - name: "fe_21 721.56"
     elem: "fe"
-    ion: 18
-    wave: 974.86
+    ion: 21
+    wave: 721.56
     unit_wave: "Angstrom"
     lvl_low: ""
     lvl_up: ""
-    legend: "Fe XVIII 974.86 $\\AA$"
-
-  - name: "c_3 977.03"
-    elem: "c"
-    ion: 3
-    wave: 977.03
-    unit_wave: "Angstrom"
-    lvl_low: "2s$^2$ $^1$S$_{0}$"
-    lvl_up: "2s 2p $^1$P$_{1}$"
-    legend: "C III 977.03 $\\AA$"
-
-  - name: "h_1 972.54"
-    elem: "h"
-    ion: 1
-    wave: 972.54
-    unit_wave: "Angstrom"
-    lvl_low: ""
-    lvl_up: ""
-    legend: "H I Ly-gamma 972.54 $\\AA$"
-
-
+    legend: "Fe XXI 721.56 $\\AA$"

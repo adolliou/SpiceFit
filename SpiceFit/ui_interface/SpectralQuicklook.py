@@ -105,15 +105,16 @@ class GUISpectralQuicklook(QMainWindow):
         cm = Constants.inch_to_cm
         self.figure_spectral_map    = plt.figure(figsize=(17 * cm, 9 * cm))
         self.canvas_spectral_map    = FigureCanvas(self.figure_spectral_map)
-        self.ax_spectral_map = self.figure_spectral_map.subplots()
-
+        self.ax_spectral_map        = self.figure_spectral_map.subplots()
         self.fit_results.plot_fitted_map(
             fig                             = self.figure_spectral_map,
             ax                              = self.ax_spectral_map, 
             line                            = line_name,
             param                           = param,
             # pixels                          = (xpos, ypos),
-            doppler_mediansubtraction       = True
+            doppler_mediansubtraction       = True, 
+            sigma_error                     =  1000,      
+
             )
         self.ax_spectral_map.axvline(x=xpos, color="r", lw=0.3, ls="-")
         self.ax_spectral_map.axhline(y=ypos, color="r", lw=0.3, ls="-")

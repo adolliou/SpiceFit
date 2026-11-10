@@ -93,6 +93,20 @@ class SpiceRaster:
                 spectral_windows_names.append(header["EXTNAME"])
         return spectral_windows_names
 
+    def bining(self, windows, factor: tuple, function: callable = np.nanmean, ):
+
+        """
+        Bin the selected windows by the given factor 
+        """        
+        if windows == "all":
+            for ii, win in enumerate(self.windows):
+                win.binning(factor, function)
+        elif type(windows) is list:
+            for ii, win in enumerate(self.windows):
+                if (ii in windows) or (self.windows_ext[win] in windows):
+                    win.binning(factor, function)
+
+
     def build_windowsl2(self, windows) -> list:
         """
         build the SpiceRasterWindowL2 elements.

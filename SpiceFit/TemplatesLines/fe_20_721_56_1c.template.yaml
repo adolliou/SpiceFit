@@ -2,7 +2,7 @@
 fit:
   type: ["gaussian",
          "polynomial"]
-  name: ["fe_21 721.56",
+  name: ["fe_20 721.56",
          "background"]
   n_components: [ 3,  1 ]
   guess: [
@@ -34,14 +34,14 @@ fit:
     [ 0.0 ]
   ]
 
-main_line: "fe_21 721.56"
+main_line: "fe_20 721.56"
 
 info:
-  - name: "fe_21 721.56"
+  - name: "fe_20 721.56"
     elem: "fe"
-    ion: 21
+    ion: 20
     wave: 721.56
     unit_wave: "Angstrom"
     lvl_low: ""
     lvl_up: ""
-    legend: "Fe XXI 721.56 $\\AA$"
+    legend: "Fe XX 721.56 $\\AA$"

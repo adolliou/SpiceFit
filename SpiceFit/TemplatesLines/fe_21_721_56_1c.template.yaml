@@ -2,7 +2,7 @@
 fit:
   type: ["gaussian",
          "polynomial"]
-  name: ["fe_20 721.56",
+  name: ["fe_21 721.56",
          "background"]
   n_components: [ 3,  1 ]
   guess: [

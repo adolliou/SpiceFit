@@ -50,7 +50,7 @@ class GUISpectralQuicklook(QMainWindow):
         self.set_up_layouts()
         self._set_UI_component()
         self._set_spectral_map(xpos=0, ypos=0, line_name=self.lines_list[0], param="radiance")
-        self._set_spectral_plot(xpos=0, ypos=0)
+        self._set_spectral_plot(xpos=0, ypos=0, line_name=self.lines_list[0])
 
         widget = QWidget()
         widget.setLayout(self.pagelayout)
@@ -103,7 +103,6 @@ class GUISpectralQuicklook(QMainWindow):
     def _set_spectral_map(self, xpos, ypos, line_name,param="radiance"):
 
         cm = Constants.inch_to_cm
-        # gs                          = GridSpec(2, 4, wspace=0, hspace=0, height_ratios=[7, 1])
         self.figure_spectral_map    = plt.figure(figsize=(17 * cm, 9 * cm))
         self.canvas_spectral_map    = FigureCanvas(self.figure_spectral_map)
         self.ax_spectral_map = self.figure_spectral_map.subplots()
@@ -121,25 +120,27 @@ class GUISpectralQuicklook(QMainWindow):
 
         self.images_layout.addWidget(self.canvas_spectral_map)
 
-    def _set_spectral_plot(self, xpos, ypos):
+    def _set_spectral_plot(self, xpos, ypos, line_name):
 
-        data_cube = self.fit_results.spectral_window.data
-        uncertainty_cube = self.fit_results.spectral_window.uncertainty["Total"]
-        xx, yy, ll, tt = self.fit_results.spectral_window.return_point_pixels()
-        coords, lambda_cube, t = self.fit_results.spectral_window.wcs.pixel_to_world(
+        data_cube               = self.fit_results.spectral_window.data
+        uncertainty_cube        = self.fit_results.spectral_window.uncertainty["Total"]
+        xx, yy, ll, tt          = self.fit_results.spectral_window.return_point_pixels()
+        coords, lambda_cube, t  = self.fit_results.spectral_window.wcs.pixel_to_world(
             xx, yy, ll, tt
         )
 
-        data_l2 = np.squeeze(data_cube.to(Constants.conventional_spectral_units).value)
-        uncertainty_l2 = np.squeeze(uncertainty_cube.to(
-            Constants.conventional_spectral_units
-        ).value)
-        lambda_l2 = np.squeeze(lambda_cube.to(Constants.conventional_lambda_units).value)
+        # gs                          = GridSpec(2, 4, wspace=0, hspace=0, height_ratios=[7, 1])
 
-        cm = Constants.inch_to_cm
-        self.figure_spectral_plot = plt.figure(figsize=(17 * cm, 9 * cm))
-        self.canvas_spectral_plot = FigureCanvas(self.figure_spectral_plot)
-        self.ax_spectral_plot = self.figure_spectral_plot.subplots()
+        data_l2                 = np.squeeze(data_cube.to(Constants.conventional_spectral_units).value)
+        uncertainty_l2          = np.squeeze(uncertainty_cube.to(
+                            Constants.conventional_spectral_units
+                        ).value)
+        lambda_l2               = np.squeeze(lambda_cube.to(Constants.conventional_lambda_units).value)
+
+        cm                          = Constants.inch_to_cm
+        self.figure_spectral_plot   = plt.figure(figsize=(17 * cm, 9 * cm))
+        self.canvas_spectral_plot   = FigureCanvas(self.figure_spectral_plot)
+        self.ax_spectral_plot       = self.figure_spectral_plot.subplots()
         self.ax_spectral_plot.errorbar(
             x=lambda_l2[:, ypos, xpos],
             y=data_l2[:, ypos, xpos],
@@ -151,10 +152,10 @@ class GUISpectralQuicklook(QMainWindow):
             color="k",
             label="data",
         )
-        yfit_total = self.fit_results.get_fitted_spectra(x=u.Quantity(lambda_l2[:, ypos, xpos],
-                                                            Constants.conventional_lambda_units),
-                                                position=(0, ypos, xpos),
-                                                component="total")
+        yfit_total = self.fit_results.get_fitted_spectra(
+            x               = u.Quantity(lambda_l2[:, ypos, xpos],Constants.conventional_lambda_units),
+            position        = (0, ypos, xpos),
+            component       = "total")
         self.ax_spectral_plot.plot(
             lambda_l2[:, ypos, xpos],
             yfit_total,
@@ -163,6 +164,21 @@ class GUISpectralQuicklook(QMainWindow):
             linestyle="-",
             color="b",
             label="total",
+        )
+        
+        yfit_total = self.fit_results.get_fitted_spectra(
+            x               = u.Quantity(lambda_l2[:, ypos, xpos],Constants.conventional_lambda_units),
+            position        = (0, ypos, xpos),
+            component       = line_name
+            )        
+        self.ax_spectral_plot.plot(
+            lambda_l2[:, ypos, xpos],
+            yfit_total,
+            lw          = 0.9,
+            marker      = "",
+            linestyle   = "-",
+            color       = "r",
+            label       = f"{line_name}",
         )
 
         self.ax_spectral_plot.set_xlabel(f"Wavelength [{Constants.conventional_lambda_units}]")
@@ -177,7 +193,7 @@ class GUISpectralQuicklook(QMainWindow):
                 title += f"{param} : {self.fit_results.components_results['background']['coeffs'][param]['results'].value[0,ypos, xpos]:.2f}, "
 
         self.ax_spectral_plot.set_title(title)
-
+        self.ax_spectral_plot.legend()
         self.images_layout.addWidget(self.canvas_spectral_plot)
 
     def lines_list_widget_changed(self, s):
@@ -212,7 +228,7 @@ class GUISpectralQuicklook(QMainWindow):
         self._set_spectral_map(sx, sy, line_name=line_name, param=param)
 
         self.canvas_spectral_plot.close()
-        self._set_spectral_plot(sx, sy)
+        self._set_spectral_plot(sx, sy, line_name=line_name,)
 
         self.param_list_widget.close()
         self._update_param_list(line_name)

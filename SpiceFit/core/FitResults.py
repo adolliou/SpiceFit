@@ -1327,7 +1327,7 @@ class FitResults:
             else:
                 raise NotImplementedError
 
-    def detrend_doppler_shift_velocities(self):
+    def detrend_doppler_shift_velocities(self, return_coeffs=False):
         for line_name in self.components_results.keys():
             if line_name.strip() not in ["chi2", "flagged_pixels", "background"]:
                 a                       = self.components_results[line_name]["coeffs"]
@@ -1616,7 +1616,7 @@ class FitResults:
     # The SPICE Doppler tend to contain a trend across the image field.
     # Since this will impact the Doppler variance we use to determine which
     # shift is optimal we fit linear trends in x and y and remove them:
-    def _detrend_dopp(self, dopp, dopp_err): # Remove linear spatial trend in x and y from Doppler
+    def _detrend_dopp(self, dopp, dopp_err, fig=None, ax=None): # Remove linear spatial trend in x and y from Doppler
         # JPlowman function
 
         # dopp = dopp.squeeze()
@@ -1638,7 +1638,7 @@ class FitResults:
         dopp                = dopp.squeeze()
         dopp_err            = dopp_err.squeeze()
         peak_doop           = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
-        snr_th              = np.abs(dopp) > 0.5*np.abs(dopp_err)
+        snr_th              = np.abs(dopp) > np.abs(dopp_err)
         nx,ny               = dopp.shape
         x0                  = np.ones([nx,ny])
         x1, x2              = np.indices([nx,ny])
@@ -1650,21 +1650,36 @@ class FitResults:
         dopp_nan            = copy.deepcopy(dopp)
         dopp_nan[~mask]     = np.nan
         median_along_1      = np.nanmedian(dopp_nan, axis=0)
-        x_axis              = np.arange(dopp_nan.shape[1])
 
         isnan               = np.isnan(median_along_1)
 
-        popt, pcov          = curve_fit(
-            f                   = FittingUtil.polynomial,
-            xdata               = x_axis[~isnan], 
+        median_along_1      = np.nanmedian(dopp_nan, axis=0)
+        x_axis1             = np.arange(dopp_nan.shape[1])
+        isnan               = np.isnan(median_along_1)
+        popt1, pcov1        = curve_fit(
+            f                   = FittingModel.polynomial,
+            xdata               = x_axis1[~isnan], 
             ydata               = median_along_1[~isnan], 
             p0                  = [1.2E-02, -9E-05],
+        )
 
+        median_along_0      = np.nanmedian(dopp_nan, axis=1)
+        x_axis0             = np.arange(dopp_nan.shape[0])
+        isnan               = np.isnan(median_along_0)
+        popt0, pcov0        = curve_fit(
+            f                   = FittingModel.polynomial,
+            xdata               = x_axis0[~isnan], 
+            ydata               = median_along_0[~isnan], 
+            p0                  = [1.2E-02, -9E-05],
         )
 
         dopp_detrend        = copy.deepcopy(dopp)
         for pp in range(dopp_nan.shape[0]):
-            dopp_detrend[pp, :]         = dopp_detrend[pp, :] - FittingUtil.polynomial(x_axis, *popt)
+            dopp_detrend[pp, :]         = dopp_detrend[pp, :] - popt1[1] * x_axis1
+        for pp in range(dopp_nan.shape[1]):
+            dopp_detrend[:, pp]         = dopp_detrend[:, pp] - popt0[1] * x_axis0
+
+
 
 
         # dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 

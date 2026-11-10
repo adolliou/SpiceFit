@@ -1327,10 +1327,15 @@ class FitResults:
             else:
                 raise NotImplementedError
 
-    def detrend_doppler_shift_velocities(self, return_coeffs_line=None):
+    def detrend_doppler_shift_velocities(self, cvec_list=None):
         fitoutput           = None
-        for line_name in self.components_results.keys():
+        cvec_out_list       = []
+        for jj, line_name in enumerate(self.components_results.keys()):
             if line_name.strip() not in ["chi2", "flagged_pixels", "background"]:
+                if cvec_list is None:
+                    cvec        = None
+                else:
+                    cvec        = cvec_list[jj]
                 a                       = self.components_results[line_name]["coeffs"]
                 line                    = self._find_line(self.components_results[line_name]["info"]["name_component"])
                 lambda_ref              = u.Quantity(line["wave"], (line["unit_wave"]))
@@ -1338,7 +1343,8 @@ class FitResults:
                 data_doppler_err        = copy.deepcopy(a["delta_x"]["sigma"].to(Constants.conventional_lambda_units).value)
                 shape_ini               = data_doppler.shape
 
-                data_doppler            = self._detrend_dopp(data_doppler, data_doppler_err)
+                data_doppler,cvec_out   = self._detrend_dopp(data_doppler, data_doppler_err, cvec=cvec)
+                cvec_out_list.append(cvec_out)
                 data_doppler            = np.reshape(data_doppler, shape_ini)
                 data_doppler_err        = np.reshape(data_doppler_err, shape_ini)
                 data_doppler            = u.Quantity(data_doppler, Constants.conventional_lambda_units)
@@ -1364,12 +1370,7 @@ class FitResults:
                     * (data_doppler_err)
                     / lambda_ref
                 ).to(Constants.conventional_velocity_units)
-
-                if return_coeffs_line is not None:
-                    if line_name.strip() in [return_coeffs_line]:
-                        fitoutput       = fitoutput_
-        if return_coeffs_line is not None:
-            return fitoutput
+        return cvec_out_list
 
 
     def to_fits(self, path_to_save_fits: str = None, folder_to_save_fits: str = None, hdu_wcsdvar=None):
@@ -1624,7 +1625,7 @@ class FitResults:
     # The SPICE Doppler tend to contain a trend across the image field.
     # Since this will impact the Doppler variance we use to determine which
     # shift is optimal we fit linear trends in x and y and remove them:
-    def _detrend_dopp(self, dopp, dopp_err,): # Remove linear spatial trend in x and y from Doppler
+    def _detrend_dopp(self, dopp, dopp_err, cvec=None): # Remove linear spatial trend in x and y from Doppler
         # JPlowman function
 
         dopp = dopp.squeeze()
@@ -1638,10 +1639,10 @@ class FitResults:
         x1, x2 = np.indices([nx,ny])
         x1 = x1-0.5*nx; x2 = x2-0.5*ny
         mask = (np.isnan(dopp) == False) * snr_th * (dopp_err> 1.0E-15) * peak_doop
-
-        cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
+        if cvec is None:
+            cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
         dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
-        return dopp_detrend
+        return dopp_detrend, cvec
 
 
 

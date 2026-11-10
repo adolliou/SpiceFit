@@ -1627,80 +1627,81 @@ class FitResults:
     def _detrend_dopp(self, dopp, dopp_err,): # Remove linear spatial trend in x and y from Doppler
         # JPlowman function
 
-        # dopp = dopp.squeeze()
-        # dopp_err = dopp_err.squeeze()
+        dopp = dopp.squeeze()
+        dopp_err = dopp_err.squeeze()
 
-        # snr_th = np.abs(dopp) > 2*np.abs(dopp_err)
-        # peak_doop = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
-        # mask = snr_th*(dopp_err > 0)
-        # nx,ny = dopp.shape
-        # x0 = np.ones([nx,ny])
-        # x1, x2 = np.indices([nx,ny])
-        # x1 = x1-0.5*nx; x2 = x2-0.5*ny
-        # mask = (np.isnan(dopp) == False) * snr_th * (dopp_err> 1.0E-15) * peak_doop
+        snr_th = np.abs(dopp) > 2*np.abs(dopp_err)
+        peak_doop = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
+        mask = snr_th*(dopp_err > 0)
+        nx,ny = dopp.shape
+        x0 = np.ones([nx,ny])
+        x1, x2 = np.indices([nx,ny])
+        x1 = x1-0.5*nx; x2 = x2-0.5*ny
+        mask = (np.isnan(dopp) == False) * snr_th * (dopp_err> 1.0E-15) * peak_doop
 
-        # cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
-
-
-
-        dopp                = dopp.squeeze()
-        dopp_err            = dopp_err.squeeze()
-        peak_doop           = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
-        snr_th              = np.abs(dopp) > np.abs(dopp_err)
-        nx,ny               = dopp.shape
-        x0                  = np.ones([nx,ny])
-        x1, x2              = np.indices([nx,ny])
-        x1                  = x1-0.5*nx
-        x2                  = x2-0.5*ny
-        mask                = snr_th * (dopp_err > 1.0E-15)*(np.isnan(dopp)==False)*peak_doop
-
-        # cvec                = self._simple_lls(dopp[mask],dopp_err[mask],[x0[mask],x1[mask],x2[mask]])
-        dopp_nan            = copy.deepcopy(dopp)
-        dopp_nan[~mask]     = np.nan
-        median_along_1      = np.nanmedian(dopp_nan, axis=0)
-
-        isnan               = np.isnan(median_along_1)
-
-        median_along_1      = np.nanmedian(dopp_nan, axis=0)
-        x_axis1             = np.arange(dopp_nan.shape[1])
-        isnan               = np.isnan(median_along_1)
-        popt1, pcov1        = curve_fit(
-            f                   = FittingUtil.polynomial,
-            xdata               = x_axis1[~isnan], 
-            ydata               = median_along_1[~isnan], 
-            p0                  = [1.2E-02, -9E-05],
-        )
-
-        median_along_0      = np.nanmedian(dopp_nan, axis=1)
-        x_axis0             = np.arange(dopp_nan.shape[0])
-        isnan               = np.isnan(median_along_0)
-        popt0, pcov0        = curve_fit(
-            f                   = FittingUtil.polynomial,
-            xdata               = x_axis0[~isnan], 
-            ydata               = median_along_0[~isnan], 
-            p0                  = [1.2E-02, -9E-05],
-        )
-
-        dopp_detrend        = copy.deepcopy(dopp)
-        for pp in range(dopp_nan.shape[0]):
-            dopp_detrend[pp, :]         = dopp_detrend[pp, :] - popt1[1] * x_axis1
-        for pp in range(dopp_nan.shape[1]):
-            dopp_detrend[:, pp]         = dopp_detrend[:, pp] - popt0[1] * x_axis0
+        cvec = self._simple_lls(dopp[mask], dopp_err[mask], [x0[mask],x1[mask],x2[mask]])
+        dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
+        return dopp_detrend
 
 
 
+        # dopp                = dopp.squeeze()
+        # dopp_err            = dopp_err.squeeze()
+        # peak_doop           = np.array(np.abs(dopp) <= 6*np.nanstd(dopp), dtype=bool) 
+        # snr_th              = np.abs(dopp) > np.abs(dopp_err)
+        # nx,ny               = dopp.shape
+        # x0                  = np.ones([nx,ny])
+        # x1, x2              = np.indices([nx,ny])
+        # x1                  = x1-0.5*nx
+        # x2                  = x2-0.5*ny
+        # mask                = snr_th * (dopp_err > 1.0E-15)*(np.isnan(dopp)==False)*peak_doop
 
-        # dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
-        # 
-        fitting_ouputs              = {
-            "x_axis0":                  x_axis0,
-            "x_axis1":                  x_axis1,
-            "median_along_0":           median_along_0, 
-             "median_along_1":          median_along_1, 
-             "popt0":                   popt0, 
-             "popt1":                   popt1, 
-        }
-        return dopp_detrend, fitting_ouputs
+        # # cvec                = self._simple_lls(dopp[mask],dopp_err[mask],[x0[mask],x1[mask],x2[mask]])
+        # dopp_nan            = copy.deepcopy(dopp)
+        # dopp_nan[~mask]     = np.nan
+        # median_along_1      = np.nanmedian(dopp_nan, axis=0)
+
+        # isnan               = np.isnan(median_along_1)
+
+        # median_along_1      = np.nanmedian(dopp_nan, axis=0)
+        # x_axis1             = np.arange(dopp_nan.shape[1])
+        # isnan               = np.isnan(median_along_1)
+        # popt1, pcov1        = curve_fit(
+        #     f                   = FittingUtil.polynomial,
+        #     xdata               = x_axis1[~isnan], 
+        #     ydata               = median_along_1[~isnan], 
+        #     p0                  = [1.2E-02, -9E-05],
+        # )
+
+        # median_along_0      = np.nanmedian(dopp_nan, axis=1)
+        # x_axis0             = np.arange(dopp_nan.shape[0])
+        # isnan               = np.isnan(median_along_0)
+        # popt0, pcov0        = curve_fit(
+        #     f                   = FittingUtil.polynomial,
+        #     xdata               = x_axis0[~isnan], 
+        #     ydata               = median_along_0[~isnan], 
+        #     p0                  = [1.2E-02, -9E-05],
+        # )
+
+        # dopp_detrend        = copy.deepcopy(dopp)
+        # for pp in range(dopp_nan.shape[0]):
+        #     dopp_detrend[pp, :]         = dopp_detrend[pp, :] - popt1[1] * x_axis1
+        # for pp in range(dopp_nan.shape[1]):
+        #     dopp_detrend[:, pp]         = dopp_detrend[:, pp] - popt0[1] * x_axis0
+
+
+
+
+        # # 
+        # fitting_ouputs              = {
+        #     "x_axis0":                  x_axis0,
+        #     "x_axis1":                  x_axis1,
+        #     "median_along_0":           median_along_0, 
+        #      "median_along_1":          median_along_1, 
+        #      "popt0":                   popt0, 
+        #      "popt1":                   popt1, 
+        # }
+        # return dopp_detrend, fitting_ouputs
 
 
 

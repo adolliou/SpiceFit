@@ -111,7 +111,7 @@ list_lines_spice_metadata:
     lvl_low: ""
     lvl_up: ""
     legend: "Fe XVIII 974.86 $\\AA$"
-    default_template: "fe_18_974_86_2c_p.template"
+    default_template: "fe_18_974_86_2c.template"
 
   - name: "c_3 977.03"
     elem: "c"

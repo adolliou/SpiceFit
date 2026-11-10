@@ -1299,7 +1299,7 @@ class FitResults:
         :param component:
         :return:
         """
-        x = x.to(Constants.conventional_lambda_units).value
+        xdata = x.to(Constants.conventional_lambda_units).value
         if component == "total":
             coeffs = self.fit_results["coeff"]
             if coeffs.ndim == 4:
@@ -1309,7 +1309,7 @@ class FitResults:
             else:
                 raise NotImplementedError
 
-            return self.fit_template.fitting_function(x, *coeff)
+            return self.fit_template.fitting_function(xdata, *coeff)
         else:
             comp = self.components_results[component]
             if comp["info"]["type"] == "gaussian":
@@ -1317,13 +1317,13 @@ class FitResults:
                 pp      = comp["coeffs"]["x"]["results"].value[position]
                 s       = comp["coeffs"]["s"]["results"].value[position]
 
-                return FittingUtil.gaussian(x, I, pp, s, 0)
+                return FittingUtil.gaussian(xdata, I, pp, s, 0)
             elif comp["info"]["type"] == "polynomial":
                 value = []
                 for letter in string.ascii_lowercase:
                     if letter in comp.keys():
                         value.append(comp[letter])
-                return FittingUtil.polynomial(x, *value)
+                return FittingUtil.polynomial(xdata, *value)
             else:
                 raise NotImplementedError
 
@@ -1518,6 +1518,10 @@ class FitResults:
             hdu_wcs.header['WCSEXT'] = (f'{header_ref["EXTNAME"]} WCSDVARR', 'Extension name of WCSDVARR')
             hdul.append(hdu_wcs)
         hdul.writeto(path_fits, overwrite=True)
+
+    # def to_fits_map(self, path_to_save_fits: str = None, folder_to_save_fits: str = None, hdu_wcsdvar=None):
+
+
 
     def _deskew_jp(self, best_xshift, best_yshift, skew_bin_facs=default_bin_fac, lcen=None):
         """Deskew the fitted data with the shift parameters. The reprojection is performed independantly for each line,

@@ -3,6 +3,7 @@ from ..core import FitResults, SpiceRaster, FittingModel, SpiceRasterWindowL2
 from ..util.plotting_fits import PlotFits
 from astropy.io import fits
 from matplotlib import pyplot as plt
+from matplotlib.gridspec import GridSpec
 import numpy as np
 import sys
 from PyQt5.QtCore import Qt
@@ -102,12 +103,22 @@ class GUISpectralQuicklook(QMainWindow):
     def _set_spectral_map(self, xpos, ypos, line_name,param="radiance"):
 
         cm = Constants.inch_to_cm
-        self.figure_spectral_map = plt.figure(figsize=(17 * cm, 9 * cm))
-        self.canvas_spectral_map = FigureCanvas(self.figure_spectral_map)
+        # gs                          = GridSpec(2, 4, wspace=0, hspace=0, height_ratios=[7, 1])
+        self.figure_spectral_map    = plt.figure(figsize=(17 * cm, 9 * cm))
+        self.canvas_spectral_map    = FigureCanvas(self.figure_spectral_map)
         self.ax_spectral_map = self.figure_spectral_map.subplots()
 
-        self.fit_results.plot_fitted_map(fig=self.figure_spectral_map, ax=self.ax_spectral_map, 
-                                         line=line_name, param=param, pixels= (xpos, ypos), doppler_mediansubtraction=True)
+        self.fit_results.plot_fitted_map(
+            fig                             = self.figure_spectral_map,
+            ax                              = self.ax_spectral_map, 
+            line                            = line_name,
+            param                           = param,
+            # pixels                          = (xpos, ypos),
+            doppler_mediansubtraction       = True
+            )
+        self.ax_spectral_map.axvline(x=xpos, color="r", lw=0.3, ls="-")
+        self.ax_spectral_map.axhline(y=ypos, color="r", lw=0.3, ls="-")
+
         self.images_layout.addWidget(self.canvas_spectral_map)
 
     def _set_spectral_plot(self, xpos, ypos):

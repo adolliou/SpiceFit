@@ -93,7 +93,7 @@ class SpiceRaster:
                 spectral_windows_names.append(header["EXTNAME"])
         return spectral_windows_names
 
-    def bining(self, windows, factor: tuple, function: callable = np.nanmean, ):
+    def binning(self, windows, factor: tuple, function: callable = np.nanmean, ):
 
         """
         Bin the selected windows by the given factor 

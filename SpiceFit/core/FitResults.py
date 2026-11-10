@@ -1327,7 +1327,8 @@ class FitResults:
             else:
                 raise NotImplementedError
 
-    def detrend_doppler_shift_velocities(self, return_coeffs=False):
+    def detrend_doppler_shift_velocities(self, return_coeffs_line=None):
+        fitoutput           = None
         for line_name in self.components_results.keys():
             if line_name.strip() not in ["chi2", "flagged_pixels", "background"]:
                 a                       = self.components_results[line_name]["coeffs"]
@@ -1337,7 +1338,7 @@ class FitResults:
                 data_doppler_err        = copy.deepcopy(a["delta_x"]["sigma"].to(Constants.conventional_lambda_units).value)
                 shape_ini               = data_doppler.shape
 
-                data_doppler            = self._detrend_dopp(data_doppler, data_doppler_err)
+                data_doppler, fitoutput_= self._detrend_dopp(data_doppler, data_doppler_err)
                 data_doppler            = np.reshape(data_doppler, shape_ini)
                 data_doppler_err        = np.reshape(data_doppler_err, shape_ini)
                 data_doppler            = u.Quantity(data_doppler, Constants.conventional_lambda_units)
@@ -1363,6 +1364,13 @@ class FitResults:
                     * (data_doppler_err)
                     / lambda_ref
                 ).to(Constants.conventional_velocity_units)
+
+                if return_coeffs_line is not None:
+                    if line_name.strip() in [return_coeffs_line]:
+                        fitoutput       = fitoutput_
+        if return_coeffs_line is not None:
+            return fitoutput
+
 
     def to_fits(self, path_to_save_fits: str = None, folder_to_save_fits: str = None, hdu_wcsdvar=None):
         """
@@ -1616,7 +1624,7 @@ class FitResults:
     # The SPICE Doppler tend to contain a trend across the image field.
     # Since this will impact the Doppler variance we use to determine which
     # shift is optimal we fit linear trends in x and y and remove them:
-    def _detrend_dopp(self, dopp, dopp_err, fig=None, ax=None): # Remove linear spatial trend in x and y from Doppler
+    def _detrend_dopp(self, dopp, dopp_err,): # Remove linear spatial trend in x and y from Doppler
         # JPlowman function
 
         # dopp = dopp.squeeze()
@@ -1657,7 +1665,7 @@ class FitResults:
         x_axis1             = np.arange(dopp_nan.shape[1])
         isnan               = np.isnan(median_along_1)
         popt1, pcov1        = curve_fit(
-            f                   = FittingModel.polynomial,
+            f                   = FittingUtil.polynomial,
             xdata               = x_axis1[~isnan], 
             ydata               = median_along_1[~isnan], 
             p0                  = [1.2E-02, -9E-05],
@@ -1667,7 +1675,7 @@ class FitResults:
         x_axis0             = np.arange(dopp_nan.shape[0])
         isnan               = np.isnan(median_along_0)
         popt0, pcov0        = curve_fit(
-            f                   = FittingModel.polynomial,
+            f                   = FittingUtil.polynomial,
             xdata               = x_axis0[~isnan], 
             ydata               = median_along_0[~isnan], 
             p0                  = [1.2E-02, -9E-05],
@@ -1684,7 +1692,15 @@ class FitResults:
 
         # dopp_detrend = copy.deepcopy(dopp) - x1*cvec[1] - x2*cvec[2] 
         # 
-        return dopp_detrend
+        fitting_ouputs              = {
+            "x_axis0":                  x_axis0,
+            "x_axis1":                  x_axis1,
+            "median_along_0":           median_along_0, 
+             "median_along_1":          median_along_1, 
+             "popt0":                   popt0, 
+             "popt1":                   popt1, 
+        }
+        return dopp_detrend, fitting_ouputs
 
 
 

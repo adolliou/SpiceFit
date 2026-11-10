@@ -97,15 +97,15 @@ class SpiceRaster:
 
         """
         Bin the selected windows by the given factor 
-        """        
+        """
+        windows_cp         = copy.deepcopy(self.windows)
         if windows == "all":
-            for ii, win in enumerate(self.windows):
-                win.binning(factor, function)
+            for ii, win in enumerate(windows_cp):
+                self.windows[ii]        = win.binning(factor, function)
         elif type(windows) is list:
-            for ii, win in enumerate(self.windows):
+            for ii, win in enumerate(windows_cp):
                 if (ii in windows) or (self.windows_ext[win] in windows):
-                    win.binning(factor, function)
-
+                    self.windows[ii]    = win.binning(factor, function)
 
     def build_windowsl2(self, windows) -> list:
         """
